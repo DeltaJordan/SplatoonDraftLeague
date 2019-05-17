@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+
+<stickers>
+  <sticker>
+    <name>Panda</name>
+    <file>https://cdn.discordapp.com/attachments/528358990799699977/575934170400817152/panda.jpg</file>
+    <description>This is a Panda</description>
+  </sticker>
+  <sticker>
+    <name>Cat</name>
+    <file>https://cdn.discordapp.com/attachments/492942564681449483/575570079870353408/image0.jpg</file>
+    <description>This is a Cat</description>
+  </sticker>
+ </stickers>
+
