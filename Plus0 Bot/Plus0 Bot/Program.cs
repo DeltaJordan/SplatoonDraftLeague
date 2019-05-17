@@ -75,7 +75,7 @@ namespace Plus0_Bot
 
             client = new DiscordSocketClient(new DiscordSocketConfig
             {
-                LogLevel = LogSeverity.Info
+                LogLevel = LogSeverity.Debug
             });
             
             commands = new CommandService(new CommandServiceConfig
@@ -98,8 +98,6 @@ namespace Plus0_Bot
 
         private static Task Client_Log(LogMessage Message)
         {
-            Console.WriteLine(Message);
-
             LogLevel logLevel;
 
             switch (Message.Severity)
@@ -125,6 +123,10 @@ namespace Plus0_Bot
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+
+            if (logLevel >= LogLevel.Info)
+                Console.WriteLine(Message);
 
             DiscordLogger.Log(logLevel, Message.ToString(prependTimestamp: false));
 
