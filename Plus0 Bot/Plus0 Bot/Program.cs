@@ -9,110 +9,148 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
-
-using Plus0_Bot.Resources.Datatypes;
-using Plus0_Bot.Resources.Settings;
 using System.Linq;
+using NLog.Config;
+using NLog.Targets;
+using NLog;
 
 namespace Plus0_Bot
 {
-    class Program
+    public static class Program
     {
-        private DiscordSocketClient Client;
-        private CommandService Commands;
+        private static DiscordSocketClient client;
+        private static CommandService commands;
 
-        List<ulong> DraftMembers = new List<ulong>();
+        private static readonly Logger DiscordLogger = LogManager.GetLogger("Discord API - +0 Bot");
 
-        static void Main(string[] args)
-            => new Program().MainAsync().GetAwaiter().GetResult();
-
-
-        private async Task MainAsync()
+        /// <summary>
+        /// Main async method for the bot.
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public static async Task Main(string[] args)
         {
-            string JSON = "";
-            string SettingsLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location.Replace(@"bin\Debug\netcoreapp2.1", @"Data\Settings.json"));
-            using (var Stream = new FileStream(SettingsLocation, FileMode.Open, FileAccess.Read))
-            using (var ReadSettings = new StreamReader(Stream))
+            // Make sure Log folder exists
+            Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Logs"));
+
+            // Checks for existing latest log
+            if (File.Exists(Path.Combine(Globals.AppPath, "Logs", "latest.log")))
             {
-                JSON = ReadSettings.ReadToEnd();
+                // This is no longer the latest log; move to backlogs
+                string oldLogFileName = File.ReadAllLines(Path.Combine(Globals.AppPath, "Logs", "latest.log"))[0];
+                File.Move(Path.Combine(Globals.AppPath, "Logs", "latest.log"), Path.Combine(Globals.AppPath, "Logs", oldLogFileName));
             }
 
-            Setting Settings= JsonConvert.DeserializeObject<Setting>(JSON);
-            ESettings.Banned = Settings.banned;
-            ESettings.Log = Settings.log;
-            ESettings.Owner = Settings.owner;
-            ESettings.Token = Settings.token;
-            ESettings.Version = Settings.version;
+            // Builds a file name to prepare for future backlogging
+            string logFileName = $"{DateTime.Now:dd-MM-yy}-1.log";
 
-            Client = new DiscordSocketClient(new DiscordSocketConfig
+            // Loops until the log file doesn't exist
+            int index = 2;
+            while (File.Exists(Path.Combine(Globals.AppPath, "Logs", logFileName)))
+            {
+                logFileName = $"{DateTime.Now:dd-MM-yy}-{index}.log";
+                index++;
+            }
+
+            // Logs the future backlog file name
+            File.WriteAllText(Path.Combine(Globals.AppPath, "Logs", "latest.log"), $"{logFileName}\n");
+
+            // Set up logging through NLog
+            LoggingConfiguration config = new LoggingConfiguration();
+
+            FileTarget logfile = new FileTarget("logfile")
+            {
+                FileName = Path.Combine(Globals.AppPath, "Logs", "latest.log"),
+                Layout = "[${time}] [${level:uppercase=true}] [${logger}] ${message}"
+            };
+            config.AddRule(LogLevel.Trace, LogLevel.Fatal, logfile);
+
+            LogManager.Configuration = config;
+
+            string settingsLocation = Path.Combine(Globals.AppPath, "Data", "settings.json");
+            string jsonFile = File.ReadAllText(settingsLocation);
+
+            // Load the settings from file, then store it in the globals
+            Globals.BotSettings = JsonConvert.DeserializeObject<Settings>(jsonFile);
+
+            client = new DiscordSocketClient(new DiscordSocketConfig
             {
                 LogLevel = LogSeverity.Info
             });
-
-
-            Commands = new CommandService(new CommandServiceConfig
+            
+            commands = new CommandService(new CommandServiceConfig
             {
                 CaseSensitiveCommands = false,
                 DefaultRunMode = RunMode.Async,
                 LogLevel = LogSeverity.Debug
-
             });
 
-            Client.MessageReceived += Client_MessageReceived;
-            await Commands.AddModulesAsync(Assembly.GetEntryAssembly(),null);
+            client.MessageReceived += Client_MessageReceived;
+            await commands.AddModulesAsync(Assembly.GetEntryAssembly(),null);
 
-            Client.Ready += Client_Ready;
-            Client.Log += Client_Log;
-
-           
-            await Client.LoginAsync(TokenType.Bot, ESettings.Token);
-            await Client.StartAsync();
+            client.Ready += Client_Ready;
+            client.Log += Client_Log;
+            
+            await client.LoginAsync(TokenType.Bot, Globals.BotSettings.BotToken);
+            await client.StartAsync();
             await Task.Delay(-1);
-
         }
 
-        private async Task Client_Log(LogMessage Message)
-
+        private static Task Client_Log(LogMessage Message)
         {
-            Console.WriteLine($"{DateTime.Now} at {Message.Source}] {Message.Message}");
+            Console.WriteLine(Message);
 
-            try
-            {
-                SocketGuild Guild = Client.Guilds.Where(x => x.Id == ESettings.Log[0]).FirstOrDefault();
-                SocketTextChannel Channel = Guild.Channels.Where(x => x.Id == ESettings.Log[1]).FirstOrDefault() as SocketTextChannel;
-                await Channel.SendMessageAsync($"{DateTime.Now} at {Message.Source}] {Message.Message}");
-            }catch
-            {
+            LogLevel logLevel;
 
+            switch (Message.Severity)
+            {
+                case LogSeverity.Critical:
+                    logLevel = LogLevel.Fatal;
+                    break;
+                case LogSeverity.Error:
+                    logLevel = LogLevel.Error;
+                    break;
+                case LogSeverity.Warning:
+                    logLevel = LogLevel.Warn;
+                    break;
+                case LogSeverity.Info:
+                    logLevel = LogLevel.Info;
+                    break;
+                case LogSeverity.Verbose:
+                    logLevel = LogLevel.Trace;
+                    break;
+                case LogSeverity.Debug:
+                    logLevel = LogLevel.Debug;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
+            DiscordLogger.Log(logLevel, Message.ToString(prependTimestamp: false));
+
+            return Task.CompletedTask;
         }
 
-        private async Task Client_Ready()
+        private static async Task Client_Ready()
         {
-            
-            
         }
 
-        private async Task Client_MessageReceived(SocketMessage MessageParam)
+        private static async Task Client_MessageReceived(SocketMessage MessageParam)
         {
-            var Message = MessageParam as SocketUserMessage;
-            var Context = new SocketCommandContext(Client, Message);
+            SocketUserMessage message = MessageParam as SocketUserMessage;
+            SocketCommandContext context = new SocketCommandContext(client, message);
 
-            if ((Context.Message == null) || (Context.Message.Content == ""))
-                return;
-            if (Context.User.IsBot)
-                return;
-            int ArgPos = 0;
-            if (!(Message.HasStringPrefix("%", ref ArgPos)) || (Message.HasMentionPrefix(Client.CurrentUser, ref ArgPos)))
+            if (context.Message == null || context.Message.Content == "" || context.User.IsBot)
                 return;
 
-            var Result = await Commands.ExecuteAsync(Context, ArgPos,null);
+            int argPos = 0;
+            if (!(message.HasStringPrefix("%", ref argPos)) || (message.HasMentionPrefix(client.CurrentUser, ref argPos)))
+                return;
 
-            if (!Result.IsSuccess)
-                Console.WriteLine($"{DateTime.Now} at Commands] Something went wrong with executing a command. Text: {Context.Message.Content} | Error: {Result.ErrorReason}");
+            IResult result = await commands.ExecuteAsync(context, argPos,null);
+
+            if (!result.IsSuccess)
+                Console.WriteLine($"[{DateTime.Now} at Commands] Something went wrong with executing a command. Text: {context.Message.Content} | Error: {result.ErrorReason}");
         }
-
-        
     }
 }
