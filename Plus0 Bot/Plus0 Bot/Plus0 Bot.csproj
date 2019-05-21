@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <Reference Include="MarkovSharpCore">
-      <HintPath>..\..\..\MarkovSharp\MarkovSharpCore\bin\Release\netstandard2.0\MarkovSharpCore.dll</HintPath>
+      <HintPath>..\dependencies\MarkovSharpCore.dll</HintPath>
     </Reference>
   </ItemGroup>
 
