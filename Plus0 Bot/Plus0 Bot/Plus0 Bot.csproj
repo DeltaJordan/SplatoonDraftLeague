@@ -10,14 +10,26 @@
   <ItemGroup>
     <PackageReference Include="Airtable" Version="1.0.2" />
     <PackageReference Include="Discord.Net" Version="2.0.1" />
+    <PackageReference Include="log4net" Version="2.0.8" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="3.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="2.2.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="NLog" Version="4.6.3" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0006" />
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="MarkovSharpCore">
+      <HintPath>..\..\..\MarkovSharp\MarkovSharpCore\bin\Release\netstandard2.0\MarkovSharpCore.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Data\help.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Data\settings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

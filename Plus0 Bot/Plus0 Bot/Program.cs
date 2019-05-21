@@ -21,7 +21,7 @@ namespace Plus0_Bot
         private static DiscordSocketClient client;
         private static CommandService commands;
 
-        private static readonly Logger DiscordLogger = LogManager.GetLogger("Discord API - +0 Bot");
+        private static readonly Logger DiscordLogger = LogManager.GetLogger("Discord API");
 
         /// <summary>
         /// Main async method for the bot.
@@ -96,11 +96,11 @@ namespace Plus0_Bot
             await Task.Delay(-1);
         }
 
-        private static Task Client_Log(LogMessage Message)
+        private static Task Client_Log(LogMessage message)
         {
             LogLevel logLevel;
 
-            switch (Message.Severity)
+            switch (message.Severity)
             {
                 case LogSeverity.Critical:
                     logLevel = LogLevel.Fatal;
@@ -126,9 +126,9 @@ namespace Plus0_Bot
 
 
             if (logLevel >= LogLevel.Info)
-                Console.WriteLine(Message);
+                Console.WriteLine(message);
 
-            DiscordLogger.Log(logLevel, Message.ToString(prependTimestamp: false));
+            DiscordLogger.Log(logLevel, message.ToString(prependTimestamp: false));
 
             return Task.CompletedTask;
         }
@@ -137,9 +137,9 @@ namespace Plus0_Bot
         {
         }
 
-        private static async Task Client_MessageReceived(SocketMessage MessageParam)
+        private static async Task Client_MessageReceived(SocketMessage messageParam)
         {
-            SocketUserMessage message = MessageParam as SocketUserMessage;
+            SocketUserMessage message = messageParam as SocketUserMessage;
             SocketCommandContext context = new SocketCommandContext(client, message);
 
             if (context.Message == null || context.Message.Content == "" || context.User.IsBot)

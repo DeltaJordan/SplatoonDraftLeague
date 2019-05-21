@@ -4,11 +4,24 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using Newtonsoft.Json;
 
 namespace Plus0_Bot
 {
     public static class Globals
     {
+        public static List<ulong> SuperUsers => GetSuperUsers();
+
+        private static List<ulong> GetSuperUsers()
+        {
+            if (!File.Exists(Path.Combine(AppPath, "Data", "superusers.json")))
+            {
+                File.WriteAllText(Path.Combine(AppPath, "Data", "superusers.json"), JsonConvert.SerializeObject(new List<ulong>(), Formatting.Indented));
+            }
+
+            return JsonConvert.DeserializeObject<List<ulong>>(File.ReadAllText(Path.Combine(AppPath, "Data", "superusers.json")));
+        }
+
         /// <summary>
         /// Gets or sets the bots settings.
         /// </summary>
