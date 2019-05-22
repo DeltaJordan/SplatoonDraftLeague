@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Timers;
@@ -29,7 +30,7 @@ namespace Plus0_Bot.Queuing
 
         public int CurrentDelta { get; private set; }
         public int LobbyNumber { get; }
-        public IReadOnlyCollection<SdlPlayer> Players => this.players.AsReadOnly();
+        public ReadOnlyCollection<SdlPlayer> Players => this.players.AsReadOnly();
 
         private SocketCommandContext commandContext;
         private Timer timer;
@@ -72,9 +73,9 @@ namespace Plus0_Bot.Queuing
             return power > min && power < max;
         }
 
-        public bool AddPlayer(SdlPlayer player)
+        public bool AddPlayer(SdlPlayer player, bool force = false)
         {
-            if (this.IsFull || this.players.Any(e => e.DiscordUser.Id == player.DiscordUser.Id))
+            if (!force && (this.IsFull || this.players.Any(e => e.DiscordUser.Id == player.DiscordUser.Id)))
             {
                 return false;
             }

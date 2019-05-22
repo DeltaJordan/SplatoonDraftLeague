@@ -10,6 +10,8 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 using System.Linq;
+using Discord.Addons.Interactive;
+using Microsoft.Extensions.DependencyInjection;
 using NLog.Config;
 using NLog.Targets;
 using NLog;
@@ -20,6 +22,7 @@ namespace Plus0_Bot
     {
         private static DiscordSocketClient client;
         private static CommandService commands;
+        private static IServiceProvider services;
 
         private static readonly Logger DiscordLogger = LogManager.GetLogger("Discord API");
 
@@ -85,8 +88,13 @@ namespace Plus0_Bot
                 LogLevel = LogSeverity.Debug
             });
 
+            services = new ServiceCollection()
+                .AddSingleton(client)
+                .AddSingleton<InteractiveService>()
+                .BuildServiceProvider();
+
             client.MessageReceived += Client_MessageReceived;
-            await commands.AddModulesAsync(Assembly.GetEntryAssembly(),null);
+            await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
 
             client.Ready += Client_Ready;
             client.Log += Client_Log;
@@ -146,10 +154,16 @@ namespace Plus0_Bot
                 return;
 
             int argPos = 0;
-            if (!(message.HasStringPrefix("%", ref argPos)) || (message.HasMentionPrefix(client.CurrentUser, ref argPos)))
+#if WINDOWS
+            string prefix = "%%";
+#else
+            string prefix = "%";
+#endif
+
+            if (!(message.HasStringPrefix(prefix, ref argPos)) || (message.HasMentionPrefix(client.CurrentUser, ref argPos)))
                 return;
 
-            IResult result = await commands.ExecuteAsync(context, argPos,null);
+            IResult result = await commands.ExecuteAsync(context, argPos, services);
 
             if (!result.IsSuccess)
                 Console.WriteLine($"[{DateTime.Now} at Commands] Something went wrong with executing a command. Text: {context.Message.Content} | Error: {result.ErrorReason}");

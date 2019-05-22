@@ -9,17 +9,25 @@ using Discord.Commands;
 using Discord.WebSocket;
 using NLog;
 using Plus0_Bot.AirTable;
+using Plus0_Bot.Commands.Preconditions;
 using Plus0_Bot.Queuing;
 
 namespace Plus0_Bot.Commands
 {
     public class LobbyModule : ModuleBase<SocketCommandContext>
     {
-        private static readonly ReadOnlyCollection<Lobby> Lobbies = new List<Lobby>
+        public static readonly ReadOnlyCollection<Lobby> Lobbies = new List<Lobby>
         {
             new Lobby(1),
             new Lobby(2),
-            new Lobby(3)
+            new Lobby(3),
+            new Lobby(4),
+            new Lobby(5),
+            new Lobby(6),
+            new Lobby(7),
+            new Lobby(8),
+            new Lobby(9),
+            new Lobby(10)
         }.AsReadOnly();
 
         private static readonly ulong[] SetChannels =
@@ -62,39 +70,87 @@ namespace Plus0_Bot.Commands
             }
         }
 
-        [Command("leave"),
-         Summary("Leaves a currently joined lobby.")]
-        public async Task Leave()
+        [Command("fill"),
+        RequireRole("Developer")]
+        public async Task DebugPropagate()
         {
-            if (!(this.Context.User is IGuildUser user))
-                return;
-
-            Lobby joinedLobby = Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordUser.Id == user.Id));
-
-            if (joinedLobby != null)
+            try
             {
-                SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({joinedLobby.LobbyNumber})");
-                SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
+                SdlPlayer sdlPlayer = new SdlPlayer((IGuildUser) this.Context.User) {PowerLevel = 1900};
 
-                if (setRole == null)
+                List<Lobby> matchedLobbies = Lobbies.Where(e => !e.IsFull && e.IsWithinThreshold(sdlPlayer.PowerLevel)).ToList();
+                Lobby matchedLobby;
+                if (matchedLobbies.Any())
                 {
-                    await devRole.ModifyAsync(e => e.Mentionable = true);
-                    await this.Context.Channel.SendMessageAsync($"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({joinedLobby.LobbyNumber})\".");
-                    await devRole.ModifyAsync(e => e.Mentionable = false);
-                    return;
+                    matchedLobby = matchedLobbies.OrderBy(e => Math.Abs(e.LobbyPowerLevel - sdlPlayer.PowerLevel)).First();
+
+                    matchedLobby.AddPlayer(sdlPlayer);
+                }
+                else
+                {
+                    if (Lobbies.All(e => e.Players.Any()))
+                    {
+                        await this.ReplyAsync($"There are already three lobbies! Please wait until another lobby " +
+                                              $"either enters your power level threshold or there are less than 3 queuing lobbies.");
+                        return;
+                    }
+
+                    Logger.Info("Getting available lobby(s).");
+
+                    Logger.Info("Selecting first empty lobby.");
+                    matchedLobby = Lobbies.First(e => !e.Players.Any());
                 }
 
-                await user.RemoveRoleAsync(setRole);
-                joinedLobby.RemovePlayer(joinedLobby.Players.FirstOrDefault(e => e.DiscordUser.Id == user.Id));
-
-                await this.ReplyAsync($"You have left lobby #{joinedLobby.LobbyNumber}.");
-
-                if (joinedLobby.Players.Count == 0)
+                for (int i = 0; i < 7; i++)
                 {
-                    joinedLobby.Close();
+                    SdlPlayer nextPlayer = new SdlPlayer(this.Context.Guild.Users.Where(e => e.Id != this.Context.User.Id).ElementAt(i)) {PowerLevel = 1900 + i};
 
-                    await this.ReplyAsync($"Lobby #{joinedLobby.LobbyNumber} has been disbanded.");
+                    matchedLobby.AddPlayer(nextPlayer, true);
                 }
+
+                if (matchedLobby.IsFull)
+                {
+                    if (SetModule.Sets.All(e => e.AllPlayers.Any()))
+                    {
+                        await this.ReplyAsync("Sit tight in <#579890960394354690>! There are too many sets in progress right now. Once a set finishes you will be notified.",
+                            embed: matchedLobby.GetEmbedBuilder().Build());
+                        return;
+                    }
+
+                    Set newMatch = SetModule.Sets.First(e => !e.AllPlayers.Any());
+                    newMatch.MoveLobbyToSet(matchedLobby);
+                    matchedLobby.Close();
+
+                    SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({newMatch.SetNumber})");
+                    SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
+
+                    if (setRole == null)
+                    {
+                        await devRole.ModifyAsync(e => e.Mentionable = true);
+                        await this.ReplyAsync(
+                            $"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({newMatch.SetNumber})\".");
+                        await devRole.ModifyAsync(e => e.Mentionable = false);
+                        return;
+                    }
+
+                    await this.Context.Guild.GetTextChannel(SetChannels[newMatch.SetNumber - 1]).SendMessageAsync(
+                        $"Welcome to set #{newMatch.SetNumber}! To begin, {newMatch.BravoTeam.Captain.DiscordUser.Mention} will pick players using `%pick [player]`.",
+                        embed: newMatch.GetEmbedBuilder().Build());
+                }
+                else
+                {
+                    string message =
+                        $"{sdlPlayer.DiscordUser.Mention} has been added to Lobby #{matchedLobby.LobbyNumber}. {8 - matchedLobby.Players.Count} players needed to begin.";
+
+                    EmbedBuilder builder = matchedLobby.GetEmbedBuilder();
+
+                    await this.ReplyAsync(message, false, builder.Build());
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
             }
         }
 
@@ -155,23 +211,25 @@ namespace Plus0_Bot.Commands
 
             if (matchedLobby.IsFull)
             {
-                if (SetModule.Sets[matchedLobby.LobbyNumber].AllPlayers.Any())
+                if (SetModule.Sets.All(e => e.AllPlayers.Any()))
                 {
                     await this.ReplyAsync("Sit tight in <#579890960394354690>! There are too many sets in progress right now. Once a set finishes you will be notified.",
                                           embed: matchedLobby.GetEmbedBuilder().Build());
                     return;
                 }
 
-                Set newMatch = SetModule.Sets[matchedLobby.LobbyNumber - 1];
+                Set newMatch = SetModule.Sets.First(e => !e.AllPlayers.Any());
+                newMatch.MoveLobbyToSet(matchedLobby);
+                matchedLobby.Close();
 
-                SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({matchedLobby.LobbyNumber})");
+                SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({newMatch.SetNumber})");
                 SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
 
                 if (setRole == null)
                 {
                     await devRole.ModifyAsync(e => e.Mentionable = true);
                     await this.ReplyAsync(
-                        $"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({matchedLobby.LobbyNumber})\".");
+                        $"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({newMatch.SetNumber})\".");
                     await devRole.ModifyAsync(e => e.Mentionable = false);
                     return;
                 }
@@ -181,8 +239,8 @@ namespace Plus0_Bot.Commands
                     await matchedLobbyPlayer.DiscordUser.AddRoleAsync(setRole);
                 }
 
-                await this.Context.Guild.GetTextChannel(SetChannels[matchedLobby.LobbyNumber - 1]).SendMessageAsync(
-                    $"Welcome to set #{matchedLobby.LobbyNumber}! To begin, {newMatch.BravoCaptain.DiscordUser.Mention} will pick players using `%pick [player]`.", 
+                await this.Context.Guild.GetTextChannel(SetChannels[newMatch.SetNumber - 1]).SendMessageAsync(
+                    $"Welcome to set #{newMatch.SetNumber}! To begin, {newMatch.BravoTeam.Captain.DiscordUser.Mention} will pick players using `%pick [player]`.", 
                     embed: newMatch.GetEmbedBuilder().Build());
             }
             else

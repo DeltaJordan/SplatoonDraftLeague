@@ -12,17 +12,11 @@ namespace Plus0_Bot.Queuing
     {
         public int SetNumber { get; }
 
-        // TODO Move Captains to Team classes.
-        public SdlPlayer AlphaCaptain { get; private set; }
-        public SdlPlayer BravoCaptain { get; private set; }
+        public IEnumerable<SdlPlayer> AllPlayers => this.AlphaTeam.Players.Concat(this.BravoTeam.Players).Concat(this.DraftPlayers);
 
-        public IEnumerable<SdlPlayer> AllPlayers => this.AlphaTeam.Concat(this.BravoTeam).Concat(this.DraftPlayers);
-
-        // TODO Use classes for teams with a public ReadOnlyCollection and a private List.
-        public readonly List<SdlPlayer> AlphaTeam = new List<SdlPlayer>();
-        public readonly List<SdlPlayer> BravoTeam = new List<SdlPlayer>();
-
-        // TODO Not for draft players though.
+        public SdlTeam AlphaTeam { get; }
+        public SdlTeam BravoTeam { get; }
+        
         public readonly List<SdlPlayer> DraftPlayers = new List<SdlPlayer>();
 
         public bool AlphaPicking;
@@ -30,18 +24,27 @@ namespace Plus0_Bot.Queuing
         public Set(int setNumber)
         {
             this.SetNumber = setNumber;
+
+            this.AlphaTeam = new SdlTeam();
+            this.BravoTeam = new SdlTeam();
         }
 
         public void MoveLobbyToSet(Lobby lobby)
         {
             List<SdlPlayer> orderedPlayers = lobby.Players.OrderByDescending(e => e.PowerLevel).ToList();
-            this.AlphaCaptain = orderedPlayers[0];
-            this.BravoCaptain = orderedPlayers[1];
 
-            this.AlphaTeam.Add(this.AlphaCaptain);
-            this.BravoTeam.Add(this.BravoCaptain);
+            this.AlphaTeam.AddPlayer(orderedPlayers[0], true);
+            this.BravoTeam.AddPlayer(orderedPlayers[1], true);
 
             this.DraftPlayers.AddRange(orderedPlayers.Skip(2));
+        }
+
+        public void Close()
+        {
+            this.AlphaTeam.Clear();
+            this.BravoTeam.Clear();
+            this.AlphaPicking = false;
+            this.DraftPlayers.Clear();
         }
 
         public EmbedBuilder GetEmbedBuilder()
@@ -49,19 +52,33 @@ namespace Plus0_Bot.Queuing
             EmbedBuilder builder = new EmbedBuilder();
             builder.WithTitle($"Set #({this.SetNumber})");
 
-            List<string> alphaTeamInfo = this.BravoTeam.Select(e => e.DiscordUser.Mention).ToList();
-            alphaTeamInfo[this.AlphaTeam.IndexOf(this.AlphaCaptain)] = this.AlphaCaptain.DiscordUser.Mention + " [Captain]";
+            List<string> alphaTeamInfo = new List<string>();
+            foreach (SdlPlayer alphaTeamPlayer in this.AlphaTeam.Players)
+            {
+                string captainText = alphaTeamPlayer == this.AlphaTeam.Captain
+                    ? " [Captain]"
+                    : "";
+
+                alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordUser.Mention}{captainText}");
+            }
 
             EmbedFieldBuilder alphaTeamBuilder = new EmbedFieldBuilder
             {
                 Name = "Alpha Team",
-                Value = string.Join('\n', this.AlphaTeam.Select(e => e.DiscordUser.Mention))
+                Value = string.Join('\n', alphaTeamInfo)
             };
 
             builder.Fields.Add(alphaTeamBuilder);
 
-            List<string> bravoTeamInfo = this.BravoTeam.Select(e => e.DiscordUser.Mention).ToList();
-            bravoTeamInfo[this.BravoTeam.IndexOf(this.BravoCaptain)] = this.BravoCaptain.DiscordUser.Mention + " [Captain]";
+            List<string> bravoTeamInfo = new List<string>();
+            foreach (SdlPlayer bravoTeamPlayer in this.BravoTeam.Players)
+            {
+                string captainText = bravoTeamPlayer == this.BravoTeam.Captain
+                    ? " [Captain]"
+                    : "";
+
+                bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordUser.Mention}{captainText}");
+            }
 
             EmbedFieldBuilder bravoTeamBuilder = new EmbedFieldBuilder
             {

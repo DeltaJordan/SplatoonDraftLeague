@@ -80,9 +80,8 @@ namespace Plus0_Bot.AirTable
 
                 AirtableRecord playerRecord = records.First();
 
-                SdlPlayer sdlPlayer = new SdlPlayer
+                SdlPlayer sdlPlayer = new SdlPlayer(guildUser)
                 {
-                    DiscordUser = guildUser,
                     PowerLevel = Convert.ToDouble(playerRecord.Fields["Power"].ToString())
                 };
 
