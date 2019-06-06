@@ -1,4 +1,6 @@
-﻿using Discord;
+﻿using System;
+using System.Linq;
+using Discord;
 using Discord.WebSocket;
 using SquidDraftLeague.Bot.Queuing;
 
@@ -28,34 +30,24 @@ namespace SquidDraftLeague.Bot.Commands
             572538622637506591
         };
 
+        public static readonly ulong[] SetChannelIds =
+        {
+            572542086260457474,
+            572542140949856278,
+            572542164316192777
+        };
+
         public static Set SetFromChannel(ulong channel)
         {
-            switch (channel)
-            {
-                case 572542086260457474:
-                    return SetModule.Sets[0];
-                case 572542140949856278:
-                    return SetModule.Sets[1];
-                case 572542164316192777:
-                    return SetModule.Sets[2];
-                default:
-                    return null;
-            }
+            return SetChannelIds.Contains(channel) ? SetModule.Sets[Array.IndexOf(SetChannelIds, channel)] : null;
         }
 
         public static SocketTextChannel ChannelFromSet(int setNumber)
         {
-            switch (setNumber)
-            {
-                case 1:
-                    return (SocketTextChannel) Program.Client.GetChannel(572542086260457474);
-                case 2:
-                    return (SocketTextChannel) Program.Client.GetChannel(572542140949856278);
-                case 3:
-                    return (SocketTextChannel) Program.Client.GetChannel(572542164316192777);
-                default:
-                    return null;
-            }
+            if (setNumber > SetChannelIds.Length)
+                return null;
+
+            return (SocketTextChannel) Program.Client.GetChannel(SetChannelIds[setNumber - 1]);
         }
     }
 }

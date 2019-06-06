@@ -10,9 +10,11 @@ using Discord.WebSocket;
 using Newtonsoft.Json;
 using NLog;
 using SquidDraftLeague.Bot.AirTable;
+using SquidDraftLeague.Bot.Commands.Attributes;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Bot.Penalties;
 using SquidDraftLeague.Bot.Queuing;
+using SquidDraftLeague.Language.Resources;
 
 namespace SquidDraftLeague.Bot.Commands
 {
@@ -43,6 +45,104 @@ namespace SquidDraftLeague.Bot.Commands
             await this.ReplyAsync("\uD83D\uDC4C");
         }
 
+        [Command("status"),
+         Summary("Gets the status of a lobby or set.")]
+        public async Task Status([Summary(
+                "Optional parameter to specify a lobby number. Not required for sets or if you are checking a lobby you are in.")]
+            int lobbyNum = 0)
+        {
+            if (!(this.Context.User is IGuildUser user))
+                return;
+
+            Set setInChannel = CommandHelper.SetFromChannel(this.Context.Channel.Id);
+
+            if (setInChannel != null && setInChannel.AllPlayers.Any())
+            {
+                await this.ReplyAsync(embed: setInChannel.GetEmbedBuilder().Build());
+            }
+            else if (LobbyModule.Lobbies.All(e => e.LobbyNumber != lobbyNum))
+            {
+                Lobby joinedLobby = LobbyModule.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId == user.Id));
+
+                if (joinedLobby == null)
+                {
+                    await this.ReplyAsync(Resources.NotInLobby);
+                    return;
+                }
+
+                EmbedBuilder builder = joinedLobby.GetEmbedBuilder();
+
+                await this.ReplyAsync(embed: builder.Build());
+            }
+            else
+            {
+                Lobby selectedLobby = LobbyModule.Lobbies.First(e => e.LobbyNumber == lobbyNum);
+                await this.ReplyAsync(embed: selectedLobby.GetEmbedBuilder().Build());
+            }
+        }
+
+        [Command("report"),
+         Summary("Reports a player for any reason. Only to be used in DMs with this bot."),
+         ExampleCommand("%report \"DeltaJordan#5497\" Called me a crayon eater.")]
+        public async Task Report(
+            [Summary("Name formatted like so `\"DeltaJordan#5497\"`. The quotes are required if the name has spaces.")]
+            string username, 
+            [Summary("The reason this person is being reported. Explain as much as possible."),
+             Remainder] string reason)
+        {
+            if (!(this.Context.Channel is IDMChannel))
+            {
+                return;
+            }
+
+            string[] splitName = username.Replace("@", "").Split('#');
+
+            if (splitName.Length < 2)
+            {
+                await this.ReplyAsync(Resources.InvalidReportNameSplit);
+            }
+
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                await this.ReplyAsync(Resources.InvalidReportNoReason);
+            }
+
+            SocketUser reportedUser = null;
+
+            try
+            {
+                reportedUser = Program.Client.GetUser(splitName[0], splitName[1]);
+            }
+            catch (Exception e)
+            {
+                Logger.Trace(e);
+            }
+
+            if (reportedUser == null)
+            {
+                await this.ReplyAsync(Resources.InvalidReportNameResolve);
+            }
+            else
+            {
+                SocketTextChannel modChannel = (SocketTextChannel)Program.Client.GetChannel(572608285904207875);
+
+                EmbedBuilder builder = new EmbedBuilder
+                {
+                    Description = $"**{reportedUser.Mention} reported by {this.Context.User.Mention}.**",
+                    Timestamp = DateTimeOffset.Now
+                };
+
+                builder.AddField(e =>
+                {
+                    e.Name = "Reason:";
+                    e.Value = $"{reason}";
+                });
+
+                await modChannel.SendMessageAsync($"<@572539082039885839>", embed: builder.Build());
+                await this.ReplyAsync(Resources.ReportResponse);
+            }
+        }
+
         [Command("penalty"),
         RequireUserPermission(GuildPermission.ManageGuild)]
         public async Task Penalty(IUser user, int amount, [Remainder] string notes)
@@ -63,7 +163,7 @@ namespace SquidDraftLeague.Bot.Commands
                 throw;
             }
 
-            await this.ReplyAsync($"Successfully penalized {user.Mention} {amount} points.");
+            await this.ReplyAsync($"Penalized {user.Mention} {amount} points.");
         }
 
         [Command("leave", RunMode = RunMode.Async),

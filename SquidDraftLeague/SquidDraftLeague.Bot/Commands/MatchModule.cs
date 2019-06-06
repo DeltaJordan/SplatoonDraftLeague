@@ -8,10 +8,12 @@ using Discord.Commands;
 using Discord.WebSocket;
 using NLog;
 using SquidDraftLeague.Bot.AirTable;
+using SquidDraftLeague.Bot.Commands.Attributes;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Bot.Queuing;
 using SquidDraftLeague.Bot.Queuing.Data;
+using SquidDraftLeague.Language.Resources;
 
 namespace SquidDraftLeague.Bot.Commands
 {
@@ -47,9 +49,9 @@ namespace SquidDraftLeague.Bot.Commands
                                                    $"Once the match is over, use %score to report the winning team like so:\n" +
                                                    $"`%score Alpha` or `%score Bravo`");
 
-            Stage[] stages = await AirTableClient.GetMapList();
+            set.MatchNum = 1;
 
-            Stage selectedStage = stages[Globals.Random.Next(0, stages.Length - 1)];
+            Stage selectedStage = await set.PickStage();
 
             set.PlayedStages.Add(selectedStage);
 
@@ -69,12 +71,11 @@ namespace SquidDraftLeague.Bot.Commands
                 })
                 .Build());
 
-            set.MatchNum = 1;
-
             await context.SendMessageAsync("Good luck both teams on their matches! :)");
         }
 
-        [Command("report")]
+        [Command("report"),
+         Summary("Reports a discrepancy in a set to moderators.")]
         public async Task Report()
         {
             Set playerSet =
@@ -84,6 +85,7 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (playerSet == null)
             {
+                await this.ReplyAsync(Resources.ReportErrorResponse);
                 return;
             }
 
@@ -131,11 +133,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 playerSet.MatchNum++;
 
-                List<Stage> stages = (await AirTableClient.GetMapList())
-                    .Where(e => !(playerSet.PlayedStages.Any(f => f.MapName == e.MapName) && playerSet.PlayedStages.Any(f => f.Mode == e.Mode)))
-                    .ToList();
-
-                Stage selectedRandomStage = stages[Globals.Random.Next(0, stages.Count - 1)];
+                Stage selectedRandomStage = await playerSet.PickStage();
 
                 playerSet.PlayedStages.Add(selectedRandomStage);
 
@@ -225,11 +223,7 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     await this.ReplyAsync("Resolved all issues! Teams, continue with your matches.");
 
-                    List<Stage> stages = (await AirTableClient.GetMapList())
-                        .Where(e => !(selectedSet.PlayedStages.Any(f => f.MapName == e.MapName) && selectedSet.PlayedStages.Any(f => f.Mode == e.Mode)))
-                        .ToList();
-
-                    Stage selectedStage = stages[Globals.Random.Next(0, stages.Count - 1)];
+                    Stage selectedStage = await selectedSet.PickStage();
 
                     selectedSet.PlayedStages.Add(selectedStage);
 
@@ -395,11 +389,7 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     playerSet.MatchNum++;
 
-                    List<Stage> stages = (await AirTableClient.GetMapList())
-                        .Where(e => !(playerSet.PlayedStages.Any(f => f.MapName == e.MapName) && playerSet.PlayedStages.Any(f => f.Mode == e.Mode)))
-                        .ToList();
-
-                    Stage selectedStage = stages[Globals.Random.Next(0, stages.Count - 1)];
+                    Stage selectedStage = await playerSet.PickStage();
 
                     playerSet.PlayedStages.Add(selectedStage);
 

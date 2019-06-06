@@ -42,36 +42,6 @@ namespace SquidDraftLeague.Bot.Commands
 
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        [Command("status"),
-         Summary("Gets the status of a lobby.")]
-        public async Task Status([Summary(
-            "Optional parameter to specify a lobby number. Not required if you are checking a lobby you are in.")]
-            int lobbyNum = 0)
-        {
-            if (!(this.Context.User is IGuildUser user))
-                return;
-
-            if (Lobbies.All(e => e.LobbyNumber != lobbyNum))
-            {
-                Lobby joinedLobby = Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId == user.Id));
-
-                if (joinedLobby == null)
-                {
-                    await this.ReplyAsync(Resources.NotInLobby);
-                    return;
-                }
-
-                EmbedBuilder builder = joinedLobby.GetEmbedBuilder();
-
-                await this.ReplyAsync(embed: builder.Build());
-            }
-            else
-            {
-                Lobby selectedLobby = Lobbies.First(e => e.LobbyNumber == lobbyNum);
-                await this.ReplyAsync(embed: selectedLobby.GetEmbedBuilder().Build());
-            }
-        }
-
         [Command("fill"),
         RequireRole("Developer")]
         public async Task DebugPropagate()

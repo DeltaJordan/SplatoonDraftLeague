@@ -70,6 +70,33 @@ namespace SquidDraftLeague.Language.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Cannot find user with this name. Make sure you use the format `&quot;Username#Discrimator&quot;` e.g. `&quot;DeltaJordan#5497&quot;` and wrap it in quotes to capture any spaces..
+        /// </summary>
+        public static string InvalidReportNameResolve {
+            get {
+                return ResourceManager.GetString("InvalidReportNameResolve", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Please use this format: `&quot;Username#Discrimator&quot;` e.g. `&quot;DeltaJordan#5497&quot;` for reporting a user. Make sure to wrap it in quotes if it has spaces in the name..
+        /// </summary>
+        public static string InvalidReportNameSplit {
+            get {
+                return ResourceManager.GetString("InvalidReportNameSplit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Reporting requires an explaination after the user. Example command: `%report &quot;DeltaJordan#5497&quot; Called me a crayon eater.`.
+        /// </summary>
+        public static string InvalidReportNoReason {
+            get {
+                return ResourceManager.GetString("InvalidReportNoReason", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to You cannot join a lobby if you are already in one!.
         /// </summary>
         public static string JoinLobbyInLobby {
@@ -97,11 +124,29 @@ namespace SquidDraftLeague.Language.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to You are not in a lobby!.
+        ///   Looks up a localized string similar to You are not in a lobby or this is not a set channel!.
         /// </summary>
         public static string NotInLobby {
             get {
                 return ResourceManager.GetString("NotInLobby", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to This command is to be used to report discrepancies during a set. If you want to report a player, use `%report name` in DMs with this bot..
+        /// </summary>
+        public static string ReportErrorResponse {
+            get {
+                return ResourceManager.GetString("ReportErrorResponse", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Moderators have been notified of this report and will get back to you if more info is needed..
+        /// </summary>
+        public static string ReportResponse {
+            get {
+                return ResourceManager.GetString("ReportResponse", resourceCulture);
             }
         }
         

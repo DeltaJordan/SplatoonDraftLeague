@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using SquidDraftLeague.Bot.Commands.Attributes;
 
 namespace SquidDraftLeague.Bot.Commands
 {
@@ -97,11 +98,21 @@ namespace SquidDraftLeague.Bot.Commands
                     string parameters = string.Join("\n", 
                         cmd.Parameters.Select(p => $"{p.Name} - {p.Summary}"));
 
-                    string parametersDescription =
-                        $"{(cmd.Parameters.Any() ? $"__Parameters:__\n{parameters}" : "")}";
+                    if (string.IsNullOrWhiteSpace(parameters))
+                    {
+                        parameters = "None.";
+                    }
+
+                    ExampleCommandAttribute exampleCommand =
+                        (ExampleCommandAttribute) cmd.Attributes.FirstOrDefault(e => e is ExampleCommandAttribute);
+
+                    string exampleUsage = exampleCommand != null ? 
+                            $"\n__Example Usage:__\n{exampleCommand.Example}" : 
+                            "";
 
                     x.Value = $"*{cmd.Summary}*\n" +
-                              $"__Parameters:__\n{parameters}";
+                              $"__Parameters:__\n{parameters}" +
+                              exampleUsage;
                     x.IsInline = false;
                 });
             }

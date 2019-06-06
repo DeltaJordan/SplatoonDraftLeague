@@ -120,6 +120,15 @@
   <data name="BanMessage" xml:space="preserve">
     <value>You currently are banned from participating in SDL. Time remaining for your ban: </value>
   </data>
+  <data name="InvalidReportNameResolve" xml:space="preserve">
+    <value>Cannot find user with this name. Make sure you use the format `"Username#Discrimator"` e.g. `"DeltaJordan#5497"` and wrap it in quotes to capture any spaces.</value>
+  </data>
+  <data name="InvalidReportNameSplit" xml:space="preserve">
+    <value>Please use this format: `"Username#Discrimator"` e.g. `"DeltaJordan#5497"` for reporting a user. Make sure to wrap it in quotes if it has spaces in the name.</value>
+  </data>
+  <data name="InvalidReportNoReason" xml:space="preserve">
+    <value>Reporting requires an explaination after the user. Example command: `%report "DeltaJordan#5497" Called me a crayon eater.`</value>
+  </data>
   <data name="JoinLobbyInLobby" xml:space="preserve">
     <value>You cannot join a lobby if you are already in one!</value>
   </data>
@@ -130,7 +139,13 @@
     <value>There are already the max amount of lobbies! Please wait until another lobby either enters your power level threshold or there are less queuing lobbies.</value>
   </data>
   <data name="NotInLobby" xml:space="preserve">
-    <value>You are not in a lobby!</value>
+    <value>You are not in a lobby or this is not a set channel!</value>
+  </data>
+  <data name="ReportErrorResponse" xml:space="preserve">
+    <value>This command is to be used to report discrepancies during a set. If you want to report a player, use `%report name` in DMs with this bot.</value>
+  </data>
+  <data name="ReportResponse" xml:space="preserve">
+    <value>Moderators have been notified of this report and will get back to you if more info is needed.</value>
   </data>
   <data name="SetsFull" xml:space="preserve">
     <value>Sit tight in {0}! There are too many sets in progress right now. Once a set finishes you will be notified.</value>

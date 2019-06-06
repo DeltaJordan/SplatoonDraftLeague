@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Timers;
 using Discord;
 using Discord.Commands;
@@ -34,6 +35,8 @@ namespace SquidDraftLeague.Bot.Queuing
 
         private Timer draftTimer;
         private ITextChannel timeoutContext;
+
+        private GameMode[] modeOrder = null;
 
         public Set(int setNumber)
         {
@@ -107,7 +110,23 @@ namespace SquidDraftLeague.Bot.Queuing
             this.PlayedStages.Clear();
             this.MatchNum = 0;
 
+            this.modeOrder = null;
+
             this.Closed?.Invoke(null, this);
+        }
+
+        public async Task<Stage> PickStage()
+        {
+            if (this.modeOrder == null)
+            {
+                this.modeOrder = Enum.GetValues(typeof(GameMode)).Cast<GameMode>().Shuffle().ToArray();
+            }
+
+            List<Stage> stages = (await AirTableClient.GetMapList())
+                .Where(e => !(this.PlayedStages.Any(f => f.MapName == e.MapName) && e.Mode == this.modeOrder[(this.MatchNum - 1) % 4]))
+                .ToList();
+
+            return stages[Globals.Random.Next(0, stages.Count - 1)];
         }
 
         public EmbedBuilder GetEmbedBuilder()
