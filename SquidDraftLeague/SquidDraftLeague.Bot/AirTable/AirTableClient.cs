@@ -208,21 +208,24 @@ namespace SquidDraftLeague.Bot.AirTable
         {
             AirtableRecord[] records = await GetAllPlayerRecords();
 
-            return records.Select(e =>
+            return records.Select(playerRecord =>
                 {
-                    SdlPlayer sdlPlayer = new SdlPlayer(context.Guild.GetUser(Convert.ToUInt64(e.Fields["DiscordID"])))
-                    {
-                        PowerLevel = Convert.ToDouble(e.Fields["Power"].ToString()),
-                        SwitchFriendCode = e.Fields.ContainsKey("Friend Code") ? 
-                            e.Fields["Friend Code"].ToString() : string.Empty,
-                        AirtableId = e.Id
-                    };
+                    SdlPlayer sdlPlayer =
+                        new SdlPlayer(context.Guild.GetUser(Convert.ToUInt64(playerRecord.Fields["DiscordID"])))
+                        {
+                            AirtableName = playerRecord.Fields["Name"].ToString(),
+                            PowerLevel = Convert.ToDouble(playerRecord.Fields["Power"].ToString()),
+                            SwitchFriendCode = playerRecord.Fields.ContainsKey("Friend Code")
+                                ? playerRecord.Fields["Friend Code"].ToString()
+                                : string.Empty,
+                            AirtableId = playerRecord.Id
+                        };
 
                     try
                     {
-                        if (e.Fields.ContainsKey("SZ W%"))
+                        if (playerRecord.Fields.ContainsKey("SZ W%"))
                         {
-                            sdlPlayer.WinRates[GameMode.SplatZones] = Convert.ToDouble(e.Fields["SZ W%"]);
+                            sdlPlayer.WinRates[GameMode.SplatZones] = Convert.ToDouble(playerRecord.Fields["SZ W%"]);
                         }
                     }
                     catch (Exception exception)
@@ -232,9 +235,9 @@ namespace SquidDraftLeague.Bot.AirTable
 
                     try
                     {
-                        if (e.Fields.ContainsKey("TC W%"))
+                        if (playerRecord.Fields.ContainsKey("TC W%"))
                         {
-                            sdlPlayer.WinRates[GameMode.TowerControl] = Convert.ToDouble(e.Fields["TC W%"]);
+                            sdlPlayer.WinRates[GameMode.TowerControl] = Convert.ToDouble(playerRecord.Fields["TC W%"]);
                         }
                     }
                     catch (Exception exception)
@@ -244,9 +247,9 @@ namespace SquidDraftLeague.Bot.AirTable
 
                     try
                     {
-                        if (e.Fields.ContainsKey("RM W%"))
+                        if (playerRecord.Fields.ContainsKey("RM W%"))
                         {
-                            sdlPlayer.WinRates[GameMode.Rainmaker] = Convert.ToDouble(e.Fields["RM W%"]);
+                            sdlPlayer.WinRates[GameMode.Rainmaker] = Convert.ToDouble(playerRecord.Fields["RM W%"]);
                         }
                     }
                     catch (Exception exception)
@@ -256,9 +259,9 @@ namespace SquidDraftLeague.Bot.AirTable
 
                     try
                     {
-                        if (e.Fields.ContainsKey("CB W%"))
+                        if (playerRecord.Fields.ContainsKey("CB W%"))
                         {
-                            sdlPlayer.WinRates[GameMode.ClamBlitz] = Convert.ToDouble(e.Fields["CB W%"]);
+                            sdlPlayer.WinRates[GameMode.ClamBlitz] = Convert.ToDouble(playerRecord.Fields["CB W%"]);
                         }
                     }
                     catch (Exception exception)
@@ -279,6 +282,7 @@ namespace SquidDraftLeague.Bot.AirTable
 
                 SdlPlayer sdlPlayer = new SdlPlayer(guildUser)
                 {
+                    AirtableName = playerRecord.Fields["Name"].ToString(),
                     PowerLevel = Convert.ToDouble(playerRecord.Fields["Power"].ToString()),
                     SwitchFriendCode = playerRecord.Fields.ContainsKey("Friend Code") ? 
                         playerRecord.Fields["Friend Code"].ToString() : 

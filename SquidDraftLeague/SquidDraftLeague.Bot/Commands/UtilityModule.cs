@@ -56,128 +56,136 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("profile")]
         public async Task Profile([Remainder] IUser user = null)
         {
-            if (user == null)
+            try
             {
-                user = this.Context.User;
-            }
-
-            SdlPlayer player = await AirTableClient.RetrieveSdlPlayer((IGuildUser) user);
-
-            Font powerFont = Globals.ProfileFontFamily.CreateFont(400);
-            Font nameFont = Globals.ProfileFontFamily.CreateFont(220);
-            Font winRateFont = Globals.ProfileFontFamily.CreateFont(350);
-
-            WebClient webClient = new WebClient();
-            byte[] avatarBytes = await webClient.DownloadDataTaskAsync(user.GetAvatarUrl());
-
-            using (Image<Rgba32> image = Image.Load(Path.Combine(Globals.AppPath, "Data", "profile-template.png")))
-            using (Image<Rgba32> rankImage = Image.Load(Path.Combine(Globals.AppPath, "Data", "XSABC.png")))
-            using (Image<Rgba32> avatarImage = Image.Load(avatarBytes))
-            using (MemoryStream ms = new MemoryStream())
-            {
-                string name = ((IGuildUser)user).Nickname.ToUpper();
-                string powerLevel = Math.Round(player.PowerLevel, 1).ToString(CultureInfo.InvariantCulture);
-
-                SizeF nameTextSize = TextMeasurer.Measure(name, new RendererOptions(nameFont));
-
-                if (nameTextSize.Width > 2365)
+                if (user == null)
                 {
-                    float nameScalingFactor = 2365 / nameTextSize.Width;
-                    nameFont = Globals.ProfileFontFamily.CreateFont(nameFont.Size * nameScalingFactor);
-
-                    nameTextSize = TextMeasurer.Measure(name, new RendererOptions(nameFont));
+                    user = this.Context.User;
                 }
 
-                // Note that the Y values for the fonts are offset by 20. Might need to look into that to see why.
-                float nameTextX = 1150 + (1232 - nameTextSize.Width / 2);
-                float nameTextY = 120 + 20 + (162 - nameTextSize.Height / 2);
+                SdlPlayer player = await AirTableClient.RetrieveSdlPlayer((IGuildUser) user);
 
-                IPathCollection nameTextGlyphs = TextBuilder.GenerateGlyphs(name,
-                    new PointF(nameTextX, nameTextY), new RendererOptions(nameFont));
+                Font powerFont = Globals.ProfileFontFamily.CreateFont(400);
+                Font nameFont = Globals.ProfileFontFamily.CreateFont(220);
+                Font winRateFont = Globals.ProfileFontFamily.CreateFont(350);
 
-                SizeF powerTextSize = TextMeasurer.Measure(powerLevel,
-                    new RendererOptions(powerFont));
+                WebClient webClient = new WebClient();
+                byte[] avatarBytes = await webClient.DownloadDataTaskAsync(user.GetAvatarUrl());
 
-                float powerScalingFactor = (687 - 100) / powerTextSize.Height;
-                powerFont = Globals.ProfileFontFamily.CreateFont(powerFont.Size * powerScalingFactor);
-                powerTextSize = TextMeasurer.Measure(powerLevel,
-                    new RendererOptions(powerFont));
-
-                float powerTextX = 1150 + (1232 - powerTextSize.Width / 2);
-                float powerTextY = 450 + 20 + (342 - powerTextSize.Height / 2);
-
-                IPathCollection powerTextGlyphs = TextBuilder.GenerateGlyphs(powerLevel,
-                    new PointF(powerTextX, powerTextY), new RendererOptions(powerFont));
-
-                SizeF switchCodeSize = TextMeasurer.Measure(player.SwitchFriendCode, new RendererOptions(nameFont));
-
-                float switchCodeX = (float) image.Width / 2 - switchCodeSize.Width / 2;
-                float switchCodeY = 2685 + 20 + (190 - switchCodeSize.Height / 2);
-
-                IPathCollection switchCodeGlyphs = TextBuilder.GenerateGlyphs(player.SwitchFriendCode,
-                    new PointF(switchCodeX, switchCodeY), new RendererOptions(nameFont));
-
-                IPathCollection splatZonesGlyphs = TextBuilder.GenerateGlyphs(
-                    $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(1345, 1830),
-                    new RendererOptions(winRateFont));
-
-                IPathCollection rainmakerGlyphs = TextBuilder.GenerateGlyphs(
-                    $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(1345, 2340),
-                    new RendererOptions(winRateFont));
-
-                IPathCollection towerControlGlyphs = TextBuilder.GenerateGlyphs(
-                    $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(3455, 2340),
-                    new RendererOptions(winRateFont));
-
-                IPathCollection clamBlitzGlyphs = TextBuilder.GenerateGlyphs(
-                    $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(3455, 1830),
-                    new RendererOptions(winRateFont));
-
-                TextGraphicsOptions textGraphicsOptions = new TextGraphicsOptions(true);
-
-                int rankCropY = 0;
-
-                if (player.PowerLevel < 1200)
+                using (Image<Rgba32> image = Image.Load(Path.Combine(Globals.AppPath, "Data", "profile-template.png")))
+                using (Image<Rgba32> rankImage = Image.Load(Path.Combine(Globals.AppPath, "Data", "XSABC.png")))
+                using (Image<Rgba32> avatarImage = Image.Load(avatarBytes))
+                using (MemoryStream ms = new MemoryStream())
                 {
+                    string name = player.AirtableName;
+                    string powerLevel = Math.Round(player.PowerLevel, 1).ToString(CultureInfo.InvariantCulture);
+
+                    SizeF nameTextSize = TextMeasurer.Measure(name, new RendererOptions(nameFont));
+
+                    if (nameTextSize.Width > 2365)
+                    {
+                        float nameScalingFactor = 2365 / nameTextSize.Width;
+                        nameFont = Globals.ProfileFontFamily.CreateFont(nameFont.Size * nameScalingFactor);
+
+                        nameTextSize = TextMeasurer.Measure(name, new RendererOptions(nameFont));
+                    }
+
+                    // Note that the Y values for the fonts are offset by 20. Might need to look into that to see why.
+                    float nameTextX = 1150 + (1232 - nameTextSize.Width / 2);
+                    float nameTextY = 120 + 20 + (162 - nameTextSize.Height / 2);
+
+                    IPathCollection nameTextGlyphs = TextBuilder.GenerateGlyphs(name,
+                        new PointF(nameTextX, nameTextY), new RendererOptions(nameFont));
+
+                    SizeF powerTextSize = TextMeasurer.Measure(powerLevel,
+                        new RendererOptions(powerFont));
+
+                    float powerScalingFactor = (687 - 100) / powerTextSize.Height;
+                    powerFont = Globals.ProfileFontFamily.CreateFont(powerFont.Size * powerScalingFactor);
+                    powerTextSize = TextMeasurer.Measure(powerLevel,
+                        new RendererOptions(powerFont));
+
+                    float powerTextX = 1150 + (1232 - powerTextSize.Width / 2);
+                    float powerTextY = 450 + 20 + (342 - powerTextSize.Height / 2);
+
+                    IPathCollection powerTextGlyphs = TextBuilder.GenerateGlyphs(powerLevel,
+                        new PointF(powerTextX, powerTextY), new RendererOptions(powerFont));
+
+                    SizeF switchCodeSize = TextMeasurer.Measure(player.SwitchFriendCode, new RendererOptions(nameFont));
+
+                    float switchCodeX = (float) image.Width / 2 - switchCodeSize.Width / 2;
+                    float switchCodeY = 2685 + 20 + (190 - switchCodeSize.Height / 2);
+
+                    IPathCollection switchCodeGlyphs = TextBuilder.GenerateGlyphs(player.SwitchFriendCode,
+                        new PointF(switchCodeX, switchCodeY), new RendererOptions(nameFont));
+
+                    IPathCollection splatZonesGlyphs = TextBuilder.GenerateGlyphs(
+                        $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(1345, 1830),
+                        new RendererOptions(winRateFont));
+
+                    IPathCollection rainmakerGlyphs = TextBuilder.GenerateGlyphs(
+                        $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(1345, 2340),
+                        new RendererOptions(winRateFont));
+
+                    IPathCollection towerControlGlyphs = TextBuilder.GenerateGlyphs(
+                        $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(3455, 2340),
+                        new RendererOptions(winRateFont));
+
+                    IPathCollection clamBlitzGlyphs = TextBuilder.GenerateGlyphs(
+                        $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(3455, 1830),
+                        new RendererOptions(winRateFont));
+
+                    TextGraphicsOptions textGraphicsOptions = new TextGraphicsOptions(true);
+
+                    int rankCropY = 0;
+
+                    if (player.PowerLevel < 1200)
+                    {
+                        rankImage.Mutate(e => e
+                            .Fill(Rgba32.Black));
+                    }
+                    else if (player.PowerLevel > 2200)
+                    {
+                        rankCropY = 0;
+                    }
+                    else
+                    {
+                        rankCropY = rankImage.Height - ((int) player.PowerLevel - 1000) / 200 * 500;
+                    }
+
                     rankImage.Mutate(e => e
-                        .Fill(Rgba32.Black));
+                        .Crop(new Rectangle(0, rankCropY, 500, 500))
+                        .Resize(new Size(868, 868)));
+
+                    avatarImage.Mutate(e => e
+                        .Resize(new Size(856, 856)));
+
+                    image.Mutate(e => e
+                        .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.White, powerTextGlyphs)
+                        .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, nameTextGlyphs)
+                        .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, switchCodeGlyphs)
+                        .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, splatZonesGlyphs)
+                        .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, rainmakerGlyphs)
+                        .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, towerControlGlyphs)
+                        .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, clamBlitzGlyphs)
+                        .DrawImage(avatarImage, new Point(128, 125), 1)
+                        .DrawImage(rankImage, new Point(3763, 116), 1));
+
+                    image.SaveAsPng(ms);
+
+                    using (MemoryStream memory = new MemoryStream(ms.GetBuffer()))
+                    {
+                        await this.Context.Channel.SendFileAsync(memory, "profile.png");
+                    }
                 }
-                else if (player.PowerLevel > 2200)
-                {
-                    rankCropY = 0;
-                }
-                else
-                {
-                    rankCropY = rankImage.Height - ((int) player.PowerLevel - 1000) / 200 * 500;
-                }
 
-                rankImage.Mutate(e => e
-                    .Crop(new Rectangle(0, rankCropY, 500, 500))
-                    .Resize(new Size(868, 868)));
-
-                avatarImage.Mutate(e => e
-                    .Resize(new Size(856, 856)));
-
-                image.Mutate(e => e
-                    .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.White, powerTextGlyphs)
-                    .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, nameTextGlyphs)
-                    .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, switchCodeGlyphs)
-                    .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, splatZonesGlyphs)
-                    .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, rainmakerGlyphs)
-                    .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, towerControlGlyphs)
-                    .Fill((GraphicsOptions) textGraphicsOptions, Rgba32.Black, clamBlitzGlyphs)
-                    .DrawImage(avatarImage, new Point(128, 125), 1)
-                    .DrawImage(rankImage, new Point(3763, 116), 1));
-
-                image.SaveAsPng(ms);
-
-                using (MemoryStream memory = new MemoryStream(ms.GetBuffer()))
-                {
-                    await this.Context.Channel.SendFileAsync(memory, "profile.png");
-                }
+                Configuration.Default.MemoryAllocator.ReleaseRetainedResources();
             }
-
-            Configuration.Default.MemoryAllocator.ReleaseRetainedResources();
+            catch (Exception e)
+            {
+                Logger.Error(e);
+                throw;
+            }
         }
 
         [Command("stage"),
@@ -203,7 +211,10 @@ namespace SquidDraftLeague.Bot.Commands
          Summary("Measures latency, probably inaccurate and is mainly to check the bot's status")]
         public async Task Ping()
         {
-            await this.ReplyAsync($"Pong! ({(DateTimeOffset.Now - this.Context.Message.Timestamp).Milliseconds}ms)");
+            IUserMessage message = await this.ReplyAsync("Ping?");
+            await message.ModifyAsync(e =>
+                e.Content =
+                    $"Pong! ({(message.CreatedAt - this.Context.Message.CreatedAt).Milliseconds}ms)");
         }
 
         [Command("id"),
@@ -242,13 +253,15 @@ namespace SquidDraftLeague.Bot.Commands
         }
 
         [Command("eval"),
-        Summary("Warning! Dangerous command, do not use unless you know what you're doing."),
-        RequireRole("Developer")]
+        Summary("Warning! Dangerous command, do not use unless you know what you're doing.")]
         public async Task Eval([Remainder] string command)
         {
-            command = string.Join("\n", command.Split('\n').Skip(1).Take(command.Split('\n').Skip(1).Count() - 1));
+            if (this.Context.User.Id != 228019100008316948)
+            {
+                return;
+            }
 
-            Console.WriteLine(command);
+            command = string.Join("\n", command.Split('\n').Skip(1).Take(command.Split('\n').Skip(1).Count() - 1));
 
             ScriptRunner<object> script;
 
@@ -260,8 +273,8 @@ namespace SquidDraftLeague.Bot.Commands
                                     typeof(Regex).GetTypeInfo().Assembly, typeof(Task).GetTypeInfo().Assembly, typeof(CommandContext).GetTypeInfo().Assembly,
                                     typeof(MessageActivity).GetTypeInfo().Assembly, typeof(Settings).GetTypeInfo().Assembly)
                     .WithImports("System", "System.Collections.Generic", "System.Linq", "System.Reflection", "System.Text",
-                                 "System.Text.RegularExpressions", "System.Threading.Tasks", "Discord.Commands", "Discord", "Plus0_Bot",
-                                 "Plus0_Bot.Commands", "Plus0_Bot.Commands.Preconditions"), typeof(GlobalEvalContext))
+                                 "System.Text.RegularExpressions", "System.Threading.Tasks", "Discord.Commands", "Discord", "SquidDraftLeague.Bot",
+                                 "SquidDraftLeague.Bot.Commands", "SquidDraftLeague.Bot.Commands.Preconditions"), typeof(GlobalEvalContext))
                     .CreateDelegate();
             }
             catch (Exception e)

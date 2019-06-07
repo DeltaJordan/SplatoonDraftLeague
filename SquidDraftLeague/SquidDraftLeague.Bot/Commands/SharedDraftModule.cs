@@ -42,7 +42,7 @@ namespace SquidDraftLeague.Bot.Commands
                 }
             }
 
-            await this.ReplyAsync("\uD83D\uDC4C");
+            await this.ReplyAndDeleteAsync("\uD83D\uDC4C");
         }
 
         [Command("status"),

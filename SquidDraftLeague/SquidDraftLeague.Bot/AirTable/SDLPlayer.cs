@@ -8,6 +8,7 @@ namespace SquidDraftLeague.Bot.AirTable
     public class SdlPlayer : IEquatable<SdlPlayer>
     {
         public string AirtableId { get; set; }
+        public string AirtableName { get; set; }
         public ulong DiscordId { get; }
         public double PowerLevel { get; set; }
         public string SwitchFriendCode { get; set; }
