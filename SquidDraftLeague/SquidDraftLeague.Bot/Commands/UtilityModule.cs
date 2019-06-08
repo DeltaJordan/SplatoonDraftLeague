@@ -119,20 +119,36 @@ namespace SquidDraftLeague.Bot.Commands
                     IPathCollection switchCodeGlyphs = TextBuilder.GenerateGlyphs(player.SwitchFriendCode,
                         new PointF(switchCodeX, switchCodeY), new RendererOptions(nameFont));
 
+                    string splatZonesWr = player.WinRates.ContainsKey(GameMode.SplatZones) ? 
+                        $"{player.WinRates[GameMode.SplatZones]:P0}" :
+                        "N/A";
+
                     IPathCollection splatZonesGlyphs = TextBuilder.GenerateGlyphs(
-                        $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(1345, 1830),
+                        splatZonesWr, new PointF(1345, 1830),
                         new RendererOptions(winRateFont));
+
+                    string rainmakerWr = player.WinRates.ContainsKey(GameMode.Rainmaker) ?
+                        $"{player.WinRates[GameMode.Rainmaker]:P0}" :
+                        "N/A";
 
                     IPathCollection rainmakerGlyphs = TextBuilder.GenerateGlyphs(
-                        $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(1345, 2340),
+                        rainmakerWr, new PointF(1345, 2340),
                         new RendererOptions(winRateFont));
+
+                    string towerControlWr = player.WinRates.ContainsKey(GameMode.TowerControl) ?
+                        $"{player.WinRates[GameMode.TowerControl]:P0}" :
+                        "N/A";
 
                     IPathCollection towerControlGlyphs = TextBuilder.GenerateGlyphs(
-                        $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(3455, 2340),
+                        towerControlWr, new PointF(3455, 2340),
                         new RendererOptions(winRateFont));
 
+                    string clamBlitzWr = player.WinRates.ContainsKey(GameMode.ClamBlitz) ?
+                        $"{player.WinRates[GameMode.ClamBlitz]:P0}" :
+                        "N/A";
+
                     IPathCollection clamBlitzGlyphs = TextBuilder.GenerateGlyphs(
-                        $"{player.WinRates[GameMode.SplatZones]:P0}", new PointF(3455, 1830),
+                        clamBlitzWr, new PointF(3455, 1830),
                         new RendererOptions(winRateFont));
 
                     TextGraphicsOptions textGraphicsOptions = new TextGraphicsOptions(true);

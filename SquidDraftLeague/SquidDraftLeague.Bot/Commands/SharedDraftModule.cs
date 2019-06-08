@@ -23,6 +23,18 @@ namespace SquidDraftLeague.Bot.Commands
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+        [Command("betareg"),
+         RequireUserPermission(GuildPermission.ManageGuild)]
+        public async Task BetaReg()
+        {
+            foreach (SocketGuildUser socketGuildUser in this.Context.Guild.Users.Where(e => e.Roles.Any(f => f.Name == "Beta")))
+            {
+                await AirTableClient.RegisterPlayer(socketGuildUser, 2000);
+            }
+
+            await this.ReplyAsync("OK, this is epic.");
+        }
+
         [Command("cleanup"),
          RequireUserPermission(GuildPermission.ManageGuild)]
         public async Task Cleanup()

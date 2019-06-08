@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AirtableApiClient;
@@ -14,6 +15,29 @@ namespace SquidDraftLeague.Bot.AirTable
     public static class AirTableClient
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
+        public static async Task RegisterPlayer(IUser user, double startingPowerLevel)
+        {
+            using (AirtableBase airtableBase = new AirtableBase(Globals.BotSettings.AppKey, Globals.BotSettings.BaseId))
+            {
+                Fields fields = new Fields();
+                fields.AddField("Name", user.Username);
+                fields.AddField("DiscordID", user.Id.ToString());
+                fields.AddField("Starting Power", startingPowerLevel);
+
+                if ((await GetAllPlayerRecords()).All(e =>
+                    e.Fields["DiscordID"].ToString() != user.Id.ToString(CultureInfo.InvariantCulture)))
+                {
+                    AirtableCreateUpdateReplaceRecordResponse response =
+                        await airtableBase.CreateRecord("Draft Standings", fields, true);
+
+                    if (!response.Success)
+                    {
+                        Console.WriteLine(response.AirtableApiError.ErrorMessage);
+                    }
+                }
+            }
+        }
 
         public static async Task ReportScores(Set set, double gain, double loss)
         {
