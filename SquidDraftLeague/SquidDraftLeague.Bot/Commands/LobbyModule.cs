@@ -121,6 +121,8 @@ namespace SquidDraftLeague.Bot.Commands
                     matchedLobby = Lobbies.First(e => !e.Players.Any());
                 }
 
+                matchedLobby.RenewContext(this.Context);
+
                 if (debugFill)
                 {
                     foreach (SdlPlayer nextPlayer in (await AirTableClient.RetrieveAllSdlPlayers(this.Context)).Where(e => e != sdlPlayer).Take(7))
