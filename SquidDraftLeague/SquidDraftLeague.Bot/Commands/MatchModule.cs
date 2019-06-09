@@ -23,7 +23,7 @@ namespace SquidDraftLeague.Bot.Commands
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         // NOTE This is where we'll have to implement the different match amounts for cups.
-        const int SET_MATCH_NUMBER = 7;
+        private const int SET_MATCH_NUMBER = 7;
 
         public static async Task MoveToMatch(ITextChannel context, Set set)
         {
@@ -448,12 +448,12 @@ namespace SquidDraftLeague.Bot.Commands
             if (winner == "Bravo")
             {
                 powerDifference = 50 * ((Math.Pow(bravoPowerAverage, 12) + Math.Pow(alphaPowerAverage, 12)) /
-                                        (SET_MATCH_NUMBER * Math.Pow(bravoPowerAverage, 12)));
+                                        (playerSet.MatchNum * Math.Pow(bravoPowerAverage, 12)));
             }
             else
             {
                 powerDifference = 50 * ((Math.Pow(alphaPowerAverage, 12) + Math.Pow(bravoPowerAverage, 12)) /
-                      (SET_MATCH_NUMBER * Math.Pow(alphaPowerAverage, 12)));
+                      (playerSet.MatchNum * Math.Pow(alphaPowerAverage, 12)));
             }
 
             await AirTableClient.ReportScores(playerSet, powerDifference, powerDifference);
