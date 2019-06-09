@@ -27,9 +27,16 @@ namespace SquidDraftLeague.Bot.Commands
          RequireUserPermission(GuildPermission.ManageGuild)]
         public async Task BetaReg()
         {
+            IRole playerRole = this.Context.Guild.Roles.First(e => e.Name == "Player");
+
             foreach (SocketGuildUser socketGuildUser in this.Context.Guild.Users.Where(e => e.Roles.Any(f => f.Name == "Beta")))
             {
                 await AirTableClient.RegisterPlayer(socketGuildUser, 2000);
+
+                if (socketGuildUser.Roles.All(e => e.Name != "Player"))
+                {
+                    await socketGuildUser.AddRoleAsync(playerRole);
+                }
             }
 
             await this.ReplyAsync("OK, this is epic.");

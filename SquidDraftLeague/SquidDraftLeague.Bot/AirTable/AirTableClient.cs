@@ -16,6 +16,42 @@ namespace SquidDraftLeague.Bot.AirTable
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+        public static async Task<(int Placement, string Ordinal)> GetPlayerStandings(SdlPlayer player, SocketCommandContext context)
+        {
+            SdlPlayer[] allPlayerRecords = await RetrieveAllSdlPlayers(context);
+            List<SdlPlayer> orderedPlayers = allPlayerRecords.OrderByDescending(e => e.PowerLevel).ToList();
+
+            int placement = orderedPlayers.FindIndex(e => Math.Abs(e.PowerLevel - player.PowerLevel) < 0.2) + 1;
+
+            return (placement, GetOrdinal(placement));
+        }
+
+        private static string GetOrdinal(int num)
+        {
+            if (num <= 0) return num.ToString();
+
+            switch (num % 100)
+            {
+                case 11:
+                case 12:
+                case 13:
+                    return "th";
+            }
+
+            switch (num % 10)
+            {
+                case 1:
+                    return "st";
+                case 2:
+                    return "nd";
+                case 3:
+                    return "rd";
+                default:
+                    return "th";
+            }
+
+        }
+
         public static async Task RegisterPlayer(IUser user, double startingPowerLevel)
         {
             using (AirtableBase airtableBase = new AirtableBase(Globals.BotSettings.AppKey, Globals.BotSettings.BaseId))
@@ -231,6 +267,10 @@ namespace SquidDraftLeague.Bot.AirTable
         public static async Task<SdlPlayer[]> RetrieveAllSdlPlayers(SocketCommandContext context)
         {
             AirtableRecord[] records = await GetAllPlayerRecords();
+
+            records = records
+                .Where(e => context.Guild.Users.Any(f => f.Id == Convert.ToUInt64(e.Fields["DiscordID"])))
+                .ToArray();
 
             return records.Select(playerRecord =>
                 {

@@ -43,7 +43,7 @@ namespace SquidDraftLeague.Bot.Queuing
             this.LastUpdate = DateTime.Now;
 
             this.LobbyNumber = lobbyNumber;
-            this.CurrentDelta = 25;
+            this.CurrentDelta = 100;
 
             this.timer = new Timer {Interval = 300000, AutoReset = true};
             this.timer.Elapsed += this.Timer_Elapsed;
@@ -53,7 +53,7 @@ namespace SquidDraftLeague.Bot.Queuing
         {
             this.players.Clear();
             this.timer.Stop();
-            this.CurrentDelta = 25;
+            this.CurrentDelta = 100;
             this.InStandby = false;
         }
 
@@ -140,14 +140,14 @@ namespace SquidDraftLeague.Bot.Queuing
             if (!this.IsFull)
                 builder.Footer.WithText(
                     $"Next Interval: {nextInterval - DateTime.Now:mm\\:ss} " +
-                    $"Queue Time Remaining: {this.LastUpdate.Add(TimeSpan.FromMinutes(15)) - DateTime.Now:mm\\:ss}");
+                    $"Queue Time Remaining: {this.LastUpdate.Add(TimeSpan.FromMinutes(20)) - DateTime.Now:mm\\:ss}");
 
             return builder;
         }
 
         private async void Timer_Elapsed(object sender, ElapsedEventArgs elapsedEventArgs)
         {
-            if (this.CurrentDelta * 2 >= 125)
+            if (this.CurrentDelta >= 175)
             {
                 await this.commandContext.Channel.SendMessageAsync(
                     $"{string.Join(" ", this.players.Select(f => Program.Client.GetUser(f.DiscordId).Mention))}\n" +
@@ -178,7 +178,7 @@ namespace SquidDraftLeague.Bot.Queuing
             }
 
             string message =
-                $"{setRole.Mention} {(this.CurrentDelta / 25 - 1) * 5} minutes have passed. The threshold has been increased by 25 to {this.CurrentDelta}.";
+                $"{setRole.Mention} {((this.CurrentDelta - 100) / 25 - 2) * 5} minutes have passed. The threshold has been increased by 25 to {this.CurrentDelta}.";
 
             EmbedBuilder builder = this.GetEmbedBuilder();
 
