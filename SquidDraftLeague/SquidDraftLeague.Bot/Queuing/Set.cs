@@ -45,7 +45,7 @@ namespace SquidDraftLeague.Bot.Queuing
             this.AlphaTeam = new SdlTeam();
             this.BravoTeam = new SdlTeam();
 
-            this.draftTimer = new Timer(120000) {AutoReset = false};
+            this.draftTimer = new Timer(60000) {AutoReset = false};
             this.draftTimer.Elapsed += this.DraftTimer_Elapsed;
         }
 
@@ -123,7 +123,7 @@ namespace SquidDraftLeague.Bot.Queuing
             }
 
             List<Stage> stages = (await AirTableClient.GetMapList())
-                .Where(e => !(this.PlayedStages.Any(f => f.MapName == e.MapName) && e.Mode == this.modeOrder[(this.MatchNum - 1) % 4]))
+                .Where(e => this.PlayedStages.All(f => f.MapName != e.MapName) && e.Mode == this.modeOrder[(this.MatchNum - 1) % 4])
                 .ToList();
 
             return stages[Globals.Random.Next(0, stages.Count - 1)];

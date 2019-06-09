@@ -17,6 +17,7 @@ using SixLabors.Primitives;
 using SixLabors.Shapes;
 using SquidDraftLeague.Bot.AirTable;
 using SquidDraftLeague.Bot.Queuing.Data;
+using SquidDraftLeague.Language.Resources;
 using Image = SixLabors.ImageSharp.Image;
 using Path = System.IO.Path;
 
@@ -37,9 +38,22 @@ namespace SquidDraftLeague.Bot.Commands
                     user = this.Context.User;
                 }
 
-                await this.ReplyAsync("Please wait, profiles take a little bit to put together.");
+                SdlPlayer player;
+                try
+                {
+                    player = await AirTableClient.RetrieveSdlPlayer((IGuildUser)user);
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn(e);
 
-                SdlPlayer player = await AirTableClient.RetrieveSdlPlayer((IGuildUser)user);
+                    if (e is SdlAirTableException airTableException)
+                        await airTableException.OutputToDiscordUser(this.Context);
+
+                    throw;
+                }
+
+                IUserMessage message = await this.ReplyAsync("Please wait, profiles take a little bit to put together.");
 
                 Font powerFont = Globals.KarlaFontFamily.CreateFont(160, FontStyle.Bold);
                 Font nameFont = Globals.KarlaFontFamily.CreateFont(80, FontStyle.Bold);
@@ -273,6 +287,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                     using (MemoryStream memory = new MemoryStream(ms.GetBuffer()))
                     {
+                        await message.DeleteAsync();
                         await this.Context.Channel.SendFileAsync(memory, "profile.png");
                     }
                 }
