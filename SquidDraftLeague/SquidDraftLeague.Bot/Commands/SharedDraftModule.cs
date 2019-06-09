@@ -100,6 +100,28 @@ namespace SquidDraftLeague.Bot.Commands
             }
         }
 
+        [Command("close"),
+         RequireUserPermission(GuildPermission.ManageGuild)]
+        public async Task Close(string type, int number)
+        {
+            type = type.ToLower();
+
+            if (type == "set")
+            {
+                SetModule.Sets[number - 1].Close();
+                await this.ReplyAsync($"An admin has closed set number {number}.");
+            }
+            else if (type == "lobby")
+            {
+                LobbyModule.Lobbies[number - 1].Close();
+                await this.ReplyAsync($"An admin has closed lobby number {number}.");
+            }
+            else
+            {
+                await this.ReplyAsync("Please specify \"set\" or \"lobby\".");
+            }
+        }
+
         [Command("report"),
          Summary("Reports a player for any reason. Only to be used in DMs with this bot."),
          ExampleCommand("%report \"DeltaJordan#5497\" Called me a crayon eater.")]
