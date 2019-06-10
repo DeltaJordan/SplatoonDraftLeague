@@ -328,7 +328,7 @@ namespace SquidDraftLeague.Bot.Commands
                 SocketMessage replyMessage;
                 try
                 {
-                    replyMessage = await this.NextMessageAsync(false, true, TimeSpan.FromMinutes(2));
+                    replyMessage = await this.NextMessageAsync(false, true, TimeSpan.FromMinutes(1));
                 }
                 catch (Exception e)
                 {
@@ -447,13 +447,13 @@ namespace SquidDraftLeague.Bot.Commands
             double powerDifference;
             if (winner == "Bravo")
             {
-                powerDifference = 50 * ((Math.Pow(bravoPowerAverage, 12) + Math.Pow(alphaPowerAverage, 12)) /
-                                        (playerSet.MatchNum * Math.Pow(bravoPowerAverage, 12)));
+                powerDifference = 200F / (playerSet.MatchNum *
+                                  (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)));
             }
             else
             {
-                powerDifference = 50 * ((Math.Pow(alphaPowerAverage, 12) + Math.Pow(bravoPowerAverage, 12)) /
-                      (playerSet.MatchNum * Math.Pow(alphaPowerAverage, 12)));
+                powerDifference = 200F / (playerSet.MatchNum *
+                                          (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)));
             }
 
             await AirTableClient.ReportScores(playerSet, powerDifference, powerDifference);

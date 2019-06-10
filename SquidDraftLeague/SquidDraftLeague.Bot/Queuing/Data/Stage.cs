@@ -51,47 +51,33 @@ namespace SquidDraftLeague.Bot.Queuing.Data
             }
         }
 
-        public string GetModeImageLink()
+        public Emote GetModeImageLink()
         {
-            string modeEscaped;
-
             switch (this.Mode)
             {
                 case GameMode.TowerControl:
-                    modeEscaped = "Tower_Control";
-                    break;
+                    return Emote.Parse("<:TC:587708959138381835>");
                 case GameMode.SplatZones:
-                    modeEscaped = "Splat_Zones";
-                    break;
+                    return Emote.Parse("<:SZ:587708958962221071>");
                 case GameMode.Rainmaker:
-                    modeEscaped = "Rainmaker";
-                    break;
+                    return Emote.Parse("<:RM:587708959142707270>");
                 case GameMode.ClamBlitz:
-                    modeEscaped = "Clam_Blitz";
-                    break;
+                    return Emote.Parse("<:CB:587708958689722369>");
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-            WebClient client = new WebClient();
-            HtmlDocument document = new HtmlDocument();
-            document.Load(client.OpenRead($"https://splatoonwiki.org/wiki/File:Mode_Icon_{modeEscaped}.png"));
-            HtmlNode selectNode = document.DocumentNode.SelectSingleNode("//a[contains(@class, 'internal')]");
-            string imageUrl = "https:" + selectNode.Attributes["href"].Value;
-            return imageUrl;
         }
 
         public EmbedBuilder GetEmbedBuilder(string title = null)
         {
             EmbedBuilder embedBuilder = new EmbedBuilder
             {
-                Title = title ?? $"{this.GetModeName()} on {this.MapName}",
-                ImageUrl = this.GetMapImageLink()
+                Title = title ?? $"{this.GetModeName()} on {this.MapName}"
             };
 
             embedBuilder.WithFooter(e =>
             {
-                e.IconUrl = this.GetModeImageLink();
+                e.IconUrl = this.GetModeImageLink().Url;
                 e.Text = this.GetModeName();
             });
 
