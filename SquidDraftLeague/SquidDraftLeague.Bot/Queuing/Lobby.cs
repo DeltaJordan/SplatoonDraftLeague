@@ -178,7 +178,7 @@ namespace SquidDraftLeague.Bot.Queuing
             }
 
             string message =
-                $"{setRole.Mention} {((this.CurrentDelta - 100) / 25 - 2) * 5} minutes have passed. The threshold has been increased by 25 to {this.CurrentDelta}.";
+                $"{setRole.Mention} {((this.CurrentDelta - 100) / 25) * 5} minutes have passed. The threshold has been increased by 25 to {this.CurrentDelta}.";
 
             EmbedBuilder builder = this.GetEmbedBuilder();
 

@@ -142,34 +142,36 @@ namespace SquidDraftLeague.Bot.Commands
                         return;
                     }
 
-                    Set newMatch = SetModule.Sets.First(e => !e.AllPlayers.Any());
-                    newMatch.Closed += NewMatch_Closed;
-                    newMatch.MoveLobbyToSet(matchedLobby);
+                    Set newSet = SetModule.Sets.First(e => !e.AllPlayers.Any());
+                    newSet.Closed += NewMatch_Closed;
+                    newSet.MoveLobbyToSet(matchedLobby);
                     matchedLobby.Close();
 
                     SocketRole setRole =
-                        this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({newMatch.SetNumber})");
+                        this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({newSet.SetNumber})");
                     SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
 
                     if (setRole == null)
                     {
                         await this.ReplyAsync(
-                            $"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({newMatch.SetNumber})\".");
+                            $"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({newSet.SetNumber})\".");
                         return;
                     }
 
-                    foreach (SdlPlayer setPlayer in newMatch.AllPlayers)
+                    foreach (SdlPlayer setPlayer in newSet.AllPlayers)
                     {
                         await this.Context.Guild.GetUser(setPlayer.DiscordId).AddRoleAsync(setRole);
                     }
 
-                    Console.Write(newMatch.BravoTeam.Captain.DiscordId);
+                    await this.ReplyAsync($"Lobby filled! Please move to <#{SetChannels[newSet.SetNumber]}>.");
 
-                    RestUserMessage lastMessage = await this.Context.Guild.GetTextChannel(SetChannels[newMatch.SetNumber - 1]).SendMessageAsync(
-                        $"Welcome to set #{newMatch.SetNumber}! To begin, {this.Context.Guild.GetUser(newMatch.BravoTeam.Captain.DiscordId).Mention} will have two minutes to pick a player using `%pick [player]`.",
-                        embed: newMatch.GetEmbedBuilder().Build());
+                    await setRole.ModifyAsync(e => e.Mentionable = true);
+                    RestUserMessage lastMessage = await this.Context.Guild.GetTextChannel(SetChannels[newSet.SetNumber - 1]).SendMessageAsync(
+                        $"{setRole.Mention} Welcome to set #{newSet.SetNumber}! To begin, {this.Context.Guild.GetUser(newSet.BravoTeam.Captain.DiscordId).Mention} will have one minute to pick a player using `%pick [player]`.",
+                        embed: newSet.GetEmbedBuilder().Build());
+                    await setRole.ModifyAsync(e => e.Mentionable = false);
 
-                    newMatch.SetupTimeout(this.Context.Guild.GetTextChannel(SetChannels[newMatch.SetNumber - 1]));
+                    newSet.SetupTimeout(this.Context.Guild.GetTextChannel(SetChannels[newSet.SetNumber - 1]));
                 }
                 else
                 {
