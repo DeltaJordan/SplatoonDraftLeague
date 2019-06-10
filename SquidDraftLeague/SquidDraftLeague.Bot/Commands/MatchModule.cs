@@ -74,9 +74,9 @@ namespace SquidDraftLeague.Bot.Commands
             await context.SendMessageAsync("Good luck both teams on their matches! :)");
         }
 
-        [Command("report"),
+        [Command("dispute"),
          Summary("Reports a discrepancy in a set to moderators.")]
-        public async Task Report()
+        public async Task Dispute()
         {
             Set playerSet =
                 SetModule.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == this.Context.User.Id));
@@ -89,7 +89,9 @@ namespace SquidDraftLeague.Bot.Commands
                 return;
             }
 
-            await this.ReplyAsync($"{modRole.Mention} A dispute has been opened by {this.Context.User.Mention}!");
+            await this.ReplyAsync($"{modRole.Mention} A dispute has been opened by {this.Context.User.Mention}!"+
+                                  $"To resolve the error, use `%resolve` and follow the resulting instructions. " +
+                                  $"Otherwise, use `%resolve deny` to continue reporting the current score.");
 
             playerSet.Locked = true;
         }
@@ -131,8 +133,6 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await this.ReplyAsync("The report has been resolved by a moderator. This is a final decision. Please continue with the set.");
 
-                playerSet.MatchNum++;
-
                 Stage selectedRandomStage = await playerSet.PickStage();
 
                 playerSet.PlayedStages.Add(selectedRandomStage);
@@ -155,6 +155,8 @@ namespace SquidDraftLeague.Bot.Commands
 
                 return;
             }
+
+            playerSet.MatchNum--;
 
             playerSet.ResolveMode = playerSet.MatchNum;
 
@@ -223,9 +225,9 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     await this.ReplyAsync("Resolved all issues! Teams, continue with your matches.");
 
-                    Stage selectedStage = await selectedSet.PickStage();
+                    selectedSet.MatchNum++;
 
-                    selectedSet.PlayedStages.Add(selectedStage);
+                    Stage selectedStage = selectedSet.PlayedStages[selectedSet.MatchNum - 1];
 
                     await this.ReplyAsync(embed: selectedStage
                         .GetEmbedBuilder($"Match {selectedSet.MatchNum} of 7: {selectedStage.MapName}")
@@ -246,9 +248,9 @@ namespace SquidDraftLeague.Bot.Commands
             }
             else
             {
-                Stage selectedStage = selectedSet.PlayedStages[selectedSet.MatchNum - 1];
+                Stage selectedStage = selectedSet.PlayedStages[selectedSet.MatchNum];
                 await this.ReplyAsync("Moderator, use `%overwrite [Team]` to select the winner for this map.",
-                    embed: selectedStage.GetEmbedBuilder($"Match {selectedSet.MatchNum} of 7: {selectedStage.MapName}")
+                    embed: selectedStage.GetEmbedBuilder($"Match {selectedSet.MatchNum + 1} of 7: {selectedStage.MapName}")
                         .AddField(e =>
                         {
                             e.Name = "Alpha Team's Score";
@@ -376,7 +378,7 @@ namespace SquidDraftLeague.Bot.Commands
                     {
                         await this.ReplyAsync($"{modRole.Mention} issue reported by {replyMessage.Author.Mention}. " +
                                               $"To resolve the error, use `%resolve` and follow the resulting instructions." +
-                                              $"Otherwise, use `%resolve deny` to continue reporting the current score.");
+                                              $" Otherwise, use `%resolve deny` to continue reporting the current score.");
                         return;
                     }
 
