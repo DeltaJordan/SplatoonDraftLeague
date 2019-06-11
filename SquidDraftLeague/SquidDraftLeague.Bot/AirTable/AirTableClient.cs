@@ -16,6 +16,23 @@ namespace SquidDraftLeague.Bot.AirTable
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+        public static async Task SetFriendCodeAsync(SdlPlayer player, string code)
+        {
+            using (AirtableBase airtableBase = new AirtableBase(Globals.BotSettings.AppKey, Globals.BotSettings.BaseId))
+            {
+                Fields fields = new Fields();
+                fields.AddField("Friend Code", code);
+
+                AirtableCreateUpdateReplaceRecordResponse response =
+                    await airtableBase.UpdateRecord("Draft Standings", fields, player.AirtableId, true);
+
+                if (!response.Success)
+                {
+                    Logger.Error(response.AirtableApiError.ErrorMessage);
+                }
+            }
+        }
+
         public static async Task<(int Placement, string Ordinal)> GetPlayerStandings(SdlPlayer player, SocketCommandContext context)
         {
             SdlPlayer[] allPlayerRecords = await RetrieveAllSdlPlayers(context);

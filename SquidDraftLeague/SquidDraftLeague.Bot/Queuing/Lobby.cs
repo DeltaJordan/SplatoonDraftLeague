@@ -34,7 +34,7 @@ namespace SquidDraftLeague.Bot.Queuing
         public ReadOnlyCollection<SdlPlayer> Players => this.players.AsReadOnly();
 
         private SocketCommandContext commandContext;
-        private Timer timer;
+        private readonly Timer timer;
 
         private readonly List<SdlPlayer> players = new List<SdlPlayer>();
 
@@ -178,7 +178,7 @@ namespace SquidDraftLeague.Bot.Queuing
             }
 
             string message =
-                $"{setRole.Mention} {((this.CurrentDelta - 100) / 25) * 5} minutes have passed. The threshold has been increased by 25 to {this.CurrentDelta}.";
+                $"{(this.CurrentDelta - 100) / 25 * 5} minutes have passed for lobby #{this.LobbyNumber}. The threshold has been increased by 25 to {this.CurrentDelta}.";
 
             EmbedBuilder builder = this.GetEmbedBuilder();
 

@@ -308,20 +308,20 @@ namespace SquidDraftLeague.Bot.Commands
                         TimeOfOffense = DateTime.Now
                     });
 
-                    if (joinedSet.AlphaTeam.Players.Any(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id))
+                    if (joinedSet.AlphaTeam.Players.Any(e => e.DiscordId == user.Id))
                     {
                         joinedSet.AlphaTeam.RemovePlayer(
-                            joinedSet.AlphaTeam.Players.First(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+                            joinedSet.AlphaTeam.Players.First(e => e.DiscordId == user.Id));
                     }
-                    else if (joinedSet.BravoTeam.Players.Any(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id))
+                    else if (joinedSet.BravoTeam.Players.Any(e => e.DiscordId == user.Id))
                     {
                         joinedSet.BravoTeam.RemovePlayer(
-                            joinedSet.BravoTeam.Players.First(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+                            joinedSet.BravoTeam.Players.First(e => e.DiscordId == user.Id));
                     }
-                    else if (joinedSet.DraftPlayers.Any(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id))
+                    else if (joinedSet.DraftPlayers.Any(e => e.DiscordId == user.Id))
                     {
                         joinedSet.DraftPlayers.Remove(
-                            joinedSet.DraftPlayers.First(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+                            joinedSet.DraftPlayers.First(e => e.DiscordId == user.Id));
                     }
 
                     File.WriteAllText(penaltyFile, JsonConvert.SerializeObject(record, Formatting.Indented));

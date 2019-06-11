@@ -163,7 +163,7 @@ namespace SquidDraftLeague.Bot.Commands
                         await this.Context.Guild.GetUser(setPlayer.DiscordId).AddRoleAsync(setRole);
                     }
 
-                    await this.ReplyAsync($"Lobby filled! Please move to <#{SetChannels[newSet.SetNumber]}>.");
+                    await this.ReplyAsync($"Lobby filled! Please move to <#{SetChannels[newSet.SetNumber - 1]}>.");
 
                     await setRole.ModifyAsync(e => e.Mentionable = true);
                     RestUserMessage lastMessage = await this.Context.Guild.GetTextChannel(SetChannels[newSet.SetNumber - 1]).SendMessageAsync(

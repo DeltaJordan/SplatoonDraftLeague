@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -299,6 +300,36 @@ namespace SquidDraftLeague.Bot.Commands
                 Logger.Error(e);
                 throw;
             }
+        }
+
+        [Command("fc"),
+         Summary("Adds your friend code to your profile.")]
+        public async Task FriendCode(
+            [Summary("Friend code in the format 0000-0000-0000 or SW-0000-0000-0000")]
+            string code)
+        {
+            code = code.Replace("SW-", string.Empty);
+
+            if (code.Split('-').Length != 3 || code.Split('-').Any(e => !int.TryParse(e, out int _) || e.Length != 4))
+            {
+                await this.ReplyAsync("Please use the format 0000-0000-0000!");
+                return;
+            }
+
+            SdlPlayer player;
+            try
+            {
+                player = await AirTableClient.RetrieveSdlPlayer((IGuildUser) this.Context.User);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            await AirTableClient.SetFriendCodeAsync(player, code);
+
+            await this.ReplyAsync($"Set your friend code to {code}!");
         }
 
         // This method can be seen as an inline implementation of an `IImageProcessor`:
