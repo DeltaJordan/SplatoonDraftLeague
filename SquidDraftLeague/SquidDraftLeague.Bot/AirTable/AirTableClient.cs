@@ -16,6 +16,23 @@ namespace SquidDraftLeague.Bot.AirTable
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+        public static async Task SetRoleAsync(SdlPlayer player, string role)
+        {
+            using (AirtableBase airtableBase = new AirtableBase(Globals.BotSettings.AppKey, Globals.BotSettings.BaseId))
+            {
+                Fields fields = new Fields();
+                fields.AddField("Role", role);
+
+                AirtableCreateUpdateReplaceRecordResponse response =
+                    await airtableBase.UpdateRecord("Draft Standings", fields, player.AirtableId, true);
+
+                if (!response.Success)
+                {
+                    Logger.Error(response.AirtableApiError.ErrorMessage);
+                }
+            }
+        }
+
         public static async Task SetFriendCodeAsync(SdlPlayer player, string code)
         {
             using (AirtableBase airtableBase = new AirtableBase(Globals.BotSettings.AppKey, Globals.BotSettings.BaseId))
@@ -38,7 +55,17 @@ namespace SquidDraftLeague.Bot.AirTable
             SdlPlayer[] allPlayerRecords = await RetrieveAllSdlPlayers(context);
             List<SdlPlayer> orderedPlayers = allPlayerRecords.OrderByDescending(e => e.PowerLevel).ToList();
 
-            int placement = orderedPlayers.FindIndex(e => Math.Abs(e.PowerLevel - player.PowerLevel) < 0.2) + 1;
+            int placement = -1;
+
+            for (int i = 0; i < orderedPlayers.Count; i++)
+            {
+                if (Math.Abs(orderedPlayers[i].PowerLevel - player.PowerLevel) >= 0.1)
+                {
+                    continue;
+                }
+
+                placement = i + 1;
+            }
 
             return (placement, GetOrdinal(placement));
         }
@@ -299,7 +326,10 @@ namespace SquidDraftLeague.Bot.AirTable
                             SwitchFriendCode = playerRecord.Fields.ContainsKey("Friend Code")
                                 ? playerRecord.Fields["Friend Code"].ToString()
                                 : string.Empty,
-                            AirtableId = playerRecord.Id
+                            AirtableId = playerRecord.Id,
+                            Role = playerRecord.Fields.ContainsKey("Role") ?
+                                playerRecord.Fields["Role"].ToString() :
+                                string.Empty
                         };
 
                     try
@@ -368,8 +398,29 @@ namespace SquidDraftLeague.Bot.AirTable
                     SwitchFriendCode = playerRecord.Fields.ContainsKey("Friend Code") ? 
                         playerRecord.Fields["Friend Code"].ToString() : 
                         string.Empty,
-                    AirtableId = playerRecord.Id
+                    AirtableId = playerRecord.Id,
+                    Role = playerRecord.Fields.ContainsKey("Role") ?
+                        playerRecord.Fields["Role"].ToString() :
+                        string.Empty
                 };
+
+
+
+                try
+                {
+                    if (playerRecord.Fields.ContainsKey("W%"))
+                    {
+                        sdlPlayer.OverallWinRate = Convert.ToDouble(playerRecord.Fields["W%"]);
+                    }
+                    else
+                    {
+                        sdlPlayer.OverallWinRate = -1;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn(e);
+                }
 
                 try
                 {

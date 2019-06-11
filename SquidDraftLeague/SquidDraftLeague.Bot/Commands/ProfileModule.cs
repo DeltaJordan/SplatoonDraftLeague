@@ -89,13 +89,25 @@ namespace SquidDraftLeague.Bot.Commands
                     IPathCollection nameTextGlyphs = TextBuilder.GenerateGlyphs(name,
                         new PointF(445, 45), new RendererOptions(nameFont));
 
+                    SizeF powerLevelSize = TextMeasurer.Measure(powerLevel, new RendererOptions(powerFont));
+
+                    float powerYDifference = 0;
+
+                    if (powerLevelSize.Width > 480)
+                    {
+                        float powerScalingFactor = 480 / powerLevelSize.Width;
+                        powerFont = Globals.KarlaFontFamily.CreateFont(powerFont.Size * powerScalingFactor, FontStyle.Bold);
+
+                        powerYDifference = powerLevelSize.Height - TextMeasurer.Measure(powerLevel, new RendererOptions(powerFont)).Height;
+                    }
+
                     IPathCollection powerTextGlyphs = TextBuilder.GenerateGlyphs(powerLevel,
-                        new PointF(445, 110), new RendererOptions(powerFont));
+                        new PointF(445, 110 + powerYDifference), new RendererOptions(powerFont));
 
                     IPathCollection switchCodeGlyphs = TextBuilder.GenerateGlyphs(player.SwitchFriendCode,
                         new PointF(420, 987), new RendererOptions(switchCodeFont));
 
-                    // When centering, it seems everything is off by the same amount.
+                    // When centering, this is for if everything is off by the same amount.
                     const float offset = 0;
 
                     string splatZonesWr = player.WinRates.ContainsKey(GameMode.SplatZones) ?
@@ -142,23 +154,9 @@ namespace SquidDraftLeague.Bot.Commands
                     IPathCollection clamBlitzGlyphs = TextBuilder.GenerateGlyphs(
                         clamBlitzWr, new PointF(cbWrX, 587), new RendererOptions(winRateFont));
 
-                    string overallWrText;
-
-                    if (!player.WinRates.ContainsKey(GameMode.SplatZones) ||
-                        !player.WinRates.ContainsKey(GameMode.TowerControl) ||
-                        !player.WinRates.ContainsKey(GameMode.Rainmaker) ||
-                        !player.WinRates.ContainsKey(GameMode.ClamBlitz))
-                    {
-                        overallWrText = "N/A";
-                    }
-                    else
-                    {
-                        double overallWr =
-                            (player.WinRates[GameMode.SplatZones] + player.WinRates[GameMode.TowerControl] +
-                             player.WinRates[GameMode.Rainmaker] + player.WinRates[GameMode.ClamBlitz]) / 4;
-
-                        overallWrText = $"{overallWr:P0}";
-                    }
+                    string overallWrText = Math.Abs(player.OverallWinRate + 1) < 0.1
+                        ? "N/A"
+                        : $"{player.OverallWinRate:P0}";
 
                     SizeF overallWrSize = TextMeasurer.Measure(overallWrText, new RendererOptions(winRateFont));
 
@@ -191,17 +189,20 @@ namespace SquidDraftLeague.Bot.Commands
                         classText = "4";
                     }
 
+                    SizeF classSize = TextMeasurer.Measure(classText, new RendererOptions(classFont));
+
+                    float classX = 1340 + ((float) rankImage.Width / 2 - classSize.Width / 2);
+
                     IPathCollection classNameGlyphs =
                         TextBuilder.GenerateGlyphs("CLASS", new PointF(1414.32F, 70), new RendererOptions(classNameFont));
 
                     IPathCollection classGlyphs =
-                        TextBuilder.GenerateGlyphs(classText, new PointF(1397.17F, 67.57F),
+                        TextBuilder.GenerateGlyphs(classText, new PointF(classX, 67.57F),
                             new RendererOptions(classFont));
 
                     Rgba32 roleColor;
 
-                    // TODO Pull from airtable.
-                    const string role = "Back";
+                    string role = player.Role;
 
                     switch (role)
                     {
@@ -219,12 +220,14 @@ namespace SquidDraftLeague.Bot.Commands
                             break;
                     }
 
+                    role = role.ToUpper();
+
                     SizeF roleNameSize = TextMeasurer.Measure(role, new RendererOptions(roleFont));
 
                     float roleNameX = (float) roleImage.Width / 2 - roleNameSize.Width / 2;
                     float roleNameY = (float) roleImage.Height / 2 - roleNameSize.Height / 2 - 10;
 
-                    IPathCollection roleGlyphs = TextBuilder.GenerateGlyphs(role.ToUpper(), new PointF(roleNameX, roleNameY),
+                    IPathCollection roleGlyphs = TextBuilder.GenerateGlyphs(role, new PointF(roleNameX, roleNameY),
                         new RendererOptions(roleFont));
 
                     (int placement, string ordinal) = await AirTableClient.GetPlayerStandings(player, this.Context);
@@ -302,6 +305,38 @@ namespace SquidDraftLeague.Bot.Commands
             }
         }
 
+        [Command("setrole"),
+         Summary("Sets the type of playstyle you prefer.")]
+        public async Task SetRole(
+            [Summary("One of three options: front, mid, back.")]
+            string role)
+        {
+            role = role[0].ToString().ToUpper() + string.Join(string.Empty, role.Skip(1));
+
+            SdlPlayer player;
+            try
+            {
+                player = await AirTableClient.RetrieveSdlPlayer((IGuildUser)this.Context.User);
+            }
+            catch (SdlAirTableException e)
+            {
+                await e.OutputToDiscordUser(this.Context);
+                throw;
+            }
+
+            if (role == "Front" || role == "Back" || role == "Mid")
+            {
+                await AirTableClient.SetRoleAsync(player, role);
+            }
+            else
+            {
+                await this.ReplyAsync("You must specify Front, Mid, or Back!");
+                return;
+            }
+
+            await this.ReplyAsync($"Set your role to {role}");
+        }
+
         [Command("fc"),
          Summary("Adds your friend code to your profile.")]
         public async Task FriendCode(
@@ -321,9 +356,9 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 player = await AirTableClient.RetrieveSdlPlayer((IGuildUser) this.Context.User);
             }
-            catch (Exception e)
+            catch (SdlAirTableException e)
             {
-                Console.WriteLine(e);
+                await e.OutputToDiscordUser(this.Context);
                 throw;
             }
 

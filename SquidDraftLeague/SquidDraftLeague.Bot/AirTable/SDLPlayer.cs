@@ -12,8 +12,11 @@ namespace SquidDraftLeague.Bot.AirTable
         public ulong DiscordId { get; }
         public double PowerLevel { get; set; }
         public string SwitchFriendCode { get; set; }
+        public string Role { get; set; }
 
         public readonly Dictionary<GameMode, double> WinRates = new Dictionary<GameMode, double>();
+
+        public double OverallWinRate { get; set; }
 
         public SdlPlayer(IGuildUser user)
         {

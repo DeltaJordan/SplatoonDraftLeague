@@ -178,6 +178,11 @@ namespace SquidDraftLeague.Bot.Commands
                     string message =
                         $"{sdlPlayer.DiscordId.GetGuildUser(this.Context).Mention} has been added to Lobby #{matchedLobby.LobbyNumber}. {8 - matchedLobby.Players.Count} players needed to begin.";
 
+                    if ( matchedLobby.Players.Count == 1)
+                    {
+                        message = "@here A new lobby has been started! " + message;
+                    }
+
                     EmbedBuilder builder = matchedLobby.GetEmbedBuilder();
 
                     await this.ReplyAsync(message, false, builder.Build());
