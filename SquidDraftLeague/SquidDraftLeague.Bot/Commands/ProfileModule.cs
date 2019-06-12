@@ -215,6 +215,9 @@ namespace SquidDraftLeague.Bot.Commands
                         case "Mid":
                             roleColor = Rgba32.FromHex("#61E87B");
                             break;
+                        case "Flex":
+                            roleColor = Rgba32.RebeccaPurple;
+                            break;
                         default:
                             roleColor = Rgba32.Black;
                             break;
@@ -308,7 +311,7 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("setrole"),
          Summary("Sets the type of playstyle you prefer.")]
         public async Task SetRole(
-            [Summary("One of three options: front, mid, back.")]
+            [Summary("One of four options: front, mid, back, flex.")]
             string role)
         {
             role = role[0].ToString().ToUpper() + string.Join(string.Empty, role.Skip(1));
@@ -324,17 +327,17 @@ namespace SquidDraftLeague.Bot.Commands
                 throw;
             }
 
-            if (role == "Front" || role == "Back" || role == "Mid")
+            if (role == "Front" || role == "Back" || role == "Mid" || role == "Flex")
             {
                 await AirTableClient.SetRoleAsync(player, role);
             }
             else
             {
-                await this.ReplyAsync("You must specify Front, Mid, or Back!");
+                await this.ReplyAsync("You must specify Front, Flex, Mid, or Back!");
                 return;
             }
 
-            await this.ReplyAsync($"Set your role to {role}");
+            await this.ReplyAsync($"Your role has been set to {role}.");
         }
 
         [Command("fc"),
