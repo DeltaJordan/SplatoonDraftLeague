@@ -154,7 +154,7 @@
     <value>Please wait while we process your request. If you don't get a reply for more than 10 minutes, please get in contact with SDL staff.</value>
   </data>
   <data name="RegistrationScreenshot" xml:space="preserve">
-    <value>Finally, please **directly upload** a screenshot of your solo queue powers from the last month. **DO NOT** link it as this may cause issues. Be sure to upload the correct image as well as **you may not retry this response**. You can, however, still retry the last response if needed.</value>
+    <value>Finally, please **directly upload** a screenshot of your solo queue powers from the last month. **DO NOT** link it as this may cause issues. Be sure to upload the correct image as well as **you may not retry this response**. You can, however, still retry the last response if needed. If you do not wish to upload a screenshot reply "No". Please note that most likely you will be placed in the lowest seeding class, mainly depending on the team experience you listed in the last question.</value>
   </data>
   <data name="RegistrationTeams" xml:space="preserve">
     <value>Now we will need you to list any competitive teams you have been on within the last 3 months. If there are none, just reply "None" without the quotes.</value>

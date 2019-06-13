@@ -341,8 +341,6 @@ namespace SquidDraftLeague.Bot.Commands
 
                 while (true)
                 {
-                    Console.WriteLine(replyMessage);
-
                     if (replyMessage == null)
                     {
                         await this.ReplyAsync("Times up! Assuming the losing team has accepted their loss.");

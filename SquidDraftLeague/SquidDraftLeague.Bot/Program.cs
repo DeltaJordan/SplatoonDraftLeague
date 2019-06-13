@@ -157,11 +157,11 @@ namespace SquidDraftLeague.Bot
                         }
                     }
 
-                    else if (newUserMessage.Reactions.Select(e => e.Key.Name == "\u2705").Count() > 1)
+                    else if (newUserMessage.Reactions.FirstOrDefault(e => e.Key.Name == "\u2705").Value.ReactionCount > 1)
                     {
                         await newUserMessage.ModifyAsync(e => e.Content = "Approved.");
                     }
-                    else if (newUserMessage.Reactions.Select(e => e.Key.Name == "\u274E").Count() > 1)
+                    else if (newUserMessage.Reactions.FirstOrDefault(e => e.Key.Name == "\u274E").Value.ReactionCount > 1)
                     {
                         await newUserMessage.ModifyAsync(e => e.Content = "Denied.");
                         File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));

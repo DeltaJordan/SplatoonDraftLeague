@@ -45,6 +45,21 @@ namespace SquidDraftLeague.Bot.Commands
                     return;
                 }
 
+                List<ulong> awaitingIds = new List<ulong>();
+
+                string regDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Registrations")).FullName;
+
+                foreach (string file in Directory.EnumerateFiles(regDirectory))
+                {
+                    awaitingIds.Add(Convert.ToUInt64((await File.ReadAllLinesAsync(file))[0]));
+                }
+
+                if (awaitingIds.Contains(user.Id))
+                {
+                    await this.ReplyAsync("You are already are registered or are awaiting registration for SDL!");
+                    return;
+                }
+
                 await this.ReplyAsync(Resources.RegistrationBegin);
                 SocketMessage timeZoneResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
 
@@ -128,6 +143,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await this.ReplyAsync(Resources.RegistrationScreenshot);
                 SocketMessage screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                bool hasScreenshot = true;
 
                 if (screenshotResponse.Content.ToLower() == "retry")
                 {
@@ -140,7 +156,7 @@ namespace SquidDraftLeague.Bot.Commands
                         return;
                     }
 
-                    await this.ReplyAsync($"Your teams has been set to {teamsResponse.Content}.");
+                    await this.ReplyAsync($"Your team(s) have been set to {teamsResponse.Content}.");
 
                     await this.ReplyAsync(Resources.RegistrationTeams);
 
@@ -151,29 +167,42 @@ namespace SquidDraftLeague.Bot.Commands
                         return;
                     }
                 }
-
-                string teams = teamsResponse.Content;
-
-                while (screenshotResponse.Attachments.Count < 0 || screenshotResponse.Attachments.Count > 1)
+                else if (screenshotResponse.Content.ToLower() == "no")
                 {
-                    await this.ReplyAsync("Please only upload **one (1)** image of your solo queue powers from the last month.");
-                    screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
-
-                    if (screenshotResponse == null)
-                    {
-                        await this.ReplyAsync(Resources.RegistrationTimeout);
-                        return;
-                    }
+                    hasScreenshot = false;
                 }
 
-                Attachment screenshotAttachment = screenshotResponse.Attachments.First();
-                string screenshotUrl = screenshotAttachment.Url;
+                string teams = teamsResponse.Content;
+                string screenshotUrl = null;
+
+                if (hasScreenshot)
+                {
+                    while (!screenshotResponse.Attachments.Any() || screenshotResponse.Attachments.Count > 1)
+                    {
+                        await this.ReplyAsync(
+                            "Please only upload **one (1)** image of your solo queue powers from the last month.");
+                        screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+
+                        if (screenshotResponse == null)
+                        {
+                            await this.ReplyAsync(Resources.RegistrationTimeout);
+                            return;
+                        }
+                    }
+
+                    Attachment screenshotAttachment = screenshotResponse.Attachments.First();
+                    screenshotUrl = screenshotAttachment.Url;
+                }
 
                 EmbedBuilder builder = new EmbedBuilder
                 {
-                    Description = $"**{this.Context.User.Mention} ({this.Context.User.Username}#{this.Context.User.Discriminator}) has applied for registration.**",
-                    ImageUrl = screenshotUrl
+                    Description = $"**{this.Context.User.Mention} ({this.Context.User.Username}#{this.Context.User.Discriminator}) has applied for registration.**"
                 };
+
+                if (hasScreenshot)
+                {
+                    builder.ImageUrl = screenshotUrl;
+                }
 
                 builder.AddField(e =>
                 {
@@ -208,8 +237,6 @@ namespace SquidDraftLeague.Bot.Commands
                 await userMessage.AddReactionAsync(new Emoji("\u0032\u20E3")); // Two
                 await userMessage.AddReactionAsync(new Emoji("\u0033\u20E3")); // Three
                 await userMessage.AddReactionAsync(new Emoji("\u0034\u20E3")); // Four
-
-                string regDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Registrations")).FullName;
 
                 await File.WriteAllTextAsync(Path.Combine(regDirectory, $"{userMessage.Id}"), $"{this.Context.User.Id}\n{nickname}");
 

@@ -359,10 +359,14 @@ namespace SquidDraftLeague.Bot.Commands
 
                     await Task.Delay(TimeSpan.FromSeconds(30));
 
+                    List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
+
                     foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
                     {
-                        await movedLobbyPlayer.DiscordId.GetGuildUser(this.Context).RemoveRoleAsync(setRole);
+                        await movedLobbyPlayer.DiscordId.GetGuildUser(this.Context).RemoveRolesAsync(roleRemovalList);
                     }
+
+                    await ((IGuildUser) this.Context.User).RemoveRolesAsync(roleRemovalList);
 
                     await ((ITextChannel) this.Context.Client.GetChannel(572536965833162753))
                         .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.", 
