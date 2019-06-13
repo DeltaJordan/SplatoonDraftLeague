@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using Discord.Rest;
+using Discord.WebSocket;
 using NLog;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
@@ -28,6 +30,197 @@ namespace SquidDraftLeague.Bot.Commands
     public class ProfileModule : InteractiveBase
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
+        [Command("regapply"),
+         RequireContext(ContextType.DM)]
+        public async Task ApplyForRegistration()
+        {
+            try
+            {
+                IUser user = this.Context.User;
+
+                if ((await AirTableClient.RetrieveAllSdlPlayers(this.Context)).Any(e => e.DiscordId == user.Id))
+                {
+                    await this.ReplyAsync("You are already are registered or are awaiting registration for SDL!");
+                    return;
+                }
+
+                await this.ReplyAsync(Resources.RegistrationBegin);
+                SocketMessage timeZoneResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+
+                if (timeZoneResponse == null)
+                {
+                    await this.ReplyAsync(Resources.RegistrationTimeout);
+                    return;
+                }
+
+                await this.ReplyAsync($"Your timezone has been set to {timeZoneResponse.Content}. " +
+                                      $"By the way, at any time you may reply \"retry\" to reenter the last response. " +
+                                      $"Please note that you only get one chance to retry a response!");
+
+                await this.ReplyAsync(Resources.RegistrationNickname);
+                SocketMessage nicknameResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+
+                if (nicknameResponse == null)
+                {
+                    await this.ReplyAsync(Resources.RegistrationTimeout);
+                    return;
+                }
+
+                if (nicknameResponse.Content.ToLower() == "retry")
+                {
+                    await this.ReplyAsync("Please restate your timezone.");
+                    timeZoneResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+
+                    if (timeZoneResponse == null)
+                    {
+                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        return;
+                    }
+
+                    await this.ReplyAsync($"Your timezone has been set to {timeZoneResponse.Content}.");
+
+                    await this.ReplyAsync(Resources.RegistrationNickname);
+
+                    nicknameResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                    if (nicknameResponse == null)
+                    {
+                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        return;
+                    }
+                }
+
+                string timezone = timeZoneResponse.Content;
+
+                await this.ReplyAsync(Resources.RegistrationTeams);
+                SocketMessage teamsResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+
+                if (teamsResponse == null)
+                {
+                    await this.ReplyAsync(Resources.RegistrationTimeout);
+                    return;
+                }
+
+                if (teamsResponse.Content.ToLower() == "retry")
+                {
+                    await this.ReplyAsync("Please restate your nickname.");
+                    nicknameResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+
+                    if (nicknameResponse == null)
+                    {
+                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        return;
+                    }
+
+                    await this.ReplyAsync($"Your nickname has been set to {nicknameResponse.Content}.");
+
+                    await this.ReplyAsync(Resources.RegistrationTeams);
+
+                    teamsResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                    if (teamsResponse == null)
+                    {
+                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        return;
+                    }
+                }
+
+                string nickname = nicknameResponse.Content;
+
+                await this.ReplyAsync(Resources.RegistrationScreenshot);
+                SocketMessage screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+
+                if (screenshotResponse.Content.ToLower() == "retry")
+                {
+                    await this.ReplyAsync("Please restate your teams.");
+                    teamsResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+
+                    if (teamsResponse == null)
+                    {
+                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        return;
+                    }
+
+                    await this.ReplyAsync($"Your teams has been set to {teamsResponse.Content}.");
+
+                    await this.ReplyAsync(Resources.RegistrationTeams);
+
+                    screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                    if (screenshotResponse == null)
+                    {
+                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        return;
+                    }
+                }
+
+                string teams = teamsResponse.Content;
+
+                while (screenshotResponse.Attachments.Count < 0 || screenshotResponse.Attachments.Count > 1)
+                {
+                    await this.ReplyAsync("Please only upload **one (1)** image of your solo queue powers from the last month.");
+                    screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+
+                    if (screenshotResponse == null)
+                    {
+                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        return;
+                    }
+                }
+
+                Attachment screenshotAttachment = screenshotResponse.Attachments.First();
+                string screenshotUrl = screenshotAttachment.Url;
+
+                EmbedBuilder builder = new EmbedBuilder
+                {
+                    Description = $"**{this.Context.User.Mention} ({this.Context.User.Username}#{this.Context.User.Discriminator}) has applied for registration.**",
+                    ImageUrl = screenshotUrl
+                };
+
+                builder.AddField(e =>
+                {
+                    e.Name = "Time Zone";
+                    e.Value = timezone;
+                    e.IsInline = true;
+                });
+
+                builder.AddField(e =>
+                {
+                    e.Name = "Nickname";
+                    e.Value = nickname;
+                    e.IsInline = true;
+                });
+
+                builder.AddField(e =>
+                {
+                    e.Name = "Competitive Team Experience";
+                    e.Value = teams;
+                    e.IsInline = true;
+                });
+
+                await this.ReplyAsync(Resources.RegistrationProcessing);
+
+                SocketTextChannel regChannel = (SocketTextChannel) Program.Client.GetChannel(588806681303973931);
+
+                RestUserMessage userMessage = await regChannel.SendMessageAsync("Needs Approval.", embed: builder.Build());
+
+                await userMessage.AddReactionAsync(new Emoji("\u2705")); // Check mark
+                await userMessage.AddReactionAsync(new Emoji("\u274E")); // X
+                await userMessage.AddReactionAsync(new Emoji("\u0031\u20E3")); // One
+                await userMessage.AddReactionAsync(new Emoji("\u0032\u20E3")); // Two
+                await userMessage.AddReactionAsync(new Emoji("\u0033\u20E3")); // Three
+                await userMessage.AddReactionAsync(new Emoji("\u0034\u20E3")); // Four
+
+                string regDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Registrations")).FullName;
+
+                await File.WriteAllTextAsync(Path.Combine(regDirectory, $"{userMessage.Id}"), $"{this.Context.User.Id}\n{nickname}");
+
+                await this.ReplyAsync(Resources.RegistrationComplete);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
 
         [Command("profile")]
         public async Task Profile([Remainder] IUser user = null)

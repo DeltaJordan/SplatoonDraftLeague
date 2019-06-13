@@ -52,14 +52,17 @@ namespace SquidDraftLeague.Bot.AirTable
 
         public static async Task<(int Placement, string Ordinal)> GetPlayerStandings(SdlPlayer player, SocketCommandContext context)
         {
-            SdlPlayer[] allPlayerRecords = await RetrieveAllSdlPlayers(context);
-            List<SdlPlayer> orderedPlayers = allPlayerRecords.OrderByDescending(e => e.PowerLevel).ToList();
+            AirtableRecord[] allPlayerRecords = await GetAllPlayerRecords();
+            List<double> orderedPlayers = allPlayerRecords
+                .OrderByDescending(e => Convert.ToDouble(e.Fields["Power"].ToString()))
+                .Select(e => Convert.ToDouble(e.Fields["Power"].ToString()))
+                .ToList();
 
             int placement = -1;
 
             for (int i = 0; i < orderedPlayers.Count; i++)
             {
-                if (Math.Abs(orderedPlayers[i].PowerLevel - player.PowerLevel) >= 0.1)
+                if (Math.Abs(orderedPlayers[i] - player.PowerLevel) >= 0.1)
                 {
                     continue;
                 }
@@ -96,12 +99,17 @@ namespace SquidDraftLeague.Bot.AirTable
 
         }
 
-        public static async Task RegisterPlayer(IUser user, double startingPowerLevel)
+        public static async Task RegisterPlayer(IUser user, double startingPowerLevel, string nickname = null)
         {
+            if (nickname == null)
+            {
+                nickname = user.Username;
+            }
+
             using (AirtableBase airtableBase = new AirtableBase(Globals.BotSettings.AppKey, Globals.BotSettings.BaseId))
             {
                 Fields fields = new Fields();
-                fields.AddField("Name", user.Username);
+                fields.AddField("Name", nickname);
                 fields.AddField("DiscordID", user.Id.ToString());
                 fields.AddField("Starting Power", startingPowerLevel);
 
@@ -313,13 +321,13 @@ namespace SquidDraftLeague.Bot.AirTable
             AirtableRecord[] records = await GetAllPlayerRecords();
 
             records = records
-                .Where(e => context.Guild.Users.Any(f => f.Id == Convert.ToUInt64(e.Fields["DiscordID"])))
+                .Where(e => Program.Client.GetGuild(570743985530863649).Users.Any(f => f.Id == Convert.ToUInt64(e.Fields["DiscordID"])))
                 .ToArray();
 
             return records.Select(playerRecord =>
                 {
                     SdlPlayer sdlPlayer =
-                        new SdlPlayer(context.Guild.GetUser(Convert.ToUInt64(playerRecord.Fields["DiscordID"])))
+                        new SdlPlayer(Program.Client.GetGuild(570743985530863649).GetUser(Convert.ToUInt64(playerRecord.Fields["DiscordID"])))
                         {
                             AirtableName = playerRecord.Fields["Name"].ToString(),
                             PowerLevel = Convert.ToDouble(playerRecord.Fields["Power"].ToString()),

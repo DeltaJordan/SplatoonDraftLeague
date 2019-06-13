@@ -133,6 +133,69 @@ namespace SquidDraftLeague.Language.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Thank you for your interest in SDL! All responses to my questions will be pulled from the next message sent by you. To begin, please state your timezone..
+        /// </summary>
+        public static string RegistrationBegin {
+            get {
+                return ResourceManager.GetString("RegistrationBegin", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Everything seems to be in order. Our staff will process your registration ASAP and if we require any more info we will get in contact with you. Thank you for your registration!.
+        /// </summary>
+        public static string RegistrationComplete {
+            get {
+                return ResourceManager.GetString("RegistrationComplete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Next up, what would you like your nickname for standings to be? E.g. your in-game name in Splatoon..
+        /// </summary>
+        public static string RegistrationNickname {
+            get {
+                return ResourceManager.GetString("RegistrationNickname", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Please wait while we process your request. If you don&apos;t get a reply for more than 10 minutes, please get in contact with SDL staff..
+        /// </summary>
+        public static string RegistrationProcessing {
+            get {
+                return ResourceManager.GetString("RegistrationProcessing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Finally, please **directly upload** a screenshot of your solo queue powers from the last month. **DO NOT** link it as this may cause issues. Be sure to upload the correct image as well as **you may not retry this response**. You can, however, still retry the last response if needed..
+        /// </summary>
+        public static string RegistrationScreenshot {
+            get {
+                return ResourceManager.GetString("RegistrationScreenshot", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Now we will need you to list any competitive teams you have been on within the last 3 months. If there are none, just reply &quot;None&quot; without the quotes..
+        /// </summary>
+        public static string RegistrationTeams {
+            get {
+                return ResourceManager.GetString("RegistrationTeams", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to It&apos;s been 10 minutes since you last responded. You will have to try again later..
+        /// </summary>
+        public static string RegistrationTimeout {
+            get {
+                return ResourceManager.GetString("RegistrationTimeout", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to This command is to be used to report discrepancies during a set. If you want to report a player, use `%report name` in DMs with this bot..
         /// </summary>
         public static string ReportErrorResponse {

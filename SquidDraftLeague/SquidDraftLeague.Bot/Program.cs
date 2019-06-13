@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Addons.Interactive;
@@ -11,6 +15,7 @@ using Newtonsoft.Json;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
+using SquidDraftLeague.Bot.AirTable;
 
 namespace SquidDraftLeague.Bot
 {
@@ -91,6 +96,8 @@ namespace SquidDraftLeague.Bot
                 .BuildServiceProvider();
 
             Client.MessageReceived += Client_MessageReceived;
+            Client.ReactionAdded += Client_ReactionAdded;
+
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
 
             Client.Ready += Client_Ready;
@@ -99,6 +106,81 @@ namespace SquidDraftLeague.Bot
             await Client.LoginAsync(TokenType.Bot, Globals.BotSettings.BotToken);
             await Client.StartAsync();
             await Task.Delay(-1);
+        }
+
+        private static async Task Client_ReactionAdded(Cacheable<IUserMessage, ulong> messageCacheable, ISocketMessageChannel channel, SocketReaction reaction)
+        {
+            try
+            {
+                if (channel.Id == 588806681303973931)
+                {
+                    IUserMessage newUserMessage = (IUserMessage) await channel.GetMessageAsync(messageCacheable.Id);
+
+                    if (!File.Exists(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}")))
+                    {
+                        return;
+                    }
+
+                    if (newUserMessage.Content == "Approved.")
+                    {
+                        KeyValuePair<IEmote, ReactionMetadata> selectedNumberEmote = newUserMessage.Reactions
+                            .Where(e => e.Key.Name != "\u274E" && e.Key.Name != "\u2705")
+                            .OrderByDescending(e => e.Value.ReactionCount)
+                            .FirstOrDefault();
+
+                        if (selectedNumberEmote.Value.ReactionCount > 1)
+                        {
+                            string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath, "Registrations",
+                                $"{newUserMessage.Id}"));
+
+                            switch (selectedNumberEmote.Key.Name)
+                            {
+                                case "\u0031\u20E3":
+                                    await AirTableClient.RegisterPlayer(
+                                        Client.GetUser(Convert.ToUInt64(allRegLines[0])), 2200, allRegLines[1]);
+                                    break;
+                                case "\u0032\u20E3":
+                                    await AirTableClient.RegisterPlayer(
+                                        Client.GetUser(Convert.ToUInt64(allRegLines[0])), 2000, allRegLines[1]);
+                                    break;
+                                case "\u0033\u20E3":
+                                    await AirTableClient.RegisterPlayer(
+                                        Client.GetUser(Convert.ToUInt64(allRegLines[0])), 1800, allRegLines[1]);
+                                    break;
+                                case "\u0034\u20E3":
+                                    await AirTableClient.RegisterPlayer(
+                                        Client.GetUser(Convert.ToUInt64(allRegLines[0])), 1600, allRegLines[1]);
+                                    break;
+                            }
+
+                            File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
+                        }
+                    }
+
+                    else if (newUserMessage.Reactions.Select(e => e.Key.Name == "\u2705").Count() > 1)
+                    {
+                        await newUserMessage.ModifyAsync(e => e.Content = "Approved.");
+                    }
+                    else if (newUserMessage.Reactions.Select(e => e.Key.Name == "\u274E").Count() > 1)
+                    {
+                        await newUserMessage.ModifyAsync(e => e.Content = "Denied.");
+                        File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
+        private static string DecodeEncodedNonAsciiCharacters(string value)
+        {
+            return Regex.Replace(
+                value,
+                @"\\u(?<Value>[a-zA-Z0-9]{4})",
+                m => ((char)int.Parse(m.Groups["Value"].Value, NumberStyles.HexNumber)).ToString());
         }
 
         private static Task Client_Log(LogMessage message)

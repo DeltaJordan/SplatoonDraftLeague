@@ -79,7 +79,7 @@ namespace SquidDraftLeague.Bot.Commands
             IUserMessage message = await this.ReplyAsync("Ping?");
             await message.ModifyAsync(e =>
                 e.Content =
-                    $"Pong! ({(message.CreatedAt - this.Context.Message.CreatedAt).Milliseconds}ms)");
+                    $"Pong! API latency is {Program.Client.Latency}ms.");
         }
 
         [Command("id"),
