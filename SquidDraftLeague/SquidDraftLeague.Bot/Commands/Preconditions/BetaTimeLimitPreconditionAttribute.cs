@@ -11,15 +11,19 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
         private readonly TimeSpan[] startTimes;
         private readonly TimeSpan[] endTimes;
 
-        public BetaTimeLimitPreconditionAttribute(params int[] hours)
+        /// <summary>
+        /// Limits command(s) to certain time period(s).
+        /// </summary>
+        /// <param name="hours">Must be in pairs of two; times formatted HH:mm where the first of the pair is the start time and the second is the end time.</param>
+        public BetaTimeLimitPreconditionAttribute(params string[] hours)
         {
             List<TimeSpan> startList = new List<TimeSpan>();
             List<TimeSpan> endList = new List<TimeSpan>();
 
             for (int i = 0; i < hours.Length; i += 2)
             {
-                startList.Add(new TimeSpan(hours[i], 0, 0));
-                endList.Add(new TimeSpan(hours[i + 1], 0, 0));
+                startList.Add(TimeSpan.Parse(hours[i]));
+                endList.Add(TimeSpan.Parse(hours[i + 1]));
             }
 
             this.startTimes = startList.ToArray();
