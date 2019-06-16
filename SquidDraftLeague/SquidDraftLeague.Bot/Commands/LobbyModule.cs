@@ -16,7 +16,7 @@ using SquidDraftLeague.Language.Resources;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Lobby"), CheckPenalty, Group, /*BetaTimeLimitPrecondition("14:00", "18:00", "20:00", "2:30"),*/ RequireChannel(572536965833162753)]
+    [Name("Lobby"), CheckPenalty, Group, BetaTimeLimitPrecondition("14:00", "18:00", "20:00", "2:30"), RequireChannel(572536965833162753)]
     public class LobbyModule : ModuleBase<SocketCommandContext>
     {
         public static readonly ReadOnlyCollection<Lobby> Lobbies = new List<Lobby>
