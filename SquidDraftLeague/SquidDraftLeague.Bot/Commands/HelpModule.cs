@@ -81,11 +81,13 @@ namespace SquidDraftLeague.Bot.Commands
                 return;
             }
 
-            EmbedBuilder builder = new EmbedBuilder()
+            EmbedBuilder builder = new EmbedBuilder
             {
                 Color = new Color(114, 137, 218),
                 Description = $"Here are some commands like **{command}**"
             };
+
+            bool limit = false;
 
             foreach (CommandMatch match in result.Commands)
             {
@@ -95,29 +97,56 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     x.Name = string.Join(", ", cmd.Aliases);
 
-                    string parameters = string.Join("\n", 
-                        cmd.Parameters.Select(p => $"{p.Name} - {p.Summary}"));
-
-                    if (string.IsNullOrWhiteSpace(parameters))
+                    if (cmd.Name != "limit")
                     {
-                        parameters = "None.";
-                    }
+                        string parameters = string.Join("\n", 
+                            cmd.Parameters.Select(p => $"{p.Name} - {p.Summary}"));
 
-                    ExampleCommandAttribute exampleCommand =
-                        (ExampleCommandAttribute) cmd.Attributes.FirstOrDefault(e => e is ExampleCommandAttribute);
+                        if (string.IsNullOrWhiteSpace(parameters))
+                        {
+                            parameters = "None.";
+                        }
 
-                    string exampleUsage = exampleCommand != null ? 
+                        ExampleCommandAttribute exampleCommand =
+                            (ExampleCommandAttribute) cmd.Attributes.FirstOrDefault(e => e is ExampleCommandAttribute);
+
+                        string exampleUsage = exampleCommand != null ? 
                             $"\n__Example Usage:__\n{exampleCommand.Example}" : 
                             "";
 
-                    x.Value = $"*{cmd.Summary}*\n" +
-                              $"__Parameters:__\n{parameters}" +
-                              exampleUsage;
-                    x.IsInline = false;
+                        x.Value = $"*{cmd.Summary}*\n" +
+                                  $"__Parameters:__\n{parameters}" +
+                                  exampleUsage;
+                        x.IsInline = false;
+                    }
+                    else
+                    {
+                            limit = true;
+
+                            x.Name = string.Join(", ", cmd.Aliases);
+                            x.Value = $"*{cmd.Summary}*";
+                            x.IsInline = false;
+                    }
                 });
             }
 
+
+            string arguments = "__Arguments:__\n" +
+                               "**--allow** - Switches this limit instance to allow according to specified terms instead of deny.\n" +
+                               "**--now** - Limits the command immediately and at all times.\n" +
+                               "**-c [Command Name], --command [Command Name]** - Applies the limit only to the specified command.\n" +
+                               "**--group [Group Name], -g [Group Name]** - Applies the limit only to " +
+                               $"the specified group. Must select one of the following groups: {string.Join(", ", this.service.Modules.Select(e => e.Name))}\n" +
+                               $"**-t [timeStart1] [timeEnd1] [timeStart..] [timeEnd..]** - A list of start and end times formatted HH:mm to limit a command between. " +
+                               $"Times MUST be in 24 hour formatted UTC for the simple fact that this is the easiest timezone to work with.\n" +
+                               $"**-c [Channel ID], --channel [Channel ID]** - Limits the usage in a specified channel. " +
+                               $"If no channel is specified, the context channel is assumed to be selected.\n" +
+                               $"**-r [Role Name], --role [Role Name]** - Limit the usage to the specified role name.";
+
             await this.ReplyAsync("", false, builder.Build());
+
+            if (limit)
+                await this.ReplyAsync(arguments);
         }
     }
 }

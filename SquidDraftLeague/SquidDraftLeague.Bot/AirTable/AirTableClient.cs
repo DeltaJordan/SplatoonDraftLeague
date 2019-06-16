@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AirtableApiClient;
 using Discord;
 using Discord.Commands;
+using Newtonsoft.Json.Linq;
 using NLog;
 using SquidDraftLeague.Bot.Queuing;
 using SquidDraftLeague.Bot.Queuing.Data;
@@ -290,7 +291,7 @@ namespace SquidDraftLeague.Bot.AirTable
 
                 AirtableRecord record = createRecordResponse.Record;
 
-                IEnumerable<string> updatedAdjustmentIds = ((string[]) playerRecord.Fields["Adjustments"]).Append(record.Id);
+                IEnumerable<JToken> updatedAdjustmentIds = ((JArray) playerRecord.Fields["Adjustments"]).Append(record.Id);
 
                 Fields updatePlayerFields = new Fields();
                 updatePlayerFields.AddField("Adjustments", updatedAdjustmentIds.ToArray());

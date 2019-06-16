@@ -239,7 +239,7 @@ namespace SquidDraftLeague.Bot
             string prefix = Globals.BotSettings.Prefix;
 #endif
 
-            if (!(message.HasStringPrefix(prefix, ref argPos)) || (message.HasMentionPrefix(Client.CurrentUser, ref argPos)))
+            if (!message.HasStringPrefix(prefix, ref argPos) || message.HasMentionPrefix(Client.CurrentUser, ref argPos))
                 return;
 
             IResult result = await commands.ExecuteAsync(context, argPos, services);
