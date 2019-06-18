@@ -143,8 +143,8 @@ namespace SquidDraftLeague.Bot.Commands
             string arguments = "**__Arguments (In order of hierarchy):__**\n" +
                                "**--clear** - Removes all limitations from a command/group. Ignores all other arguments other than -g and -c.\n" +
                                "**--now** - Limits the command immediately and at all times. Ignores all other arguments other than -g and -c.\n" +
-                               "**--deny** - Switches this limit instance to deny according to specified terms instead of allow.\n" +
                                "**--all** - Selects every command in the bot. Ignores -g and -c.\n" +
+                               "**--deny** - Switches this limit instance to deny according to specified terms instead of allow.\n" +
                                "**-c [Command Name1] [Command Name...], --command [Command Name1] [Command Name...]** - Applies the limit only to the specified command(s).\n" +
                                "**-g [Group Name1] [Group Name...], --group [Group Name1] [Group Name...]** - Applies the limit only to the specified group(s). " +
                                $"Must select one of the following groups: {string.Join(", ", this.service.Modules.Select(e => e.Name))}\n" +

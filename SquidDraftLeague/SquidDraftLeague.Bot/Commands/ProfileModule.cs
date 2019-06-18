@@ -145,6 +145,12 @@ namespace SquidDraftLeague.Bot.Commands
                 SocketMessage screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
                 bool hasScreenshot = true;
 
+                if (screenshotResponse == null)
+                {
+                    await this.ReplyAsync(Resources.RegistrationTimeout);
+                    return;
+                }
+
                 if (screenshotResponse.Content.ToLower() == "retry")
                 {
                     await this.ReplyAsync("Please restate your teams.");

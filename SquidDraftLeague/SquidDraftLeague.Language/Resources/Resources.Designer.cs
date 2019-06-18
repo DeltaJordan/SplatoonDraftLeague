@@ -142,7 +142,7 @@ namespace SquidDraftLeague.Language.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Everything seems to be in order. Our staff will process your registration ASAP and if we require any more info we will get in contact with you. Thank you for your registration!.
+        ///   Looks up a localized string similar to Your registration has been sent to staff and will be processed. If we require any more info we will get in contact with you. Otherwise, this is all you have to do for now other than wait for our opening date, June 23rd. Thank you for your registration!.
         /// </summary>
         public static string RegistrationComplete {
             get {
@@ -160,7 +160,7 @@ namespace SquidDraftLeague.Language.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Please wait while we process your request. If you don&apos;t get a reply for more than 10 minutes, please get in contact with SDL staff..
+        ///   Looks up a localized string similar to Please wait while we process your request. If you don&apos;t get a reply from this bot for more than 10 minutes, please get in contact with SDL staff..
         /// </summary>
         public static string RegistrationProcessing {
             get {
@@ -169,7 +169,7 @@ namespace SquidDraftLeague.Language.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Finally, please **directly upload** a screenshot of your solo queue powers from the last month. **DO NOT** link it as this may cause issues. Be sure to upload the correct image as well as **you may not retry this response**. You can, however, still retry the last response if needed. If you do not wish to upload a screenshot reply &quot;No&quot;. Please note that most likely you will be placed in the lowest seeding class, mainly depending on the team experience you listed in the last question..
+        ///   Looks up a localized string similar to Finally, please **directly upload** a screenshot of your solo queue powers from the last month. **DO NOT** link it as this may cause issues. Be sure to upload the correct image as well as **you may not retry this response**. You can, however, still retry the last response if needed. If you do not wish to upload a screenshot reply &quot;No&quot;. Please note that this most likely cause you to be placed in the lowest seeding class, mainly depending on the team experience you listed in the last question..
         /// </summary>
         public static string RegistrationScreenshot {
             get {

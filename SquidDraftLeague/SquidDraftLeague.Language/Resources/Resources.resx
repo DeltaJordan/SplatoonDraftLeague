@@ -145,16 +145,16 @@
     <value>Thank you for your interest in SDL! All responses to my questions will be pulled from the next message sent by you. To begin, please state your timezone.</value>
   </data>
   <data name="RegistrationComplete" xml:space="preserve">
-    <value>Everything seems to be in order. Our staff will process your registration ASAP and if we require any more info we will get in contact with you. Thank you for your registration!</value>
+    <value>Your registration has been sent to staff and will be processed. If we require any more info we will get in contact with you. Otherwise, this is all you have to do for now other than wait for our opening date, June 23rd. Thank you for your registration!</value>
   </data>
   <data name="RegistrationNickname" xml:space="preserve">
     <value>Next up, what would you like your nickname for standings to be? E.g. your in-game name in Splatoon.</value>
   </data>
   <data name="RegistrationProcessing" xml:space="preserve">
-    <value>Please wait while we process your request. If you don't get a reply for more than 10 minutes, please get in contact with SDL staff.</value>
+    <value>Please wait while we process your request. If you don't get a reply from this bot for more than 10 minutes, please get in contact with SDL staff.</value>
   </data>
   <data name="RegistrationScreenshot" xml:space="preserve">
-    <value>Finally, please **directly upload** a screenshot of your solo queue powers from the last month. **DO NOT** link it as this may cause issues. Be sure to upload the correct image as well as **you may not retry this response**. You can, however, still retry the last response if needed. If you do not wish to upload a screenshot reply "No". Please note that most likely you will be placed in the lowest seeding class, mainly depending on the team experience you listed in the last question.</value>
+    <value>Finally, please **directly upload** a screenshot of your solo queue powers from the last month. **DO NOT** link it as this may cause issues. Be sure to upload the correct image as well as **you may not retry this response**. You can, however, still retry the last response if needed. If you do not wish to upload a screenshot reply "No". Please note that this most likely cause you to be placed in the lowest seeding class, mainly depending on the team experience you listed in the last question.</value>
   </data>
   <data name="RegistrationTeams" xml:space="preserve">
     <value>Now we will need you to list any competitive teams you have been on within the last 3 months. If there are none, just reply "None" without the quotes.</value>
