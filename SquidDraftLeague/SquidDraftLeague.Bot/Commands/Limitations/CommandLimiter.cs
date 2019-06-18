@@ -21,7 +21,7 @@ namespace SquidDraftLeague.Bot.Commands.Limitations
         {
             if (context.User is SocketGuildUser guildUser && guildUser.Roles.Any(e => e.Name == "Moderator"))
             {
-                // return true;
+                return true;
             }
 
             UnconditionalLimitation unconditionalLimitation = this.Limitations.OfType<UnconditionalLimitation>().FirstOrDefault();
