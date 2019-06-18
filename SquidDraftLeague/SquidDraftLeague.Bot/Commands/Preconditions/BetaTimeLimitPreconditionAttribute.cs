@@ -8,8 +8,7 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
 {
     public class BetaTimeLimitPreconditionAttribute : PreconditionAttribute
     {
-        private readonly TimeSpan[] startTimes;
-        private readonly TimeSpan[] endTimes;
+        private readonly TimePeriod[] timePeriods;
 
         /// <summary>
         /// Limits command(s) to certain time period(s).
@@ -17,24 +16,21 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
         /// <param name="hours">Must be in pairs of two; times formatted HH:mm where the first of the pair is the start time and the second is the end time.</param>
         public BetaTimeLimitPreconditionAttribute(params string[] hours)
         {
-            List<TimeSpan> startList = new List<TimeSpan>();
-            List<TimeSpan> endList = new List<TimeSpan>();
+            List<TimePeriod> periodList = new List<TimePeriod>();
 
             for (int i = 0; i < hours.Length; i += 2)
             {
-                startList.Add(TimeSpan.Parse(hours[i]));
-                endList.Add(TimeSpan.Parse(hours[i + 1]));
+                periodList.Add(new TimePeriod(TimeSpan.Parse(hours[i]), TimeSpan.Parse(hours[i + 1])));
             }
 
-            this.startTimes = startList.ToArray();
-            this.endTimes = endList.ToArray();
+            this.timePeriods = periodList.ToArray();
         }
 
         public override async Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
         {
-            for (int i = 0; i < this.startTimes.Length; i++)
+            foreach (TimePeriod timePeriod in this.timePeriods)
             {
-                if (TimeBetween(DateTime.UtcNow, this.startTimes[i], this.endTimes[i]))
+                if (timePeriod.IsWithPeriod(DateTime.UtcNow))
                 {
                     return PreconditionResult.FromSuccess();
                 }
@@ -42,17 +38,6 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
 
             await context.Channel.SendMessageAsync("Beta is currently closed.");
             return PreconditionResult.FromError("Beta is currently closed.");
-        }
-
-        private static bool TimeBetween(DateTime datetime, TimeSpan start, TimeSpan end)
-        {
-            // convert datetime to a TimeSpan
-            TimeSpan now = datetime.TimeOfDay;
-            // see if start comes before end
-            if (start < end)
-                return start <= now && now <= end;
-            // start is after end, so do the inverse comparison
-            return !(end < now && now < start);
         }
     }
 }

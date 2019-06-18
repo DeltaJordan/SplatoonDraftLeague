@@ -624,10 +624,14 @@ namespace SquidDraftLeague.Bot.AirTable
             }
             catch (Exception e)
             {
-                SdlAirTableException caughtAirTableException = new SdlAirTableException(
-                    e.Message, SdlAirTableException.AirtableErrorType.Generic);
-                Logger.Error(caughtAirTableException);
-                throw caughtAirTableException;
+                if (!(e is SdlAirTableException sdlAirTableException))
+                {
+                    sdlAirTableException = new SdlAirTableException(
+                        e.Message, SdlAirTableException.AirtableErrorType.Generic);
+                }
+
+                Logger.Error(sdlAirTableException);
+                throw sdlAirTableException;
             }
         }
     }

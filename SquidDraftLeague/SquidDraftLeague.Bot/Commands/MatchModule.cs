@@ -71,7 +71,7 @@ namespace SquidDraftLeague.Bot.Commands
                 })
                 .Build());
 
-            await context.SendMessageAsync("Good luck both teams on their matches! :)");
+            await context.SendMessageAsync("🦑Let the games commence!🐙");
         }
 
         [Command("dispute"),
@@ -431,9 +431,16 @@ namespace SquidDraftLeague.Bot.Commands
 
             foreach (SdlPlayer playerSetAllPlayer in playerSet.AllPlayers)
             {
-                await playerSetAllPlayer.DiscordId.GetGuildUser(this.Context).RemoveRolesAsync(roleRemovalList.Where(e =>
-                    this.Context.Guild.GetUser(playerSetAllPlayer.DiscordId.GetGuildUser(this.Context).Id).Roles
+                SocketGuildUser guildUser = playerSetAllPlayer.DiscordId.GetGuildUser(this.Context);
+
+                await guildUser.RemoveRolesAsync(roleRemovalList.Where(e =>
+                    this.Context.Guild.GetUser(guildUser.Id).Roles
                         .Any(f => e.Id == f.Id)));
+
+                if (guildUser.VoiceChannel != null)
+                {
+                    await guildUser.VoiceChannel.DisconnectAsync();
+                }
             }
 
             playerSet.Close();
