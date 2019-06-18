@@ -142,7 +142,7 @@ namespace SquidDraftLeague.Language.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Your registration has been sent to staff and will be processed. If we require any more info we will get in contact with you. Otherwise, this is all you have to do for now other than wait for our opening date, June 23rd. Thank you for your registration!.
+        ///   Looks up a localized string similar to Your registration has been sent to staff and will be reviewed. If we require any more info we will get in contact with you. Otherwise, this is all you have to do for now other than wait for our opening date, June 23rd. Thank you for your registration!.
         /// </summary>
         public static string RegistrationComplete {
             get {

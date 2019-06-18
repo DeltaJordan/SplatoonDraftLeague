@@ -145,7 +145,7 @@
     <value>Thank you for your interest in SDL! All responses to my questions will be pulled from the next message sent by you. To begin, please state your timezone.</value>
   </data>
   <data name="RegistrationComplete" xml:space="preserve">
-    <value>Your registration has been sent to staff and will be processed. If we require any more info we will get in contact with you. Otherwise, this is all you have to do for now other than wait for our opening date, June 23rd. Thank you for your registration!</value>
+    <value>Your registration has been sent to staff and will be reviewed. If we require any more info we will get in contact with you. Otherwise, this is all you have to do for now other than wait for our opening date, June 23rd. Thank you for your registration!</value>
   </data>
   <data name="RegistrationNickname" xml:space="preserve">
     <value>Next up, what would you like your nickname for standings to be? E.g. your in-game name in Splatoon.</value>

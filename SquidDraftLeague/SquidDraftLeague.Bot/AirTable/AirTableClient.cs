@@ -330,7 +330,9 @@ namespace SquidDraftLeague.Bot.AirTable
                     SdlPlayer sdlPlayer =
                         new SdlPlayer(Program.Client.GetGuild(570743985530863649).GetUser(Convert.ToUInt64(playerRecord.Fields["DiscordID"])))
                         {
-                            AirtableName = playerRecord.Fields["Name"].ToString(),
+                            AirtableName = playerRecord.Fields.ContainsKey("Name") ?
+                                playerRecord.Fields["Name"].ToString() :
+                                string.Empty,
                             PowerLevel = Convert.ToDouble(playerRecord.Fields["Power"].ToString()),
                             SwitchFriendCode = playerRecord.Fields.ContainsKey("Friend Code")
                                 ? playerRecord.Fields["Friend Code"].ToString()
@@ -402,7 +404,9 @@ namespace SquidDraftLeague.Bot.AirTable
 
                 SdlPlayer sdlPlayer = new SdlPlayer(guildUser)
                 {
-                    AirtableName = playerRecord.Fields["Name"].ToString(),
+                    AirtableName = playerRecord.Fields.ContainsKey("Name") ?
+                        playerRecord.Fields["Name"].ToString() :
+                        string.Empty,
                     PowerLevel = Convert.ToDouble(playerRecord.Fields["Power"].ToString()),
                     SwitchFriendCode = playerRecord.Fields.ContainsKey("Friend Code") ? 
                         playerRecord.Fields["Friend Code"].ToString() : 
@@ -412,8 +416,6 @@ namespace SquidDraftLeague.Bot.AirTable
                         playerRecord.Fields["Role"].ToString() :
                         string.Empty
                 };
-
-
 
                 try
                 {

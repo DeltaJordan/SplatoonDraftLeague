@@ -246,53 +246,57 @@ namespace SquidDraftLeague.Bot
 
             string limitDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Limiters")).FullName;
 
-            foreach (CommandMatch command in commands.Search(context, argPos).Commands)
+            if (context.Channel is IGuildChannel)
             {
-                if (File.Exists(Path.Combine(limitDirectory, "all")))
+                foreach (CommandMatch command in commands.Search(context, argPos).Commands)
                 {
-                    CommandLimiter commandLimiter =
-                        JsonConvert.DeserializeObject<CommandLimiter>(
-                            await File.ReadAllTextAsync(Path.Combine(limitDirectory, "all")),
-                            new JsonSerializerSettings
-                            {
-                                TypeNameHandling = TypeNameHandling.Auto
-                            });
-
-                    if (!await commandLimiter.CheckAllLimitationsAsync(context))
+                    if (File.Exists(Path.Combine(limitDirectory, "all")))
                     {
-                        return;
+                        CommandLimiter commandLimiter =
+                            JsonConvert.DeserializeObject<CommandLimiter>(
+                                await File.ReadAllTextAsync(Path.Combine(limitDirectory, "all")),
+                                new JsonSerializerSettings
+                                {
+                                    TypeNameHandling = TypeNameHandling.Auto
+                                });
+
+                        if (!await commandLimiter.CheckAllLimitationsAsync(context))
+                        {
+                            return;
+                        }
                     }
-                }
 
-                if (File.Exists(Path.Combine(limitDirectory, $"{command.Command.Name}")))
-                {
-                    CommandLimiter commandLimiter =
-                        JsonConvert.DeserializeObject<CommandLimiter>(
-                            await File.ReadAllTextAsync(Path.Combine(limitDirectory, $"{command.Command.Name}")), 
-                            new JsonSerializerSettings
-                            {
-                                TypeNameHandling = TypeNameHandling.Auto
-                            });
-
-                    if (!await commandLimiter.CheckAllLimitationsAsync(context))
+                    if (File.Exists(Path.Combine(limitDirectory, $"{command.Command.Name}")))
                     {
-                        return;
+                        CommandLimiter commandLimiter =
+                            JsonConvert.DeserializeObject<CommandLimiter>(
+                                await File.ReadAllTextAsync(Path.Combine(limitDirectory, $"{command.Command.Name}")),
+                                new JsonSerializerSettings
+                                {
+                                    TypeNameHandling = TypeNameHandling.Auto
+                                });
+
+                        if (!await commandLimiter.CheckAllLimitationsAsync(context))
+                        {
+                            return;
+                        }
                     }
-                }
 
-                if (File.Exists(Path.Combine(limitDirectory, $"{command.Command.Module.Name}")))
-                {
-                    CommandLimiter commandLimiter =
-                        JsonConvert.DeserializeObject<CommandLimiter>(
-                            await File.ReadAllTextAsync(Path.Combine(limitDirectory, $"{command.Command.Module.Name}")),
-                            new JsonSerializerSettings
-                            {
-                                TypeNameHandling = TypeNameHandling.Auto
-                            });
-
-                    if (!await commandLimiter.CheckAllLimitationsAsync(context))
+                    if (File.Exists(Path.Combine(limitDirectory, $"{command.Command.Module.Name}")))
                     {
-                        return;
+                        CommandLimiter commandLimiter =
+                            JsonConvert.DeserializeObject<CommandLimiter>(
+                                await File.ReadAllTextAsync(Path.Combine(limitDirectory,
+                                    $"{command.Command.Module.Name}")),
+                                new JsonSerializerSettings
+                                {
+                                    TypeNameHandling = TypeNameHandling.Auto
+                                });
+
+                        if (!await commandLimiter.CheckAllLimitationsAsync(context))
+                        {
+                            return;
+                        }
                     }
                 }
             }
