@@ -177,14 +177,6 @@ namespace SquidDraftLeague.Bot
             }
         }
 
-        private static string DecodeEncodedNonAsciiCharacters(string value)
-        {
-            return Regex.Replace(
-                value,
-                @"\\u(?<Value>[a-zA-Z0-9]{4})",
-                m => ((char)int.Parse(m.Groups["Value"].Value, NumberStyles.HexNumber)).ToString());
-        }
-
         private static Task Client_Log(LogMessage message)
         {
             LogLevel logLevel;

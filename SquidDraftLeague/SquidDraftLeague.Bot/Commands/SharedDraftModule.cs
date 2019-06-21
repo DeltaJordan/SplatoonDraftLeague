@@ -123,7 +123,7 @@ namespace SquidDraftLeague.Bot.Commands
         }
 
         [Command("report"),
-         Summary("Reports a player for any reason. Only to be used in DMs with this bot."),
+         Summary("Reports a user for any reason. Only to be used in DMs with this bot."),
          ExampleCommand("%report \"DeltaJordan#5497\" Called me a crayon eater.")]
         public async Task Report(
             [Summary("Name formatted like so `\"DeltaJordan#5497\"`. The quotes are required if the name has spaces.")]
@@ -305,7 +305,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                         record.AllInfractions.Add(new Infraction
                         {
-                            Penalty = 15,
+                            Penalty = 10,
                             Notes = "Left a set.",
                             TimeOfOffense = DateTime.Now
                         });
