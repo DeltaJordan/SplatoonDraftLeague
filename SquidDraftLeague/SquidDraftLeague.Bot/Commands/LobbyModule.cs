@@ -212,11 +212,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                     if (matchedLobby.Players.Count == 1)
                     {
-                        await notifRole.ModifyAsync(e => e.Mentionable = true);
-
                         message = $"{notifRole.Mention} A new lobby has been started! " + message;
-
-                        await notifRole.ModifyAsync(e => e.Mentionable = false);
                     }
 
                     EmbedBuilder builder = matchedLobby.GetEmbedBuilder();
