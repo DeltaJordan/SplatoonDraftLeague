@@ -148,7 +148,7 @@ namespace SquidDraftLeague.Bot.Queuing
 
                 string roleText = alphaTeamPlayer.Role == string.Empty ? string.Empty : $"[{alphaTeamPlayer.Role}]";
 
-                alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordId.GetGuildUser(null).Mention} {roleText} {captainText}");
+                alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordId.GetGuildUser(null).Mention} [{alphaTeamPlayer.PowerLevel}] {roleText} {captainText}");
             }
 
             EmbedFieldBuilder alphaTeamBuilder = new EmbedFieldBuilder
@@ -168,7 +168,7 @@ namespace SquidDraftLeague.Bot.Queuing
 
                 string roleText = bravoTeamPlayer.Role == string.Empty ? string.Empty : $"[{bravoTeamPlayer.Role}]";
 
-                bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordId.GetGuildUser(null).Mention} {roleText} {captainText}");
+                bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordId.GetGuildUser(null).Mention} [{bravoTeamPlayer.PowerLevel}] {roleText} {captainText}");
             }
 
             EmbedFieldBuilder bravoTeamBuilder = new EmbedFieldBuilder
@@ -185,7 +185,7 @@ namespace SquidDraftLeague.Bot.Queuing
                 {
                     Name = "Players Awaiting Team",
                     Value = string.Join('\n',
-                        this.DraftPlayers.Select(e => e.DiscordId.GetGuildUser(null).Mention + $" [{e.Role}]"))
+                        this.DraftPlayers.Select(e => e.DiscordId.GetGuildUser(null).Mention + $"[{e.PowerLevel}] [{e.Role}]"))
                 };
 
                 builder.Fields.Add(draftTeamBuilder);
