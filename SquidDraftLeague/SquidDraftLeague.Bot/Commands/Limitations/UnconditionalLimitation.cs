@@ -9,6 +9,6 @@ namespace SquidDraftLeague.Bot.Commands.Limitations
     public class UnconditionalLimitation : ILimitation
     {
         public bool Inverse { get; set; }
-        public async Task<bool> CheckLimitationAsync(SocketCommandContext context) => this.Inverse;
+        public async Task<bool> CheckLimitationAsync(SocketCommandContext context) => !this.Inverse;
     }
 }

@@ -135,25 +135,40 @@ namespace SquidDraftLeague.Bot
                             string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath, "Registrations",
                                 $"{newUserMessage.Id}"));
 
+                            int classNum = 0;
+
+                            ulong userId = Convert.ToUInt64(allRegLines[0]);
+
                             switch (selectedNumberEmote.Key.Name)
                             {
                                 case "\u0031\u20E3":
                                     await AirTableClient.RegisterPlayer(
-                                        Client.GetUser(Convert.ToUInt64(allRegLines[0])), 2200, allRegLines[1]);
+                                        Client.GetUser(userId), 2200, allRegLines[1]);
+                                    classNum = 1;
                                     break;
                                 case "\u0032\u20E3":
                                     await AirTableClient.RegisterPlayer(
-                                        Client.GetUser(Convert.ToUInt64(allRegLines[0])), 2000, allRegLines[1]);
+                                        Client.GetUser(userId), 2000, allRegLines[1]);
+                                    classNum = 2;
                                     break;
                                 case "\u0033\u20E3":
                                     await AirTableClient.RegisterPlayer(
-                                        Client.GetUser(Convert.ToUInt64(allRegLines[0])), 1800, allRegLines[1]);
+                                        Client.GetUser(userId), 1800, allRegLines[1]);
+                                    classNum = 3;
                                     break;
                                 case "\u0034\u20E3":
                                     await AirTableClient.RegisterPlayer(
-                                        Client.GetUser(Convert.ToUInt64(allRegLines[0])), 1600, allRegLines[1]);
+                                        Client.GetUser(userId), 1700, allRegLines[1]);
+                                    classNum = 4;
                                     break;
                             }
+
+                            IDMChannel dmChannel = await Client.GetDMChannelAsync(userId);
+                            await dmChannel.SendMessageAsync($"You have been approved! You have been placed in class {classNum}. " +
+                                                             $"To jump into a set, head into #draft and use %join.");
+
+                            SocketGuild guild = Client.GetGuild(570743985530863649);
+                            await guild.GetUser(userId).AddRoleAsync(guild.GetRole(572537013949956105));
 
                             File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
                         }
@@ -162,6 +177,7 @@ namespace SquidDraftLeague.Bot
                     else if (newUserMessage.Reactions.FirstOrDefault(e => e.Key.Name == "\u2705").Value.ReactionCount > 1)
                     {
                         await newUserMessage.ModifyAsync(e => e.Content = "Approved.");
+
                     }
                     else if (newUserMessage.Reactions.FirstOrDefault(e => e.Key.Name == "\u274E").Value.ReactionCount > 1)
                     {
@@ -299,6 +315,18 @@ namespace SquidDraftLeague.Bot
             {
                 ClassLogger.Warn($"Something went wrong with executing a command. Text: {context.Message.Content} | Error: {result.ErrorReason}");
             }
+            /*else if (result.Error == CommandError.UnknownCommand)
+            {
+                string moduleFolder = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Modules")).FullName;
+
+                string moduleFile = Path.Combine(moduleFolder, $"{message.Content.Substring(argPos).Split(' ')[0]}");
+
+
+                if (File.Exists(moduleFile))
+                {
+
+                }
+            }*/
         }
     }
 }

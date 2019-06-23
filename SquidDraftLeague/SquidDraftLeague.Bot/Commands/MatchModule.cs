@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -21,6 +22,7 @@ namespace SquidDraftLeague.Bot.Commands
     public class MatchModule : InteractiveBase<SocketCommandContext>
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly Dictionary<ulong, Stopwatch> ChannelTimers = new Dictionary<ulong, Stopwatch>();
 
         // NOTE This is where we'll have to implement the different match amounts for cups.
         private const int SET_MATCH_NUMBER = 7;
@@ -72,6 +74,13 @@ namespace SquidDraftLeague.Bot.Commands
                 .Build());
 
             await context.SendMessageAsync("🦑Let the games commence!🐙");
+
+            IRole setRole = context.Guild.Roles.First(e => e.Name == $"In Set ({set.SetNumber})");
+
+            foreach (SdlPlayer allPlayer in set.AllPlayers)
+            {
+                await allPlayer.DiscordId.GetGuildUser(null).RemoveRoleAsync(setRole);
+            }
         }
 
         [Command("dispute"),
@@ -270,6 +279,19 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("score")]
         public async Task Score(string team)
         {
+            if (ChannelTimers.ContainsKey(this.Context.Channel.Id))
+            {
+                if (ChannelTimers[this.Context.Channel.Id].Elapsed.TotalSeconds < 30)
+                {
+                    await this.ReplyAsync($"Please wait to report the score for " +
+                                          $"{30 - ChannelTimers[this.Context.Channel.Id].Elapsed.TotalSeconds} more seconds.");
+                }
+                else
+                {
+                    ChannelTimers.Remove(this.Context.Channel.Id);
+                }
+            }
+
             Set playerSet =
                 SetModule.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == this.Context.User.Id));
 
@@ -423,7 +445,9 @@ namespace SquidDraftLeague.Bot.Commands
 
             await this.ReplyAsync($"Congratulations Team {winner} on their victory! " +
                                   $"Everyone's power levels have been updated to reflect this match. " +
-                                  $"Use `%profile` to check that. For now, you have 30 seconds to converse in this channel before access is removed.");
+                                  $"Use `%profile` to check that. " +
+                                  $"Beginning removal of access to this channel in 30 seconds. " +
+                                  $"Rate limiting may cause the full process to take up to two minutes.");
 
             await Task.Delay(30000);
 
@@ -456,11 +480,27 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 powerDifference = 200F / (playerSet.MatchNum *
                                   (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)));
+
+                if (playerSet.Halved > 0)
+                {
+                    if (playerSet.BravoTeam.Players.Any(e => e.DiscordId == playerSet.Halved))
+                    {
+                        powerDifference /= 2;
+                    }
+                }
             }
             else
             {
                 powerDifference = 200F / (playerSet.MatchNum *
                                           (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)));
+
+                if (playerSet.Halved > 0)
+                {
+                    if (playerSet.AlphaTeam.Players.Any(e => e.DiscordId == playerSet.Halved))
+                    {
+                        powerDifference /= 2;
+                    }
+                }
             }
 
             await AirTableClient.ReportScores(playerSet, powerDifference, powerDifference);

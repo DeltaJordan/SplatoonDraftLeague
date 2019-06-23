@@ -16,6 +16,8 @@ namespace SquidDraftLeague.Bot.Queuing
     {
         public int SetNumber { get; }
 
+        public ulong Halved { get; set; }
+
         public IEnumerable<SdlPlayer> AllPlayers => this.AlphaTeam.Players.Concat(this.BravoTeam.Players).Concat(this.DraftPlayers);
 
         public SdlTeam AlphaTeam { get; }
@@ -99,10 +101,13 @@ namespace SquidDraftLeague.Bot.Queuing
             this.BravoTeam.AddPlayer(orderedPlayers[1], true);
 
             this.DraftPlayers.AddRange(orderedPlayers.Skip(2));
+
+            this.Halved = lobby.Halved;
         }
 
         public void Close()
         {
+            this.Halved = 0;
             this.AlphaTeam.Clear();
             this.BravoTeam.Clear();
             this.AlphaPicking = false;
@@ -141,7 +146,9 @@ namespace SquidDraftLeague.Bot.Queuing
                     ? " [Captain]"
                     : "";
 
-                alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordId.GetGuildUser(null).Mention}{captainText}");
+                string roleText = alphaTeamPlayer.Role == string.Empty ? string.Empty : $"[{alphaTeamPlayer.Role}]";
+
+                alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordId.GetGuildUser(null).Mention} {roleText} {captainText}");
             }
 
             EmbedFieldBuilder alphaTeamBuilder = new EmbedFieldBuilder
@@ -159,7 +166,9 @@ namespace SquidDraftLeague.Bot.Queuing
                     ? " [Captain]"
                     : "";
 
-                bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordId.GetGuildUser(null).Mention}{captainText}");
+                string roleText = bravoTeamPlayer.Role == string.Empty ? string.Empty : $"[{bravoTeamPlayer.Role}]";
+
+                bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordId.GetGuildUser(null).Mention} {roleText} {captainText}");
             }
 
             EmbedFieldBuilder bravoTeamBuilder = new EmbedFieldBuilder
@@ -175,7 +184,8 @@ namespace SquidDraftLeague.Bot.Queuing
                 EmbedFieldBuilder draftTeamBuilder = new EmbedFieldBuilder
                 {
                     Name = "Players Awaiting Team",
-                    Value = string.Join('\n', this.DraftPlayers.Select(e => e.DiscordId.GetGuildUser(null).Mention))
+                    Value = string.Join('\n',
+                        this.DraftPlayers.Select(e => e.DiscordId.GetGuildUser(null).Mention + $" [{e.Role}]"))
                 };
 
                 builder.Fields.Add(draftTeamBuilder);

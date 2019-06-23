@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 using MarkovSharp.TokenisationStrategies;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -32,6 +33,29 @@ namespace SquidDraftLeague.Bot.Commands
     public class UtilityModule : ModuleBase<SocketCommandContext>
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
+        [Command("notif")]
+        public async Task Notif()
+        {
+            if (!(this.Context.User is SocketGuildUser user))
+                return;
+
+            if (user.Roles.All(e => e.Name != "Player"))
+                return;
+
+            IRole role = this.Context.Guild.GetRole(592448366831730708);
+
+            if (user.Roles.Any(e => e == role))
+            {
+                await user.RemoveRoleAsync(role);
+                await this.ReplyAsync("Disabled lobby notifications.");
+            }
+            else
+            {
+                await user.AddRoleAsync(role);
+                await this.ReplyAsync("Enabled lobby notifications.");
+            }
+        }
 
         [Command("sendhelp")]
         public async Task SendHelp()
@@ -115,6 +139,21 @@ namespace SquidDraftLeague.Bot.Commands
                 JsonConvert.SerializeObject(Globals.SuperUsers.Select(e => e != user.Id).ToList(), Formatting.Indented));
 
             await this.ReplyAsync($"Removed {user.Mention} from the superuser group.");
+        }
+
+        [Command("addmod")]
+        public async Task AddModule(string name, [Remainder] string command)
+        {
+            if (this.Context.User.Id != 228019100008316948)
+            {
+                return;
+            }
+            
+            command = string.Join("\n", command.Split('\n').Skip(1).Take(command.Split('\n').Skip(1).Count() - 1));
+
+            string moduleFolder = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Modules")).FullName;
+
+            await File.WriteAllTextAsync(Path.Combine(moduleFolder, $"{name}"), command);
         }
 
         [Command("eval"),

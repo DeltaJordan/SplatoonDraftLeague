@@ -55,8 +55,8 @@ namespace SquidDraftLeague.Bot.AirTable
         {
             AirtableRecord[] allPlayerRecords = await GetAllPlayerRecords();
             List<double> orderedPlayers = allPlayerRecords
-                .OrderByDescending(e => Convert.ToDouble(e.Fields["Power"].ToString()))
                 .Select(e => Convert.ToDouble(e.Fields["Power"].ToString()))
+                .OrderByDescending(e => e)
                 .ToList();
 
             int placement = -1;
@@ -290,6 +290,11 @@ namespace SquidDraftLeague.Bot.AirTable
                 }
 
                 AirtableRecord record = createRecordResponse.Record;
+
+                if (!playerRecord.Fields.ContainsKey("Adjustments"))
+                {
+                    playerRecord.Fields["Adjustments"] = new JArray();
+                }
 
                 IEnumerable<JToken> updatedAdjustmentIds = ((JArray) playerRecord.Fields["Adjustments"]).Append(record.Id);
 

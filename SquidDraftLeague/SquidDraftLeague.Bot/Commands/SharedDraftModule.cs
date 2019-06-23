@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using NLog;
 using SquidDraftLeague.Bot.AirTable;
 using SquidDraftLeague.Bot.Commands.Attributes;
+using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Bot.Penalties;
 using SquidDraftLeague.Bot.Queuing;
@@ -22,6 +23,7 @@ namespace SquidDraftLeague.Bot.Commands
     public class SharedDraftModule : InteractiveBase
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private static readonly List<int> LeaveLockedSets = new List<int>();
 
         [Command("betareg"),
          RequireUserPermission(GuildPermission.ManageGuild)]
@@ -207,6 +209,130 @@ namespace SquidDraftLeague.Bot.Commands
             await this.ReplyAsync($"Penalized {user.Mention} {amount} points.");
         }
 
+        [Command("kick"),
+         RequireRole("Moderator")]
+        public async Task Kick(IGuildUser user, bool noPenalty = false)
+        {
+            Lobby joinedLobby = LobbyModule.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+
+            if (joinedLobby != null)
+            {
+                joinedLobby.RemovePlayer(joinedLobby.Players.FirstOrDefault(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+
+                await this.ReplyAsync($"{user.Mention} has been kicked from lobby #{joinedLobby.LobbyNumber}.");
+
+                if (joinedLobby.Players.Count == 0)
+                {
+                    joinedLobby.Close();
+
+                    await this.ReplyAsync($"Lobby #{joinedLobby.LobbyNumber} has been disbanded.");
+                }
+            }
+            else
+            {
+                Set joinedSet = SetModule.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+
+                if (joinedSet == null)
+                {
+                    return;
+                }
+
+                if (!noPenalty)
+                {
+                    string penaltyDir = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Penalties")).FullName;
+                    string penaltyFile = Path.Combine(penaltyDir, $"{user.Id}.penalty");
+                    Record record;
+
+                    if (File.Exists(penaltyFile))
+                    {
+                        record = JsonConvert.DeserializeObject<Record>(File.ReadAllText(penaltyFile));
+                    }
+                    else
+                    {
+                        record = new Record
+                        {
+                            AllInfractions = new List<Infraction>()
+                        };
+                    }
+
+                    await AirTableClient.PenalizePlayer(user.Id, 10, "Was kicked from a set.");
+
+                    record.AllInfractions.Add(new Infraction
+                    {
+                        Penalty = 10,
+                        Notes = "Was kicked from a set.",
+                        TimeOfOffense = DateTime.Now
+                    });
+
+                    File.WriteAllText(penaltyFile, JsonConvert.SerializeObject(record, Formatting.Indented));
+                }
+
+                if (joinedSet.AlphaTeam.Players.Any(e => e.DiscordId == user.Id))
+                {
+                    joinedSet.AlphaTeam.RemovePlayer(
+                        joinedSet.AlphaTeam.Players.First(e => e.DiscordId == user.Id));
+                }
+                else if (joinedSet.BravoTeam.Players.Any(e => e.DiscordId == user.Id))
+                {
+                    joinedSet.BravoTeam.RemovePlayer(
+                        joinedSet.BravoTeam.Players.First(e => e.DiscordId == user.Id));
+                }
+                else if (joinedSet.DraftPlayers.Any(e => e.DiscordId == user.Id))
+                {
+                    joinedSet.DraftPlayers.Remove(
+                        joinedSet.DraftPlayers.First(e => e.DiscordId == user.Id));
+                }
+
+                await this.ReplyAsync(
+                    $"{user.Mention} was kicked from the set. " +
+                    $"To the rest of the set, you will return to <#572536965833162753> to requeue. " +
+                    $"Beginning removal of access to this channel in 30 seconds. " +
+                    $"Rate limiting may cause the full process to take up to two minutes.");
+
+                Lobby movedLobby = LobbyModule.Lobbies.First(e => !e.Players.Any());
+
+                if (movedLobby == null)
+                {
+                    // TODO Not sure what to do if all lobbies are filled.
+                    return;
+                }
+
+                foreach (SdlPlayer joinedSetPlayer in joinedSet.AllPlayers)
+                {
+                    movedLobby.AddPlayer(joinedSetPlayer, true);
+                }
+
+                joinedSet.Close();
+
+                SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({joinedSet.SetNumber})");
+                SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
+
+                if (setRole == null)
+                {
+                    await devRole.ModifyAsync(e => e.Mentionable = true);
+                    await this.ReplyAsync(
+                        $"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({joinedSet.SetNumber})\".");
+                    await devRole.ModifyAsync(e => e.Mentionable = false);
+                    return;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(30));
+
+                List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
+
+                foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
+                {
+                    await movedLobbyPlayer.DiscordId.GetGuildUser(this.Context).RemoveRolesAsync(roleRemovalList);
+                }
+
+                await ((IGuildUser)this.Context.User).RemoveRolesAsync(roleRemovalList);
+
+                await ((ITextChannel)this.Context.Client.GetChannel(572536965833162753))
+                    .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.",
+                        embed: movedLobby.GetEmbedBuilder().Build());
+            }
+        }
+
         [Command("leave", RunMode = RunMode.Async),
          Summary("Leaves a currently joined lobby.")]
         public async Task Leave()
@@ -220,18 +346,6 @@ namespace SquidDraftLeague.Bot.Commands
 
                 if (joinedLobby != null)
                 {
-                    SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({joinedLobby.LobbyNumber})");
-                    SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
-
-                    if (setRole == null)
-                    {
-                        await devRole.ModifyAsync(e => e.Mentionable = true);
-                        await this.Context.Channel.SendMessageAsync($"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({joinedLobby.LobbyNumber})\".");
-                        await devRole.ModifyAsync(e => e.Mentionable = false);
-                        return;
-                    }
-
-                    await user.RemoveRoleAsync(setRole);
                     joinedLobby.RemovePlayer(joinedLobby.Players.FirstOrDefault(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id));
 
                     await this.ReplyAsync($"You have left lobby #{joinedLobby.LobbyNumber}.");
@@ -255,7 +369,7 @@ namespace SquidDraftLeague.Bot.Commands
                     string penaltyDir = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Penalties")).FullName;
                     string penaltyFile = Path.Combine(penaltyDir, $"{user.Id}.penalty");
 
-                    string penaltyMessage = "If you leave the set, you will be instated with a penalty of 15 points. ";
+                    string penaltyMessage = "If you leave the set, you will be instated with a penalty of 10 points. ";
                     Record record;
 
                     if (File.Exists(penaltyFile))
@@ -301,7 +415,7 @@ namespace SquidDraftLeague.Bot.Commands
                     }
                     else if (response.Content.ToLower() == "y")
                     {
-                        await AirTableClient.PenalizePlayer(user.Id, 15, "Left a set.");
+                        await AirTableClient.PenalizePlayer(user.Id, 10, "Left a set.");
 
                         record.AllInfractions.Add(new Infraction
                         {
@@ -330,7 +444,9 @@ namespace SquidDraftLeague.Bot.Commands
 
                         await this.ReplyAsync(
                             $"{user.Mention} Aforementioned penalty applied. Don't make a habit of this! " +
-                            $"As for the rest of the set, you will return to <#572536965833162753> to requeue. Removing access to this channel in 30 seconds.");
+                            $"As for the rest of the set, you will return to <#572536965833162753> to requeue. " +
+                            $"Beginning removal of access to this channel in 30 seconds. " +
+                            $"Rate limiting may cause the full process to take up to two minutes.");
 
                         Lobby movedLobby = LobbyModule.Lobbies.First(e => !e.Players.Any());
 

@@ -29,6 +29,8 @@ namespace SquidDraftLeague.Bot.Queuing
             }
         }
 
+        public ulong Halved { get; set; }
+
         public int CurrentDelta { get; private set; }
         public int LobbyNumber { get; }
         public ReadOnlyCollection<SdlPlayer> Players => this.players.AsReadOnly();
@@ -37,6 +39,7 @@ namespace SquidDraftLeague.Bot.Queuing
         private readonly Timer timer;
 
         private readonly List<SdlPlayer> players = new List<SdlPlayer>();
+        private readonly List<ulong> stalePlayers = new List<ulong>();
 
         public Lobby(int lobbyNumber)
         {
@@ -51,8 +54,11 @@ namespace SquidDraftLeague.Bot.Queuing
 
         public void Close()
         {
+            this.Halved = 0;
             this.players.Clear();
+            this.stalePlayers.Clear();
             this.timer.Stop();
+            this.timer.Interval = 300000;
             this.CurrentDelta = 100;
             this.InStandby = false;
         }
@@ -72,7 +78,7 @@ namespace SquidDraftLeague.Bot.Queuing
             double min = this.LobbyPowerLevel - this.CurrentDelta;
             double max = this.LobbyPowerLevel + this.CurrentDelta;
 
-            return power > min && power < max;
+            return power >= min && power <= max;
         }
 
         public bool AddPlayer(SdlPlayer player, bool force = false)
@@ -84,8 +90,19 @@ namespace SquidDraftLeague.Bot.Queuing
 
             this.players.Add(player);
 
+            if (!this.stalePlayers.Contains(player.DiscordId))
+            {
+                this.stalePlayers.Add(player.DiscordId);
+            }
+
             this.LastUpdate = DateTime.Now;
             this.timer.Stop();
+
+            if (this.players.Count > 4 && !this.stalePlayers.Contains(player.DiscordId))
+            {
+                this.timer.Interval += 300000;
+            }
+
             this.timer.Start();
 
             return true;

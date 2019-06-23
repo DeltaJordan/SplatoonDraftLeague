@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
+using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.Rest;
 using Discord.WebSocket;
@@ -17,7 +18,7 @@ using SquidDraftLeague.Language.Resources;
 namespace SquidDraftLeague.Bot.Commands
 {
     [Name("Lobby"), CheckPenalty, Group, RequireChannel(572536965833162753)]
-    public class LobbyModule : ModuleBase<SocketCommandContext>
+    public class LobbyModule : InteractiveBase
     {
         public static readonly ReadOnlyCollection<Lobby> Lobbies = new List<Lobby>
         {
@@ -37,7 +38,9 @@ namespace SquidDraftLeague.Bot.Commands
         {
             572542086260457474,
             572542140949856278,
-            572542164316192777
+            572542164316192777,
+            589955282365317151,
+            589955337256173571
         };
 
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -53,7 +56,7 @@ namespace SquidDraftLeague.Bot.Commands
 
         [Command("join"),
          Summary("Join an existing lobby near your power level, or creates a new lobby if none exist.")]
-        public async Task Join()
+        public async Task Join(int? lobbyNum = null)
         {
             if (!(this.Context.User is IGuildUser))
                 return;
@@ -89,36 +92,59 @@ namespace SquidDraftLeague.Bot.Commands
 
             Logger.Info("Complete. Searching for existing lobbies.");
 
-            await this.JoinLobby(sdlPlayer);
+            await this.JoinLobby(sdlPlayer, lobbyNumber: lobbyNum);
         }
 
-        private async Task JoinLobby(SdlPlayer sdlPlayer, bool debugFill = false)
+        private async Task JoinLobby(SdlPlayer sdlPlayer, bool debugFill = false, int? lobbyNumber = null)
         {
             try
             {
-                List<Lobby> matchedLobbies =
-                    Lobbies.Where(e => !e.IsFull && e.IsWithinThreshold(sdlPlayer.PowerLevel)).ToList();
-
                 Lobby matchedLobby;
-                if (matchedLobbies.Any())
-                {
-                    matchedLobby = matchedLobbies.OrderBy(e => Math.Abs(e.LobbyPowerLevel - sdlPlayer.PowerLevel))
-                        .First();
 
-                    matchedLobby.AddPlayer(sdlPlayer);
+                if (lobbyNumber != null)
+                {
+                    Lobby selectedLobby = Lobbies[lobbyNumber.Value - 1];
+
+                    if (selectedLobby.IsWithinThreshold(sdlPlayer.PowerLevel))
+                    {
+                        matchedLobby = selectedLobby;
+                    }
+                    else if (sdlPlayer.PowerLevel > selectedLobby.LobbyPowerLevel + selectedLobby.CurrentDelta)
+                    {
+                        matchedLobby = selectedLobby;
+                        selectedLobby.Halved = sdlPlayer.DiscordId;
+                    }
+                    else
+                    {
+                        await this.ReplyAsync($"You are not eligible to join lobby #{lobbyNumber}");
+                        return;
+                    }
                 }
                 else
                 {
-                    if (Lobbies.All(e => e.Players.Any()))
+                    List<Lobby> matchedLobbies =
+                        Lobbies.Where(e => !e.IsFull && e.IsWithinThreshold(sdlPlayer.PowerLevel)).ToList();
+
+                    if (matchedLobbies.Any())
                     {
-                        await this.ReplyAsync(Resources.LobbiesFull);
-                        return;
+                        matchedLobby = matchedLobbies.OrderBy(e => Math.Abs(e.LobbyPowerLevel - sdlPlayer.PowerLevel))
+                            .First();
+
+                        matchedLobby.AddPlayer(sdlPlayer);
                     }
+                    else
+                    {
+                        if (Lobbies.All(e => e.Players.Any()))
+                        {
+                            await this.ReplyAsync(Resources.LobbiesFull);
+                            return;
+                        }
 
-                    Logger.Info("Getting available lobby(s).");
+                        Logger.Info("Getting available lobby(s).");
 
-                    Logger.Info("Selecting first empty lobby.");
-                    matchedLobby = Lobbies.First(e => !e.Players.Any());
+                        Logger.Info("Selecting first empty lobby.");
+                        matchedLobby = Lobbies.First(e => !e.Players.Any());
+                    }
                 }
 
                 matchedLobby.RenewContext(this.Context);
@@ -178,9 +204,15 @@ namespace SquidDraftLeague.Bot.Commands
                     string message =
                         $"{sdlPlayer.DiscordId.GetGuildUser(this.Context).Mention} has been added to Lobby #{matchedLobby.LobbyNumber}. {8 - matchedLobby.Players.Count} players needed to begin.";
 
-                    if ( matchedLobby.Players.Count == 1)
+                    IRole notifRole = this.Context.Guild.GetRole(592448366831730708);
+
+                    if (matchedLobby.Players.Count == 1)
                     {
-                        message = "@here A new lobby has been started! " + message;
+                        await notifRole.ModifyAsync(e => e.Mentionable = true);
+
+                        message = $"{notifRole.Mention} A new lobby has been started! " + message;
+
+                        await notifRole.ModifyAsync(e => e.Mentionable = false);
                     }
 
                     EmbedBuilder builder = matchedLobby.GetEmbedBuilder();
