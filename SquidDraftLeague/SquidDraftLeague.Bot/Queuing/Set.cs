@@ -16,7 +16,7 @@ namespace SquidDraftLeague.Bot.Queuing
     {
         public int SetNumber { get; }
 
-        public ulong Halved { get; set; }
+        public SdlPlayer Halved { get; set; }
 
         public IEnumerable<SdlPlayer> AllPlayers => this.AlphaTeam.Players.Concat(this.BravoTeam.Players).Concat(this.DraftPlayers);
 
@@ -107,7 +107,7 @@ namespace SquidDraftLeague.Bot.Queuing
 
         public void Close()
         {
-            this.Halved = 0;
+            this.Halved = null;
             this.AlphaTeam.Clear();
             this.BravoTeam.Clear();
             this.AlphaPicking = false;

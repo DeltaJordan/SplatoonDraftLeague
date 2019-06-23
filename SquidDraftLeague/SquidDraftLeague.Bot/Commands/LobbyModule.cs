@@ -112,7 +112,11 @@ namespace SquidDraftLeague.Bot.Commands
                     else if (sdlPlayer.PowerLevel > selectedLobby.LobbyPowerLevel + selectedLobby.CurrentDelta)
                     {
                         matchedLobby = selectedLobby;
-                        selectedLobby.Halved = sdlPlayer.DiscordId;
+
+                        if (selectedLobby.Halved == null || sdlPlayer.PowerLevel > selectedLobby.Halved.PowerLevel)
+                            selectedLobby.Halved = sdlPlayer;
+
+                        await this.ReplyAsync("You will be added to this lobby but please note that winning will cause you to gain half the points.");
                     }
                     else
                     {

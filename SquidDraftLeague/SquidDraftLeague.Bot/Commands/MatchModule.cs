@@ -481,9 +481,10 @@ namespace SquidDraftLeague.Bot.Commands
                 powerDifference = 200F / (playerSet.MatchNum *
                                   (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)));
 
-                if (playerSet.Halved > 0)
+                if (playerSet.Halved != null)
                 {
-                    if (playerSet.BravoTeam.Players.Any(e => e.DiscordId == playerSet.Halved))
+                    if (playerSet.BravoTeam.Players.Any(e => e.DiscordId == playerSet.Halved.DiscordId) &&
+                        playerSet.AllPlayers.Select(e => e.PowerLevel).Average() + 125 < playerSet.Halved.PowerLevel)
                     {
                         powerDifference /= 2;
                     }
@@ -494,9 +495,10 @@ namespace SquidDraftLeague.Bot.Commands
                 powerDifference = 200F / (playerSet.MatchNum *
                                           (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)));
 
-                if (playerSet.Halved > 0)
+                if (playerSet.Halved != null)
                 {
-                    if (playerSet.AlphaTeam.Players.Any(e => e.DiscordId == playerSet.Halved))
+                    if (playerSet.AlphaTeam.Players.Any(e => e.DiscordId == playerSet.Halved.DiscordId) &&
+                        playerSet.AllPlayers.Select(e => e.PowerLevel).Average() + 125 < playerSet.Halved.PowerLevel)
                     {
                         powerDifference /= 2;
                     }
