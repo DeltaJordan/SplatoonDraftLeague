@@ -129,8 +129,6 @@ namespace SquidDraftLeague.Bot.Commands
                     {
                         matchedLobby = matchedLobbies.OrderBy(e => Math.Abs(e.LobbyPowerLevel - sdlPlayer.PowerLevel))
                             .First();
-
-                        matchedLobby.AddPlayer(sdlPlayer);
                     }
                     else
                     {
@@ -146,6 +144,8 @@ namespace SquidDraftLeague.Bot.Commands
                         matchedLobby = Lobbies.First(e => !e.Players.Any());
                     }
                 }
+
+                matchedLobby.AddPlayer(sdlPlayer);
 
                 matchedLobby.RenewContext(this.Context);
 
