@@ -4,14 +4,13 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AirtableApiClient;
-using Discord;
-using Discord.Commands;
 using Newtonsoft.Json.Linq;
 using NLog;
-using SquidDraftLeague.Bot.Queuing;
-using SquidDraftLeague.Bot.Queuing.Data;
+using SquidDraftLeague.Draft;
+using SquidDraftLeague.Draft.Map;
+using SquidDraftLeague.Settings;
 
-namespace SquidDraftLeague.Bot.AirTable
+namespace SquidDraftLeague.AirTable
 {
     public static class AirTableClient
     {
@@ -51,7 +50,7 @@ namespace SquidDraftLeague.Bot.AirTable
             }
         }
 
-        public static async Task<(int Placement, string Ordinal)> GetPlayerStandings(SdlPlayer player, SocketCommandContext context)
+        public static async Task<(int Placement, string Ordinal)> GetPlayerStandings(SdlPlayer player)
         {
             AirtableRecord[] allPlayerRecords = await GetAllPlayerRecords();
             List<double> orderedPlayers = allPlayerRecords
@@ -100,22 +99,17 @@ namespace SquidDraftLeague.Bot.AirTable
 
         }
 
-        public static async Task RegisterPlayer(IUser user, double startingPowerLevel, string nickname = null)
+        public static async Task RegisterPlayer(ulong discordId, double startingPowerLevel, string nickname)
         {
-            if (nickname == null)
-            {
-                nickname = user.Username;
-            }
-
             using (AirtableBase airtableBase = new AirtableBase(Globals.BotSettings.AppKey, Globals.BotSettings.BaseId))
             {
                 Fields fields = new Fields();
                 fields.AddField("Name", nickname);
-                fields.AddField("DiscordID", user.Id.ToString());
+                fields.AddField("DiscordID", discordId.ToString());
                 fields.AddField("Starting Power", startingPowerLevel);
 
                 if ((await GetAllPlayerRecords()).All(e =>
-                    e.Fields["DiscordID"].ToString() != user.Id.ToString(CultureInfo.InvariantCulture)))
+                    e.Fields["DiscordID"].ToString() != discordId.ToString(CultureInfo.InvariantCulture)))
                 {
                     AirtableCreateUpdateReplaceRecordResponse response =
                         await airtableBase.CreateRecord("Draft Standings", fields, true);
@@ -322,18 +316,14 @@ namespace SquidDraftLeague.Bot.AirTable
             }
         }
 
-        public static async Task<SdlPlayer[]> RetrieveAllSdlPlayers(SocketCommandContext context)
+        public static async Task<SdlPlayer[]> RetrieveAllSdlPlayers()
         {
             AirtableRecord[] records = await GetAllPlayerRecords();
-
-            records = records
-                .Where(e => Program.Client.GetGuild(570743985530863649).Users.Any(f => f.Id == Convert.ToUInt64(e.Fields["DiscordID"])))
-                .ToArray();
 
             return records.Select(playerRecord =>
                 {
                     SdlPlayer sdlPlayer =
-                        new SdlPlayer(Program.Client.GetGuild(570743985530863649).GetUser(Convert.ToUInt64(playerRecord.Fields["DiscordID"])))
+                        new SdlPlayer(Convert.ToUInt64(playerRecord.Fields["DiscordID"]))
                         {
                             AirtableName = playerRecord.Fields.ContainsKey("Name") ?
                                 playerRecord.Fields["Name"].ToString() :
@@ -401,13 +391,13 @@ namespace SquidDraftLeague.Bot.AirTable
                 .ToArray();
         }
 
-        public static async Task<SdlPlayer> RetrieveSdlPlayer(IGuildUser guildUser)
+        public static async Task<SdlPlayer> RetrieveSdlPlayer(ulong discordId)
         {
             try
             {
-                AirtableRecord playerRecord = await GetPlayerRecord(guildUser.Id);
+                AirtableRecord playerRecord = await GetPlayerRecord(discordId);
 
-                SdlPlayer sdlPlayer = new SdlPlayer(guildUser)
+                SdlPlayer sdlPlayer = new SdlPlayer(discordId)
                 {
                     AirtableName = playerRecord.Fields.ContainsKey("Name") ?
                         playerRecord.Fields["Name"].ToString() :

@@ -15,8 +15,9 @@ using Newtonsoft.Json;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
-using SquidDraftLeague.Bot.AirTable;
+using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Limitations;
+using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot
 {
@@ -77,7 +78,7 @@ namespace SquidDraftLeague.Bot
             string jsonFile = File.ReadAllText(settingsLocation);
 
             // Load the settings from file, then store it in the globals
-            Globals.BotSettings = JsonConvert.DeserializeObject<Settings>(jsonFile);
+            Globals.BotSettings = JsonConvert.DeserializeObject<Settings.Settings>(jsonFile);
 
             Client = new DiscordSocketClient(new DiscordSocketConfig
             {
@@ -99,6 +100,7 @@ namespace SquidDraftLeague.Bot
 
             Client.MessageReceived += Client_MessageReceived;
             Client.ReactionAdded += Client_ReactionAdded;
+            Client.UserLeft += Client_UserLeft;
 
             await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
 
@@ -108,6 +110,15 @@ namespace SquidDraftLeague.Bot
             await Client.LoginAsync(TokenType.Bot, Globals.BotSettings.BotToken);
             await Client.StartAsync();
             await Task.Delay(-1);
+        }
+
+        private static async Task Client_UserLeft(SocketGuildUser arg)
+        {
+            if (arg.Guild.Id == 570743985530863649)
+            {
+                await arg.Guild.GetTextChannel(579790669007290370)
+                    .SendMessageAsync($"{arg.Username}#{arg.DiscriminatorValue} ({arg.Mention}) has left the server.");
+            }
         }
 
         private static async Task Client_ReactionAdded(Cacheable<IUserMessage, ulong> messageCacheable, ISocketMessageChannel channel, SocketReaction reaction)
@@ -142,23 +153,19 @@ namespace SquidDraftLeague.Bot
                             switch (selectedNumberEmote.Key.Name)
                             {
                                 case "\u0031\u20E3":
-                                    await AirTableClient.RegisterPlayer(
-                                        Client.GetUser(userId), 2200, allRegLines[1]);
+                                    await AirTableClient.RegisterPlayer(userId, 2200, allRegLines[1]);
                                     classNum = 1;
                                     break;
                                 case "\u0032\u20E3":
-                                    await AirTableClient.RegisterPlayer(
-                                        Client.GetUser(userId), 2000, allRegLines[1]);
+                                    await AirTableClient.RegisterPlayer(userId, 2000, allRegLines[1]);
                                     classNum = 2;
                                     break;
                                 case "\u0033\u20E3":
-                                    await AirTableClient.RegisterPlayer(
-                                        Client.GetUser(userId), 1800, allRegLines[1]);
+                                    await AirTableClient.RegisterPlayer(userId, 1800, allRegLines[1]);
                                     classNum = 3;
                                     break;
                                 case "\u0034\u20E3":
-                                    await AirTableClient.RegisterPlayer(
-                                        Client.GetUser(userId), 1700, allRegLines[1]);
+                                    await AirTableClient.RegisterPlayer(userId, 1700, allRegLines[1]);
                                     classNum = 4;
                                     break;
                             }

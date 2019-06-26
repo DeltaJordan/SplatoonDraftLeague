@@ -9,13 +9,15 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 using NLog;
-using SquidDraftLeague.Bot.AirTable;
+using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Attributes;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
-using SquidDraftLeague.Bot.Penalties;
-using SquidDraftLeague.Bot.Queuing;
+using SquidDraftLeague.Draft;
+using SquidDraftLeague.Draft.Matchmaking;
+using SquidDraftLeague.Draft.Penalties;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
@@ -24,25 +26,6 @@ namespace SquidDraftLeague.Bot.Commands
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
         private static readonly List<int> LeaveLockedSets = new List<int>();
-
-        [Command("betareg"),
-         RequireUserPermission(GuildPermission.ManageGuild)]
-        public async Task BetaReg()
-        {
-            IRole playerRole = this.Context.Guild.Roles.First(e => e.Name == "Player");
-
-            foreach (SocketGuildUser socketGuildUser in this.Context.Guild.Users.Where(e => e.Roles.Any(f => f.Name == "Beta")))
-            {
-                await AirTableClient.RegisterPlayer(socketGuildUser, 2000);
-
-                if (socketGuildUser.Roles.All(e => e.Name != "Player"))
-                {
-                    await socketGuildUser.AddRoleAsync(playerRole);
-                }
-            }
-
-            await this.ReplyAsync("OK, this is epic.");
-        }
 
         [Command("cleanup"),
          RequireUserPermission(GuildPermission.ManageGuild)]
@@ -81,9 +64,9 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 await this.ReplyAsync(embed: setInChannel.GetEmbedBuilder().Build());
             }
-            else if (LobbyModule.Lobbies.All(e => e.LobbyNumber != lobbyNum))
+            else if (Matchmaker.Lobbies.All(e => e.LobbyNumber != lobbyNum))
             {
-                Lobby joinedLobby = LobbyModule.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId == user.Id));
+                Lobby joinedLobby = Matchmaker.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId == user.Id));
 
                 if (joinedLobby == null)
                 {
@@ -97,7 +80,7 @@ namespace SquidDraftLeague.Bot.Commands
             }
             else
             {
-                Lobby selectedLobby = LobbyModule.Lobbies.First(e => e.LobbyNumber == lobbyNum);
+                Lobby selectedLobby = Matchmaker.Lobbies.First(e => e.LobbyNumber == lobbyNum);
                 await this.ReplyAsync(embed: selectedLobby.GetEmbedBuilder().Build());
             }
         }
@@ -110,12 +93,12 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (type == "set")
             {
-                SetModule.Sets[number - 1].Close();
+                Matchmaker.Sets[number - 1].Close();
                 await this.ReplyAsync($"An admin has closed set number {number}.");
             }
             else if (type == "lobby")
             {
-                LobbyModule.Lobbies[number - 1].Close();
+                Matchmaker.Lobbies[number - 1].Close();
                 await this.ReplyAsync($"An admin has closed lobby number {number}.");
             }
             else
@@ -213,11 +196,11 @@ namespace SquidDraftLeague.Bot.Commands
          RequireRole("Moderator")]
         public async Task Kick(IGuildUser user, bool noPenalty = false)
         {
-            Lobby joinedLobby = LobbyModule.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+            Lobby joinedLobby = Matchmaker.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId == user.Id));
 
             if (joinedLobby != null)
             {
-                joinedLobby.RemovePlayer(joinedLobby.Players.FirstOrDefault(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+                joinedLobby.RemovePlayer(joinedLobby.Players.FirstOrDefault(e => e.DiscordId == user.Id));
 
                 await this.ReplyAsync($"{user.Mention} has been kicked from lobby #{joinedLobby.LobbyNumber}.");
 
@@ -230,7 +213,7 @@ namespace SquidDraftLeague.Bot.Commands
             }
             else
             {
-                Set joinedSet = SetModule.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+                Set joinedSet = Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == user.Id));
 
                 if (joinedSet == null)
                 {
@@ -289,7 +272,7 @@ namespace SquidDraftLeague.Bot.Commands
                     $"Beginning removal of access to this channel in 30 seconds. " +
                     $"Rate limiting may cause the full process to take up to two minutes.");
 
-                Lobby movedLobby = LobbyModule.Lobbies.First(e => !e.Players.Any());
+                Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
 
                 if (movedLobby == null)
                 {
@@ -322,7 +305,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
                 {
-                    await movedLobbyPlayer.DiscordId.GetGuildUser(this.Context).RemoveRolesAsync(roleRemovalList);
+                    await this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
                 }
 
                 await ((IGuildUser)this.Context.User).RemoveRolesAsync(roleRemovalList);
@@ -342,11 +325,11 @@ namespace SquidDraftLeague.Bot.Commands
                 if (!(this.Context.User is IGuildUser user))
                     return;
 
-                Lobby joinedLobby = LobbyModule.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+                Lobby joinedLobby = Matchmaker.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId == user.Id));
 
                 if (joinedLobby != null)
                 {
-                    joinedLobby.RemovePlayer(joinedLobby.Players.FirstOrDefault(e => e.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+                    joinedLobby.RemovePlayer(joinedLobby.Players.FirstOrDefault(e => e.DiscordId == user.Id));
 
                     await this.ReplyAsync($"You have left lobby #{joinedLobby.LobbyNumber}.");
 
@@ -359,7 +342,7 @@ namespace SquidDraftLeague.Bot.Commands
                 }
                 else
                 {
-                    Set joinedSet = SetModule.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == user.Id));
+                    Set joinedSet = Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == user.Id));
 
                     if (joinedSet == null)
                     {
@@ -448,7 +431,7 @@ namespace SquidDraftLeague.Bot.Commands
                             $"Beginning removal of access to this channel in 30 seconds. " +
                             $"Rate limiting may cause the full process to take up to two minutes.");
 
-                        Lobby movedLobby = LobbyModule.Lobbies.First(e => !e.Players.Any());
+                        Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
 
                         if (movedLobby == null)
                         {
@@ -481,7 +464,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                         foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
                         {
-                            await movedLobbyPlayer.DiscordId.GetGuildUser(this.Context).RemoveRolesAsync(roleRemovalList);
+                            await this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
                         }
 
                         await ((IGuildUser) this.Context.User).RemoveRolesAsync(roleRemovalList);

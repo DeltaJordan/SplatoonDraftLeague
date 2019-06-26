@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 
-namespace SquidDraftLeague.Bot.Penalties
+namespace SquidDraftLeague.Draft.Penalties
 {
     public class Record
     {

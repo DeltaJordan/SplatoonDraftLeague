@@ -5,14 +5,9 @@ namespace SquidDraftLeague.Bot.Extensions
 {
     public static class DiscordAPIExtensions
     {
-        public static SocketGuildUser GetGuildUser(this ulong id, SocketCommandContext context)
+        public static string ToUserMention(this ulong id)
         {
-            if (context == null)
-            {
-                return Program.Client.GetGuild(570743985530863649).GetUser(id);
-            }
-
-            return context.Guild.GetUser(id);
+            return $"<@{id}>";
         }
     }
 }

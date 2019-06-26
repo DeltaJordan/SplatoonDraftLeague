@@ -4,8 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord.Commands;
 using Newtonsoft.Json;
-using SquidDraftLeague.Bot.Penalties;
+using SquidDraftLeague.Draft.Penalties;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands.Preconditions
 {

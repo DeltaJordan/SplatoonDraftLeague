@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 
-namespace SquidDraftLeague.Bot.Penalties
+namespace SquidDraftLeague.Draft.Penalties
 {
     public class Infraction
     {

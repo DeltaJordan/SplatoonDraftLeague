@@ -2,7 +2,8 @@
 using System.Linq;
 using Discord;
 using Discord.WebSocket;
-using SquidDraftLeague.Bot.Queuing;
+using SquidDraftLeague.Draft;
+using SquidDraftLeague.Draft.Matchmaking;
 
 namespace SquidDraftLeague.Bot.Commands
 {
@@ -53,7 +54,7 @@ namespace SquidDraftLeague.Bot.Commands
 
         public static Set SetFromChannel(ulong channel)
         {
-            return SetChannelIds.Contains(channel) ? SetModule.Sets[Array.IndexOf(SetChannelIds, channel)] : null;
+            return SetChannelIds.Contains(channel) ? Matchmaker.Sets[Array.IndexOf(SetChannelIds, channel)] : null;
         }
 
         public static SocketTextChannel ChannelFromSet(int setNumber)

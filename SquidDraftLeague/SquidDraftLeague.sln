@@ -7,6 +7,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SquidDraftLeague.Bot", "Squ
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SquidDraftLeague.Language", "SquidDraftLeague.Language\SquidDraftLeague.Language.csproj", "{CD95781A-8C92-4E89-8729-58AC8DC3913E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SquidDraftLeague.Draft", "SquidDraftLeague.Draft\SquidDraftLeague.Draft.csproj", "{4FF55EA2-2DC4-4295-B47F-3B3CD45B4121}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SquidDraftLeague.AirTable", "SquidDraftLeague.AirTable\SquidDraftLeague.AirTable.csproj", "{5484CBEF-96F8-4B16-96F2-2383A85A31FB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SquidDraftLeague.Settings", "SquidDraftLeague.Settings\SquidDraftLeague.Settings.csproj", "{C11359CC-AC41-4704-B168-A16FDF715EAD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,6 +32,24 @@ Global
 		{CD95781A-8C92-4E89-8729-58AC8DC3913E}.Debug-Prefix|Any CPU.Build.0 = Debug|Any CPU
 		{CD95781A-8C92-4E89-8729-58AC8DC3913E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CD95781A-8C92-4E89-8729-58AC8DC3913E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4FF55EA2-2DC4-4295-B47F-3B3CD45B4121}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4FF55EA2-2DC4-4295-B47F-3B3CD45B4121}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4FF55EA2-2DC4-4295-B47F-3B3CD45B4121}.Debug-Prefix|Any CPU.ActiveCfg = Debug|Any CPU
+		{4FF55EA2-2DC4-4295-B47F-3B3CD45B4121}.Debug-Prefix|Any CPU.Build.0 = Debug|Any CPU
+		{4FF55EA2-2DC4-4295-B47F-3B3CD45B4121}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4FF55EA2-2DC4-4295-B47F-3B3CD45B4121}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5484CBEF-96F8-4B16-96F2-2383A85A31FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5484CBEF-96F8-4B16-96F2-2383A85A31FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5484CBEF-96F8-4B16-96F2-2383A85A31FB}.Debug-Prefix|Any CPU.ActiveCfg = Debug|Any CPU
+		{5484CBEF-96F8-4B16-96F2-2383A85A31FB}.Debug-Prefix|Any CPU.Build.0 = Debug|Any CPU
+		{5484CBEF-96F8-4B16-96F2-2383A85A31FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5484CBEF-96F8-4B16-96F2-2383A85A31FB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C11359CC-AC41-4704-B168-A16FDF715EAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C11359CC-AC41-4704-B168-A16FDF715EAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C11359CC-AC41-4704-B168-A16FDF715EAD}.Debug-Prefix|Any CPU.ActiveCfg = Debug|Any CPU
+		{C11359CC-AC41-4704-B168-A16FDF715EAD}.Debug-Prefix|Any CPU.Build.0 = Debug|Any CPU
+		{C11359CC-AC41-4704-B168-A16FDF715EAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C11359CC-AC41-4704-B168-A16FDF715EAD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -8,12 +8,13 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using NLog;
-using SquidDraftLeague.Bot.AirTable;
+using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Attributes;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
-using SquidDraftLeague.Bot.Queuing;
-using SquidDraftLeague.Bot.Queuing.Data;
+using SquidDraftLeague.Draft;
+using SquidDraftLeague.Draft.Map;
+using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Language.Resources;
 
 namespace SquidDraftLeague.Bot.Commands
@@ -22,12 +23,11 @@ namespace SquidDraftLeague.Bot.Commands
     public class MatchModule : InteractiveBase<SocketCommandContext>
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private static readonly Dictionary<ulong, Stopwatch> ChannelTimers = new Dictionary<ulong, Stopwatch>();
 
         // NOTE This is where we'll have to implement the different match amounts for cups.
         private const int SET_MATCH_NUMBER = 7;
 
-        public static async Task MoveToMatch(ITextChannel context, Set set)
+        public static async Task MoveToMatch(SocketTextChannel context, Set set)
         {
             await context.SendMessageAsync("Both teams are drafted! Please wait while roles are being distributed...");
 
@@ -36,12 +36,12 @@ namespace SquidDraftLeague.Bot.Commands
 
             foreach (SdlPlayer alphaTeamPlayer in set.AlphaTeam.Players)
             {
-                await alphaTeamPlayer.DiscordId.GetGuildUser(null).AddRoleAsync(alphaRole);
+                await context.Guild.GetUser(alphaTeamPlayer.DiscordId).AddRoleAsync(alphaRole);
             }
 
             foreach (SdlPlayer bravoTeamPlayer in set.BravoTeam.Players)
             {
-                await bravoTeamPlayer.DiscordId.GetGuildUser(null).AddRoleAsync(bravoRole);
+                await context.Guild.GetUser(bravoTeamPlayer.DiscordId).AddRoleAsync(bravoRole);
             }
 
             await alphaRole.ModifyAsync(e => e.Mentionable = true);
@@ -53,7 +53,9 @@ namespace SquidDraftLeague.Bot.Commands
 
             set.MatchNum = 1;
 
-            Stage selectedStage = await set.PickStage();
+            Stage[] mapList = await AirTableClient.GetMapList();
+
+            Stage selectedStage = set.PickStage(mapList);
 
             set.PlayedStages.Add(selectedStage);
 
@@ -79,7 +81,7 @@ namespace SquidDraftLeague.Bot.Commands
 
             foreach (SdlPlayer allPlayer in set.AllPlayers)
             {
-                await allPlayer.DiscordId.GetGuildUser(null).RemoveRoleAsync(setRole);
+                await context.Guild.GetUser(allPlayer.DiscordId).RemoveRoleAsync(setRole);
             }
         }
 
@@ -88,7 +90,7 @@ namespace SquidDraftLeague.Bot.Commands
         public async Task Dispute()
         {
             Set playerSet =
-                SetModule.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == this.Context.User.Id));
+                Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == this.Context.User.Id));
 
             IRole modRole = this.Context.Guild.Roles.First(e => e.Name == "Moderator");
 
@@ -123,7 +125,7 @@ namespace SquidDraftLeague.Bot.Commands
             }
             else
             {
-                playerSet = SetModule.Sets[setNumber - 1];
+                playerSet = Matchmaker.Sets[setNumber - 1];
             }
 
             playerSet.Locked = false;
@@ -142,7 +144,8 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await this.ReplyAsync("The report has been resolved by a moderator. This is a final decision. Please continue with the set.");
 
-                Stage selectedRandomStage = await playerSet.PickStage();
+                Stage[] mapList = await AirTableClient.GetMapList();
+                Stage selectedRandomStage = playerSet.PickStage(mapList);
 
                 playerSet.PlayedStages.Add(selectedRandomStage);
 
@@ -209,7 +212,7 @@ namespace SquidDraftLeague.Bot.Commands
             }
             else
             {
-                selectedSet = SetModule.Sets[set - 1];
+                selectedSet = Matchmaker.Sets[set - 1];
             }
 
             team = team.ToLower();
@@ -277,27 +280,19 @@ namespace SquidDraftLeague.Bot.Commands
         }
 
         [Command("score")]
-        public async Task Score(string team)
+        public async Task Score()
         {
-            if (ChannelTimers.ContainsKey(this.Context.Channel.Id))
-            {
-                if (ChannelTimers[this.Context.Channel.Id].Elapsed.TotalSeconds < 30)
-                {
-                    await this.ReplyAsync($"Please wait to report the score for " +
-                                          $"{30 - ChannelTimers[this.Context.Channel.Id].Elapsed.TotalSeconds} more seconds.");
-                }
-                else
-                {
-                    ChannelTimers.Remove(this.Context.Channel.Id);
-                }
-            }
-
             Set playerSet =
-                SetModule.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId.GetGuildUser(this.Context).Id == this.Context.User.Id));
+                Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == this.Context.User.Id));
 
             IRole modRole = this.Context.Guild.Roles.First(e => e.Name == "Moderator");
 
             if (playerSet == null)
+            {
+                return;
+            }
+
+            if (playerSet.DraftPlayers.Any())
             {
                 return;
             }
@@ -313,13 +308,26 @@ namespace SquidDraftLeague.Bot.Commands
                 return;
             }
 
-            team = team.ToLower();
-
-            if (team != "bravo" && team != "alpha")
+            if (!playerSet.AlphaTeam.IsCaptain(this.Context.User.Id) || !playerSet.BravoTeam.IsCaptain(this.Context.User.Id))
             {
-                await this.ReplyAsync("Please use the terms \"alpha\" or \"bravo\" to indicate the winning team.");
+                await this.ReplyAsync("Only a captain of the losing team can report the score.");
                 return;
             }
+
+            string team;
+            if (playerSet.AlphaTeam.IsCaptain(this.Context.User.Id))
+            {
+                team = "alpha";
+            }
+            else if (playerSet.BravoTeam.IsCaptain(this.Context.User.Id))
+            {
+                team = "bravo";
+            }
+            else
+            {
+                team = null;
+            }
+
 
             playerSet.ReportScore(team);
 
@@ -411,7 +419,8 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     playerSet.MatchNum++;
 
-                    Stage selectedStage = await playerSet.PickStage();
+                    Stage[] mapList = await AirTableClient.GetMapList();
+                    Stage selectedStage = playerSet.PickStage(mapList);
 
                     playerSet.PlayedStages.Add(selectedStage);
 
@@ -455,7 +464,7 @@ namespace SquidDraftLeague.Bot.Commands
 
             foreach (SdlPlayer playerSetAllPlayer in playerSet.AllPlayers)
             {
-                SocketGuildUser guildUser = playerSetAllPlayer.DiscordId.GetGuildUser(this.Context);
+                SocketGuildUser guildUser = this.Context.Guild.GetUser(playerSetAllPlayer.DiscordId);
 
                 await guildUser.RemoveRolesAsync(roleRemovalList.Where(e =>
                     this.Context.Guild.GetUser(guildUser.Id).Roles

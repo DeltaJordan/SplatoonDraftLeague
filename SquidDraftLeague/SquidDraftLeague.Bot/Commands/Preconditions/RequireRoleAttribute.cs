@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord.Commands;
 using Discord.WebSocket;
+using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands.Preconditions
 {

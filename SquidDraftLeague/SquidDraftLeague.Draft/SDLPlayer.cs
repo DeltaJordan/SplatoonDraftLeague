@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Discord;
-using SquidDraftLeague.Bot.Queuing.Data;
+using SquidDraftLeague.Draft.Map;
 
-namespace SquidDraftLeague.Bot.AirTable
+namespace SquidDraftLeague.Draft
 {
     public class SdlPlayer : IEquatable<SdlPlayer>
     {
@@ -18,9 +17,9 @@ namespace SquidDraftLeague.Bot.AirTable
 
         public double OverallWinRate { get; set; }
 
-        public SdlPlayer(IGuildUser user)
+        public SdlPlayer(ulong discordId)
         {
-            this.DiscordId = user.Id;
+            this.DiscordId = discordId;
         }
 
         public override bool Equals(object obj)

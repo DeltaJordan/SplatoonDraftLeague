@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using SquidDraftLeague.Settings;
 
-namespace SquidDraftLeague.Bot.Extensions
+namespace SquidDraftLeague.Draft.Extensions
 {
     public static class LinqExtensions
     {

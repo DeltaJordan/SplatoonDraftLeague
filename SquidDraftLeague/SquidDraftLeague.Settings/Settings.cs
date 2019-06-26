@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using Newtonsoft.Json;
 
-namespace SquidDraftLeague.Bot
+namespace SquidDraftLeague.Settings
 {
     public class Settings
     {

@@ -1,13 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Discord;
-using SquidDraftLeague.Bot.AirTable;
 
-namespace SquidDraftLeague.Bot.Queuing
+namespace SquidDraftLeague.Draft
 {
     public class SdlTeam
     {
+        public string Name { get; }
         public ReadOnlyCollection<SdlPlayer> Players => this.players.AsReadOnly();
         private readonly List<SdlPlayer> players = new List<SdlPlayer>();
 
@@ -17,9 +16,14 @@ namespace SquidDraftLeague.Bot.Queuing
 
         public SdlPlayer Captain { get; private set; }
 
-        public bool IsCaptain(IUser user)
+        public SdlTeam(string name)
         {
-            return user.Id == this.Captain.DiscordId;
+            this.Name = name;
+        }
+
+        public bool IsCaptain(ulong discordId)
+        {
+            return discordId == this.Captain.DiscordId;
         }
 
         public void AddPlayer(SdlPlayer player, bool asCaptain = false)

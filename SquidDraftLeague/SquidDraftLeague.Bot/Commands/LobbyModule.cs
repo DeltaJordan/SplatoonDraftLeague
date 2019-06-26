@@ -9,10 +9,11 @@ using Discord.Commands;
 using Discord.Rest;
 using Discord.WebSocket;
 using NLog;
-using SquidDraftLeague.Bot.AirTable;
+using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
-using SquidDraftLeague.Bot.Queuing;
+using SquidDraftLeague.Draft;
+using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Language.Resources;
 
 namespace SquidDraftLeague.Bot.Commands
@@ -20,36 +21,13 @@ namespace SquidDraftLeague.Bot.Commands
     [Name("Lobby"), CheckPenalty, Group, RequireChannel(572536965833162753)]
     public class LobbyModule : InteractiveBase
     {
-        public static readonly ReadOnlyCollection<Lobby> Lobbies = new List<Lobby>
-        {
-            new Lobby(1),
-            new Lobby(2),
-            new Lobby(3),
-            new Lobby(4),
-            new Lobby(5),
-            new Lobby(6),
-            new Lobby(7),
-            new Lobby(8),
-            new Lobby(9),
-            new Lobby(10)
-        }.AsReadOnly();
-
-        private static readonly ulong[] SetChannels =
-        {
-            572542086260457474,
-            572542140949856278,
-            572542164316192777,
-            589955282365317151,
-            589955337256173571
-        };
-
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         [Command("fill"),
         RequireRole("Developer")]
         public async Task DebugPropagate()
         {
-            SdlPlayer sdlPlayer = await AirTableClient.RetrieveSdlPlayer((IGuildUser) this.Context.User);
+            SdlPlayer sdlPlayer = await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id);
 
             await this.JoinLobby(sdlPlayer, true);
         }
@@ -63,34 +41,46 @@ namespace SquidDraftLeague.Bot.Commands
 
             IGuildUser player = (IGuildUser)this.Context.User;
 
-            if (SetModule.Sets.Any(e => e.AllPlayers.Any(f => f.DiscordId == player.Id)))
+            LobbyEligibilityResponse lobbyEligibility = Matchmaker.LobbyEligibility(player.Id);
+
+            if (!lobbyEligibility.Success)
             {
-                await this.ReplyAsync(Resources.JoinLobbyInSet);
+                await this.ReplyAsync(lobbyEligibility.Message);
                 return;
             }
-
-            if (Lobbies.Any(e => e.Players.Any(f => f.DiscordId == player.Id)))
-            {
-                await this.ReplyAsync(Resources.JoinLobbyInLobby);
-                return;
-            }
-
-            Logger.Info("Retrieving player records from airtable.");
 
             SdlPlayer sdlPlayer;
 
             try
             {
-                sdlPlayer = await AirTableClient.RetrieveSdlPlayer(player);
+                sdlPlayer = await AirTableClient.RetrieveSdlPlayer(player.Id);
             }
             catch (SdlAirTableException exception)
             {
                 Logger.Error(exception);
-                await exception.OutputToDiscordUser(this.Context);
+
+                switch (exception.ErrorType)
+                {
+                    case SdlAirTableException.AirtableErrorType.NotFound:
+                        await (await (await Program.Client.GetApplicationInfoAsync()).Owner.GetOrCreateDMChannelAsync())
+                            .SendMessageAsync(exception.Message);
+
+                        await this.ReplyAsync("Cannot find your record in the database. " +
+                                              "Most likely either you have not registered or are not registered correctly.");
+                        break;
+                    case SdlAirTableException.AirtableErrorType.UnexpectedDuplicate:
+                    case SdlAirTableException.AirtableErrorType.CommunicationError:
+                    case SdlAirTableException.AirtableErrorType.Generic:
+                        await (await (await Program.Client.GetApplicationInfoAsync()).Owner.GetOrCreateDMChannelAsync())
+                            .SendMessageAsync(exception.Message);
+
+                        await this.ReplyAsync("There was an error retrieving your player record.");
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
                 return;
             }
-
-            Logger.Info("Complete. Searching for existing lobbies.");
 
             await this.JoinLobby(sdlPlayer, lobbyNumber: lobbyNum);
         }
@@ -103,59 +93,50 @@ namespace SquidDraftLeague.Bot.Commands
 
                 if (lobbyNumber != null)
                 {
-                    Lobby selectedLobby = Lobbies[lobbyNumber.Value - 1];
+                    LobbySelectResponse lobbySelectResponse = Matchmaker.SelectLobbyByNumber(sdlPlayer, lobbyNumber.Value);
 
-                    if (selectedLobby.IsWithinThreshold(sdlPlayer.PowerLevel))
+                    if (!lobbySelectResponse.Success)
                     {
-                        matchedLobby = selectedLobby;
-                    }
-                    else if (sdlPlayer.PowerLevel > selectedLobby.LobbyPowerLevel + selectedLobby.CurrentDelta)
-                    {
-                        matchedLobby = selectedLobby;
+                        if (lobbySelectResponse.Exception != null)
+                            Logger.Error(lobbySelectResponse.Exception);
 
-                        if (selectedLobby.Halved == null || sdlPlayer.PowerLevel > selectedLobby.Halved.PowerLevel)
-                            selectedLobby.Halved = sdlPlayer;
+                        if (!string.IsNullOrEmpty(lobbySelectResponse.Message))
+                            await this.ReplyAsync(lobbySelectResponse.Message);
 
-                        await this.ReplyAsync("You will be added to this lobby but please note that winning will cause you to gain half the points.");
-                    }
-                    else
-                    {
-                        await this.ReplyAsync($"You are not eligible to join lobby #{lobbyNumber}");
                         return;
                     }
+
+                    matchedLobby = lobbySelectResponse.Result;
+
+                    if (!string.IsNullOrEmpty(lobbySelectResponse.Message))
+                        await this.ReplyAsync(lobbySelectResponse.Message);
                 }
                 else
                 {
-                    List<Lobby> matchedLobbies =
-                        Lobbies.Where(e => !e.IsFull && e.IsWithinThreshold(sdlPlayer.PowerLevel)).ToList();
+                    LobbySelectResponse lobbySelectResponse = Matchmaker.FindLobby(sdlPlayer);
 
-                    if (matchedLobbies.Any())
+                    if (!lobbySelectResponse.Success)
                     {
-                        matchedLobby = matchedLobbies.OrderBy(e => Math.Abs(e.LobbyPowerLevel - sdlPlayer.PowerLevel))
-                            .First();
-                    }
-                    else
-                    {
-                        if (Lobbies.All(e => e.Players.Any()))
-                        {
-                            await this.ReplyAsync(Resources.LobbiesFull);
-                            return;
-                        }
+                        if (lobbySelectResponse.Exception != null)
+                            Logger.Error(lobbySelectResponse.Exception);
 
-                        Logger.Info("Getting available lobby(s).");
+                        if (!string.IsNullOrEmpty(lobbySelectResponse.Message))
+                            await this.ReplyAsync(lobbySelectResponse.Message);
 
-                        Logger.Info("Selecting first empty lobby.");
-                        matchedLobby = Lobbies.First(e => !e.Players.Any());
+                        return;
                     }
+
+                    if (!string.IsNullOrEmpty(lobbySelectResponse.Message))
+                        await this.ReplyAsync(lobbySelectResponse.Message);
+
+                    matchedLobby = lobbySelectResponse.Result;
                 }
 
                 matchedLobby.AddPlayer(sdlPlayer);
 
-                matchedLobby.RenewContext(this.Context);
-
                 if (debugFill)
                 {
-                    foreach (SdlPlayer nextPlayer in (await AirTableClient.RetrieveAllSdlPlayers(this.Context)).Where(e => e != sdlPlayer).Take(7))
+                    foreach (SdlPlayer nextPlayer in (await AirTableClient.RetrieveAllSdlPlayers()).Where(e => e != sdlPlayer).Take(7))
                     {
                         matchedLobby.AddPlayer(nextPlayer, true);
                     }
@@ -163,55 +144,60 @@ namespace SquidDraftLeague.Bot.Commands
 
                 if (matchedLobby.IsFull)
                 {
-                    if (SetModule.Sets.All(e => e.AllPlayers.Any()))
+                    MoveToSetResponse moveToSetResponse = Matchmaker.MoveLobbyToSet(matchedLobby);
+
+                    if (!moveToSetResponse.Success)
                     {
-                        matchedLobby.InStandby = true;
-                        // TODO Left off language file stuff here
-                        await this.ReplyAsync(string.Format(Resources.SetsFull, "<#579890960394354690>"),
-                            embed: matchedLobby.GetEmbedBuilder().Build());
+                        if (moveToSetResponse.Exception != null)
+                            Logger.Error(moveToSetResponse.Exception);
+
+                        if (moveToSetResponse.Message != null)
+                            await this.ReplyAsync(moveToSetResponse.Message,
+                                embed: matchedLobby.GetEmbedBuilder().Build());
+
                         return;
                     }
 
-                    Set newSet = SetModule.Sets.First(e => !e.AllPlayers.Any());
-                    newSet.Closed += NewMatch_Closed;
-                    newSet.MoveLobbyToSet(matchedLobby);
-                    matchedLobby.Close();
+                    if (!string.IsNullOrEmpty(moveToSetResponse.Message))
+                        await this.ReplyAsync(moveToSetResponse.Message);
+
+                    Set newSet = moveToSetResponse.Result;
+                    newSet.Closed += this.NewMatch_Closed;
 
                     SocketRole setRole =
-                        this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({newSet.SetNumber})");
-                    SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
-
-                    if (setRole == null)
-                    {
-                        await this.ReplyAsync(
-                            $"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({newSet.SetNumber})\".");
-                        return;
-                    }
+                        this.Context.Guild.Roles.First(e => e.Name == $"In Set ({newSet.SetNumber})");
 
                     foreach (SdlPlayer setPlayer in newSet.AllPlayers)
                     {
                         await this.Context.Guild.GetUser(setPlayer.DiscordId).AddRoleAsync(setRole);
                     }
 
-                    await this.ReplyAsync($"Lobby filled! Please move to <#{SetChannels[newSet.SetNumber - 1]}>.");
+                    SocketTextChannel setChannel = CommandHelper.ChannelFromSet(newSet.SetNumber);
+
+                    await this.ReplyAsync($"Lobby filled! Please move to {setChannel.Mention}.");
 
                     await setRole.ModifyAsync(e => e.Mentionable = true);
-                    RestUserMessage lastMessage = await this.Context.Guild.GetTextChannel(SetChannels[newSet.SetNumber - 1]).SendMessageAsync(
-                        $"{setRole.Mention} Welcome to set #{newSet.SetNumber}! To begin, {this.Context.Guild.GetUser(newSet.BravoTeam.Captain.DiscordId).Mention} will have one minute to pick a player using `%pick [player]`.",
+                    RestUserMessage lastMessage = await setChannel.SendMessageAsync(
+                        $"{setRole.Mention} Welcome to set #{newSet.SetNumber}! To begin, " +
+                        $"{this.Context.Guild.GetUser(newSet.BravoTeam.Captain.DiscordId).Mention} will have " +
+                        $"one minute to pick a player using `%pick [player]`.",
                         embed: newSet.GetEmbedBuilder().Build());
                     await setRole.ModifyAsync(e => e.Mentionable = false);
 
-                    newSet.SetupTimeout(this.Context.Guild.GetTextChannel(SetChannels[newSet.SetNumber - 1]));
+                    newSet.DraftTimeout += this.NewSet_DraftTimeout;
                 }
                 else
                 {
                     string message =
-                        $"{sdlPlayer.DiscordId.GetGuildUser(this.Context).Mention} has been added to Lobby #{matchedLobby.LobbyNumber}. {8 - matchedLobby.Players.Count} players needed to begin.";
+                        $"{sdlPlayer.DiscordId.ToUserMention()} has been added to " +
+                        $"Lobby #{matchedLobby.LobbyNumber}. {8 - matchedLobby.Players.Count} players needed to begin.";
 
                     IRole notifRole = this.Context.Guild.GetRole(592448366831730708);
 
                     if (matchedLobby.Players.Count == 1)
                     {
+                        matchedLobby.DeltaUpdated += this.MatchedLobby_DeltaUpdated;
+
                         message = $"{notifRole.Mention} A new lobby has been started! " + message;
                     }
 
@@ -228,13 +214,69 @@ namespace SquidDraftLeague.Bot.Commands
             }
         }
 
-        private static async void NewMatch_Closed(object sender, Set set)
+        private async void MatchedLobby_DeltaUpdated(object sender, bool closed)
         {
-            set.Closed -= NewMatch_Closed;
+            if (sender == null || !(sender is Lobby lobby))
+                return;
 
-            if (!Lobbies.Any(l => l.InStandby)) return;
+            if (closed)
+            {
+                await this.Context.Channel.SendMessageAsync(
+                    $"{string.Join(" ", lobby.Players.Select(f => Program.Client.GetUser(f.DiscordId).Mention))}\n" +
+                    $"Closing the lobby because not enough players have joined the battle. Please try again by using %join.");
 
-            Lobby matchedLobby = Lobbies.First(l => l.InStandby);
+                SocketRole rmSetRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({lobby.LobbyNumber})");
+                foreach (SdlPlayer sdlPlayer in lobby.Players)
+                {
+                    await Program.Client.GetGuild(570743985530863649).GetUser(sdlPlayer.DiscordId).RemoveRoleAsync(rmSetRole);
+                }
+
+                return;
+            }
+
+            SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({lobby.LobbyNumber})");
+            SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
+
+            if (setRole == null)
+            {
+                await devRole.ModifyAsync(e => e.Mentionable = true);
+                await this.Context.Channel.SendMessageAsync($"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({lobby.LobbyNumber})\".");
+                await devRole.ModifyAsync(e => e.Mentionable = false);
+                return;
+            }
+
+            string message =
+                $"{(lobby.CurrentDelta - 75) / 25 * 5} minutes have passed for lobby #{lobby.LobbyNumber}. The threshold has been increased by 25 to {lobby.CurrentDelta}.";
+
+            EmbedBuilder builder = lobby.GetEmbedBuilder();
+
+            await setRole.ModifyAsync(e => e.Mentionable = true);
+            await this.Context.Channel.SendMessageAsync(message, false, builder.Build());
+            await setRole.ModifyAsync(e => e.Mentionable = false);
+        }
+
+        private async void NewSet_DraftTimeout(object sender, EventArgs e)
+        {
+            if (sender == null || !(sender is Set set))
+                return;
+
+            SocketTextChannel setChannel = CommandHelper.ChannelFromSet(set.SetNumber);
+
+            await setChannel.SendMessageAsync("Choosing team member due to timeout.");
+
+            await SetModule.PickPlayer(set, set.DraftPlayers[0], setChannel);
+        }
+
+        private async void NewMatch_Closed(object sender, EventArgs eventArgs)
+        {
+            if (sender == null || !(sender is Set set))
+                return;
+
+            set.Closed -= this.NewMatch_Closed;
+
+            if (!Matchmaker.Lobbies.Any(l => l.InStandby)) return;
+
+            Lobby matchedLobby = Matchmaker.Lobbies.First(l => l.InStandby);
             set.MoveLobbyToSet(matchedLobby);
             matchedLobby.Close();
 
@@ -257,11 +299,11 @@ namespace SquidDraftLeague.Bot.Commands
                 await sdlGuild.GetUser(setPlayer.DiscordId).AddRoleAsync(setRole);
             }
 
-            RestUserMessage sendMessageAsync = await setChannel.SendMessageAsync(
+            await setChannel.SendMessageAsync(
                 $"Welcome to set #{set.SetNumber}! To begin, {sdlGuild.GetUser(set.BravoTeam.Captain.DiscordId).Mention} will have two minutes to pick a player using `%pick [player]`.",
                 embed: set.GetEmbedBuilder().Build());
 
-            set.SetupTimeout((ITextChannel) sendMessageAsync.Channel);
+            set.DraftTimeout += this.NewMatch_Closed;
         }
     }
 }

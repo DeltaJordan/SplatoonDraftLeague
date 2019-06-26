@@ -4,9 +4,8 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using Newtonsoft.Json;
-using SixLabors.Fonts;
 
-namespace SquidDraftLeague.Bot
+namespace SquidDraftLeague.Settings
 {
     public static class Globals
     {
@@ -31,12 +30,6 @@ namespace SquidDraftLeague.Bot
         /// Returns the root directory of the application.
         /// </summary>
         public static readonly string AppPath = Directory.GetParent(new Uri(Assembly.GetEntryAssembly()?.CodeBase).LocalPath).FullName;
-
-        public static readonly FontCollection Fonts = new FontCollection();
-        public static readonly FontFamily KarlaFontFamily = Fonts.Install(Path.Combine(AppPath, "Data", "font", "Karla-Regular.ttf"));
-        public static readonly FontFamily KarlaBoldFontFamily = Fonts.Install(Path.Combine(AppPath, "Data", "font", "Karla-Bold.ttf"));
-        public static readonly FontFamily KarlaBoldItalicFontFamily = Fonts.Install(Path.Combine(AppPath, "Data", "font", "Karla-BoldItalic.ttf"));
-        public static readonly FontFamily KarlaItalicFontFamily = Fonts.Install(Path.Combine(AppPath, "Data", "font", "Karla-Italic.ttf"));
 
         /// <summary>
         /// My implementation of a static random; as close to fully random as possible.

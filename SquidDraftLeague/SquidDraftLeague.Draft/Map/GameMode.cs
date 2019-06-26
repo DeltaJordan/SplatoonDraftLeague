@@ -1,4 +1,4 @@
-﻿namespace SquidDraftLeague.Bot.Queuing.Data
+﻿namespace SquidDraftLeague.Draft.Map
 {
     public enum GameMode
     {

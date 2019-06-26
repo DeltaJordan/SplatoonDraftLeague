@@ -18,9 +18,11 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 using SixLabors.Shapes;
-using SquidDraftLeague.Bot.AirTable;
-using SquidDraftLeague.Bot.Queuing.Data;
+using SquidDraftLeague.AirTable;
+using SquidDraftLeague.Draft;
+using SquidDraftLeague.Draft.Map;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.Settings;
 using Image = SixLabors.ImageSharp.Image;
 using Path = System.IO.Path;
 
@@ -31,6 +33,12 @@ namespace SquidDraftLeague.Bot.Commands
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+        public static readonly FontCollection Fonts = new FontCollection();
+        public static readonly FontFamily KarlaFontFamily = Fonts.Install(Path.Combine(Globals.AppPath, "Data", "font", "Karla-Regular.ttf"));
+        public static readonly FontFamily KarlaBoldFontFamily = Fonts.Install(Path.Combine(Globals.AppPath, "Data", "font", "Karla-Bold.ttf"));
+        public static readonly FontFamily KarlaBoldItalicFontFamily = Fonts.Install(Path.Combine(Globals.AppPath, "Data", "font", "Karla-BoldItalic.ttf"));
+        public static readonly FontFamily KarlaItalicFontFamily = Fonts.Install(Path.Combine(Globals.AppPath, "Data", "font", "Karla-Italic.ttf"));
+
         [Command("regapply"),
          RequireContext(ContextType.DM)]
         public async Task ApplyForRegistration()
@@ -39,7 +47,7 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 IUser user = this.Context.User;
 
-                if ((await AirTableClient.RetrieveAllSdlPlayers(this.Context)).Any(e => e.DiscordId == user.Id))
+                if ((await AirTableClient.RetrieveAllSdlPlayers()).Any(e => e.DiscordId == user.Id))
                 {
                     await this.ReplyAsync("You are already are registered or are awaiting registration for SDL!");
                     return;
@@ -268,29 +276,29 @@ namespace SquidDraftLeague.Bot.Commands
                 SdlPlayer player;
                 try
                 {
-                    player = await AirTableClient.RetrieveSdlPlayer((IGuildUser)user);
+                    player = await AirTableClient.RetrieveSdlPlayer(user.Id);
                 }
                 catch (Exception e)
                 {
                     Logger.Warn(e);
 
-                    if (e is SdlAirTableException airTableException)
-                        await airTableException.OutputToDiscordUser(this.Context);
+                    /*if (e is SdlAirTableException airTableException)
+                        await airTableException.Message;*/
 
                     throw;
                 }
 
                 IUserMessage message = await this.ReplyAsync("Please wait, profiles take a little bit to put together.");
 
-                Font powerFont = Globals.KarlaFontFamily.CreateFont(160, FontStyle.Bold);
-                Font nameFont = Globals.KarlaFontFamily.CreateFont(80, FontStyle.Bold);
-                Font winRateFont = Globals.KarlaFontFamily.CreateFont(100, FontStyle.Bold);
-                Font switchCodeFont = Globals.KarlaItalicFontFamily.CreateFont(50, FontStyle.Italic);
-                Font classFont = Globals.KarlaFontFamily.CreateFont(180, FontStyle.Bold);
-                Font classNameFont = Globals.KarlaFontFamily.CreateFont(26, FontStyle.Bold);
-                Font roleFont = Globals.KarlaFontFamily.CreateFont(100, FontStyle.Bold);
-                Font placementFont = Globals.KarlaFontFamily.CreateFont(113, FontStyle.Bold);
-                Font ordinalFont = Globals.KarlaFontFamily.CreateFont(57, FontStyle.Bold);
+                Font powerFont = KarlaFontFamily.CreateFont(160, FontStyle.Bold);
+                Font nameFont = KarlaFontFamily.CreateFont(80, FontStyle.Bold);
+                Font winRateFont = KarlaFontFamily.CreateFont(100, FontStyle.Bold);
+                Font switchCodeFont = KarlaItalicFontFamily.CreateFont(50, FontStyle.Italic);
+                Font classFont = KarlaFontFamily.CreateFont(180, FontStyle.Bold);
+                Font classNameFont = KarlaFontFamily.CreateFont(26, FontStyle.Bold);
+                Font roleFont = KarlaFontFamily.CreateFont(100, FontStyle.Bold);
+                Font placementFont = KarlaFontFamily.CreateFont(113, FontStyle.Bold);
+                Font ordinalFont = KarlaFontFamily.CreateFont(57, FontStyle.Bold);
 
                 WebClient webClient = new WebClient();
                 byte[] avatarBytes = await webClient.DownloadDataTaskAsync(user.GetAvatarUrl());
@@ -309,7 +317,7 @@ namespace SquidDraftLeague.Bot.Commands
                     if (nameTextSize.Width > 700)
                     {
                         float nameScalingFactor = 700 / nameTextSize.Width;
-                        nameFont = Globals.KarlaFontFamily.CreateFont(nameFont.Size * nameScalingFactor);
+                        nameFont = KarlaFontFamily.CreateFont(nameFont.Size * nameScalingFactor);
                     }
 
                     IPathCollection nameTextGlyphs = TextBuilder.GenerateGlyphs(name,
@@ -322,7 +330,7 @@ namespace SquidDraftLeague.Bot.Commands
                     if (powerLevelSize.Width > 480)
                     {
                         float powerScalingFactor = 480 / powerLevelSize.Width;
-                        powerFont = Globals.KarlaFontFamily.CreateFont(powerFont.Size * powerScalingFactor, FontStyle.Bold);
+                        powerFont = KarlaFontFamily.CreateFont(powerFont.Size * powerScalingFactor, FontStyle.Bold);
 
                         powerYDifference = powerLevelSize.Height - TextMeasurer.Measure(powerLevel, new RendererOptions(powerFont)).Height;
                     }
@@ -459,7 +467,7 @@ namespace SquidDraftLeague.Bot.Commands
                     IPathCollection roleGlyphs = TextBuilder.GenerateGlyphs(role, new PointF(roleNameX, roleNameY),
                         new RendererOptions(roleFont));
 
-                    (int placement, string ordinal) = await AirTableClient.GetPlayerStandings(player, this.Context);
+                    (int placement, string ordinal) = await AirTableClient.GetPlayerStandings(player);
 
                     SizeF placementSize =
                         TextMeasurer.Measure(placement.ToString(), new RendererOptions(placementFont));
@@ -545,11 +553,11 @@ namespace SquidDraftLeague.Bot.Commands
             SdlPlayer player;
             try
             {
-                player = await AirTableClient.RetrieveSdlPlayer((IGuildUser)this.Context.User);
+                player = await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id);
             }
             catch (SdlAirTableException e)
             {
-                await e.OutputToDiscordUser(this.Context);
+                /*await e.OutputToDiscordUser(this.Context);*/
                 throw;
             }
 
@@ -583,11 +591,11 @@ namespace SquidDraftLeague.Bot.Commands
             SdlPlayer player;
             try
             {
-                player = await AirTableClient.RetrieveSdlPlayer((IGuildUser) this.Context.User);
+                player = await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id);
             }
             catch (SdlAirTableException e)
             {
-                await e.OutputToDiscordUser(this.Context);
+                /*await e.OutputToDiscordUser(this.Context);*/
                 throw;
             }
 
