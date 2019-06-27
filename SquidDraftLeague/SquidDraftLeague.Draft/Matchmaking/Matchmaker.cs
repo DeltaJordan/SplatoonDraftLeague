@@ -64,7 +64,7 @@ namespace SquidDraftLeague.Draft.Matchmaking
                     return new LobbySelectResponse(true, result: selectedLobby);
                 }
 
-                if ((DateTime.Now - selectedLobby.StartTime).TotalMinutes >= 5 && selectedLobby.IsWithinThreshold(sdlPlayer.PowerLevel - 100))
+                if (selectedLobby.IsWithinThreshold(sdlPlayer.PowerLevel - 100))
                 {
                     if ((selectedLobby.Halved?.PowerLevel ?? 0) < sdlPlayer.PowerLevel)
                         selectedLobby.Halved = sdlPlayer;
@@ -74,7 +74,7 @@ namespace SquidDraftLeague.Draft.Matchmaking
                         result: selectedLobby);
                 }
 
-                return new LobbySelectResponse(false, $"You are not eligible to join lobby #{lobbyNumber}.");
+                return new LobbySelectResponse(false, $"You are not eligible to join lobby #{lobbyNumber} due to your power level.");
             }
             catch (Exception e)
             {

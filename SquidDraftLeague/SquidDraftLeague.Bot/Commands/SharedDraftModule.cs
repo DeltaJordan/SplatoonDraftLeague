@@ -49,6 +49,16 @@ namespace SquidDraftLeague.Bot.Commands
             await this.ReplyAsync("🦑");
         }
 
+        [Command("statusall"),
+         Summary("Gets the status of all lobbies.")]
+        public async Task StatusAll()
+        {
+            foreach (Lobby lobby in Matchmaker.Lobbies.Where(e => e.Players.Any()))
+            {
+                await this.ReplyAsync(embed: lobby.GetEmbedBuilder().Build());
+            }
+        }
+
         [Command("status"),
          Summary("Gets the status of a lobby or set.")]
         public async Task Status([Summary(
@@ -93,7 +103,19 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (type == "set")
             {
-                Matchmaker.Sets[number - 1].Close();
+                await this.ReplyAsync("Closing set and removing roles please wait...");
+
+                Set set = Matchmaker.Sets[number - 1];
+
+                List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
+
+                foreach (SdlPlayer sdlPlayer in set.AllPlayers)
+                {
+                    await this.Context.Guild.GetUser(sdlPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
+                }
+
+                set.Close();
+
                 await this.ReplyAsync($"An admin has closed set number {number}.");
             }
             else if (type == "lobby")
@@ -303,6 +325,8 @@ namespace SquidDraftLeague.Bot.Commands
 
                 List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
 
+                await user.RemoveRolesAsync(roleRemovalList);
+
                 foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
                 {
                     await this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
@@ -461,6 +485,8 @@ namespace SquidDraftLeague.Bot.Commands
                         await Task.Delay(TimeSpan.FromSeconds(30));
 
                         List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
+
+                        await user.RemoveRolesAsync(roleRemovalList);
 
                         foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
                         {

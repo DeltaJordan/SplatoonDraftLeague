@@ -149,8 +149,6 @@ namespace SquidDraftLeague.Draft
         {
             if (DateTime.Now >= this.LastUpdate + this.TimeRemaining)
             {
-                this.TimeRemaining -= TimeSpan.FromMinutes(5);
-
                 this.Close();
                 this.DeltaUpdated?.Invoke(this, true);
 

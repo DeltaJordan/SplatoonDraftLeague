@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,16 +25,18 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
 
             Record record = JsonConvert.DeserializeObject<Record>(File.ReadAllText(penaltyFile));
 
-            switch (record.AllInfractions.Count)
+            List<Infraction> infractionsThisMonth = record.AllInfractions.Where(e => e.TimeOfOffense.Month == DateTime.Now.Month).ToList();
+
+            switch (infractionsThisMonth.Count)
             {
                 case 0:
                 case 1:
                     return PreconditionResult.FromSuccess();
                 case 2:
-                    if (record.AllInfractions.Any(e => e.TimeOfOffense > DateTime.Now - TimeSpan.FromDays(1)))
+                    if (infractionsThisMonth.Any(e => e.TimeOfOffense > DateTime.Now - TimeSpan.FromDays(1)))
                     {
                         await context.Channel.SendMessageAsync(Resources.BanMessage + 
-                            $"{record.AllInfractions.OrderByDescending(e => e.TimeOfOffense).First().TimeOfOffense + TimeSpan.FromDays(1) - DateTime.Now:hh\\:mm} (Hours:Minutes)");
+                            $"{infractionsThisMonth.OrderByDescending(e => e.TimeOfOffense).First().TimeOfOffense + TimeSpan.FromDays(1) - DateTime.Now:hh\\:mm} (Hours:Minutes)");
 
                         return PreconditionResult.FromError("User is currently banned.");
                     }
@@ -42,10 +45,10 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
                         return PreconditionResult.FromSuccess();
                     }
                 default:
-                    if (record.AllInfractions.Any(e => e.TimeOfOffense > DateTime.Now - TimeSpan.FromDays(7)))
+                    if (infractionsThisMonth.Any(e => e.TimeOfOffense > DateTime.Now - TimeSpan.FromDays(7)))
                     {
                         await context.Channel.SendMessageAsync(Resources.BanMessage +
-                                                         $"{record.AllInfractions.OrderByDescending(e => e.TimeOfOffense).First().TimeOfOffense + TimeSpan.FromDays(7) - DateTime.Now:dd\\.hh\\:mm} (Days.Hours:Minutes)");
+                                                         $"{infractionsThisMonth.OrderByDescending(e => e.TimeOfOffense).First().TimeOfOffense + TimeSpan.FromDays(7) - DateTime.Now:dd\\.hh\\:mm} (Days.Hours:Minutes)");
 
                         return PreconditionResult.FromError("User is currently banned.");
                     }

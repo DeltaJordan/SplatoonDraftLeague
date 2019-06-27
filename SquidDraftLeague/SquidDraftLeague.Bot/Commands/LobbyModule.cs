@@ -225,23 +225,6 @@ namespace SquidDraftLeague.Bot.Commands
                     $"{string.Join(" ", lobby.Players.Select(f => Program.Client.GetUser(f.DiscordId).Mention))}\n" +
                     $"Closing the lobby because not enough players have joined the battle. Please try again by using %join.");
 
-                SocketRole rmSetRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({lobby.LobbyNumber})");
-                foreach (SdlPlayer sdlPlayer in lobby.Players)
-                {
-                    await Program.Client.GetGuild(570743985530863649).GetUser(sdlPlayer.DiscordId).RemoveRoleAsync(rmSetRole);
-                }
-
-                return;
-            }
-
-            SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({lobby.LobbyNumber})");
-            SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
-
-            if (setRole == null)
-            {
-                await devRole.ModifyAsync(e => e.Mentionable = true);
-                await this.Context.Channel.SendMessageAsync($"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({lobby.LobbyNumber})\".");
-                await devRole.ModifyAsync(e => e.Mentionable = false);
                 return;
             }
 
@@ -250,9 +233,7 @@ namespace SquidDraftLeague.Bot.Commands
 
             EmbedBuilder builder = lobby.GetEmbedBuilder();
 
-            await setRole.ModifyAsync(e => e.Mentionable = true);
             await this.Context.Channel.SendMessageAsync(message, false, builder.Build());
-            await setRole.ModifyAsync(e => e.Mentionable = false);
         }
 
         private async void NewSet_DraftTimeout(object sender, EventArgs e)
