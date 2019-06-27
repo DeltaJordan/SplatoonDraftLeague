@@ -74,7 +74,8 @@ namespace SquidDraftLeague.Draft.Matchmaking
                         result: selectedLobby);
                 }
 
-                return new LobbySelectResponse(false, $"You are not eligible to join lobby #{lobbyNumber} due to your power level.");
+                return new LobbySelectResponse(false, $"You are not eligible to join lobby #{lobbyNumber} " +
+                                                      $"due to your power level being more than 100 points outside the threshold.");
             }
             catch (Exception e)
             {
