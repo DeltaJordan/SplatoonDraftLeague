@@ -48,8 +48,8 @@ namespace SquidDraftLeague.Bot.Commands
             await bravoRole.ModifyAsync(e => e.Mentionable = true);
             await context.SendMessageAsync($"{alphaRole.Mention} {bravoRole.Mention} To begin, please join your respective voice channels.\n" +
                                                    $"After everyone is situated, please create and join a Private Battle and have the host select the map and mode chosen after this message. " +
-                                                   $"Once the match is over, use %score to report the winning team like so:\n" +
-                                                   $"`%score Alpha` or `%score Bravo`");
+                                                   $"Once the match is over, the captain of the **losing team** will use %score to report the score like so:\n" +
+                                                   $"`%score`");
 
             set.MatchNum = 1;
 
@@ -297,6 +297,12 @@ namespace SquidDraftLeague.Bot.Commands
                 return;
             }
 
+            if (playerSet.BravoTeam.Score > SET_MATCH_NUMBER / 2 ||
+                playerSet.AlphaTeam.Score > SET_MATCH_NUMBER / 2)
+            {
+                return;
+            }
+
             if (playerSet.Locked)
             {
                 await this.ReplyAsync("This set will be locked until a moderator addresses the report. Please wait.");
@@ -308,26 +314,14 @@ namespace SquidDraftLeague.Bot.Commands
                 return;
             }
 
-            if (!playerSet.AlphaTeam.IsCaptain(this.Context.User.Id) || !playerSet.BravoTeam.IsCaptain(this.Context.User.Id))
+            if (!playerSet.AlphaTeam.IsCaptain(this.Context.User.Id) && 
+                !playerSet.BravoTeam.IsCaptain(this.Context.User.Id))
             {
-                await this.ReplyAsync("Only a captain of the losing team can report the score.");
+                await this.ReplyAsync("Only the captain of the losing team can report the score.");
                 return;
             }
 
-            string team;
-            if (playerSet.AlphaTeam.IsCaptain(this.Context.User.Id))
-            {
-                team = "alpha";
-            }
-            else if (playerSet.BravoTeam.IsCaptain(this.Context.User.Id))
-            {
-                team = "bravo";
-            }
-            else
-            {
-                team = null;
-            }
-
+            string team = playerSet.AlphaTeam.IsCaptain(this.Context.User.Id) ? "bravo" : "alpha";
 
             playerSet.ReportScore(team);
 

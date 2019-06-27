@@ -23,7 +23,7 @@ namespace SquidDraftLeague.Draft
 
         public bool IsCaptain(ulong discordId)
         {
-            return discordId == this.Captain.DiscordId;
+            return discordId == this.Captain?.DiscordId;
         }
 
         public void AddPlayer(SdlPlayer player, bool asCaptain = false)

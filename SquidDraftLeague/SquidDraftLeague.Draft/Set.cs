@@ -62,7 +62,7 @@ namespace SquidDraftLeague.Draft
                 case 1: // 6
                     return this.AlphaTeam;
                 default:
-                    return null;
+                    return this.AlphaTeam;
             }
         }
 
