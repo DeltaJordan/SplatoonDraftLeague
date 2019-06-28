@@ -186,7 +186,7 @@ namespace SquidDraftLeague.Bot.Commands
                     e.Value = $"{reason}";
                 });
 
-                await modChannel.SendMessageAsync($"<@572539082039885839>", embed: builder.Build());
+                await modChannel.SendMessageAsync($"<@&572539082039885839>", embed: builder.Build());
                 await this.ReplyAsync(Resources.ReportResponse);
             }
         }
