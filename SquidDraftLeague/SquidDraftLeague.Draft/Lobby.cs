@@ -147,6 +147,14 @@ namespace SquidDraftLeague.Draft
 
         private void Timer_Elapsed(object sender, ElapsedEventArgs elapsedEventArgs)
         {
+            if (DateTime.Now > this.StartTime + TimeSpan.FromMinutes(30))
+            {
+                this.Close();
+                this.DeltaUpdated?.Invoke(this, true);
+
+                return;
+            }
+
             if (DateTime.Now >= this.LastUpdate + this.TimeRemaining)
             {
                 this.Close();
