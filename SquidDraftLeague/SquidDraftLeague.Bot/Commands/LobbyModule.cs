@@ -185,6 +185,7 @@ namespace SquidDraftLeague.Bot.Commands
                     await setRole.ModifyAsync(e => e.Mentionable = false);
 
                     newSet.DraftTimeout += this.NewSet_DraftTimeout;
+                    newSet.ResetTimeout();
                 }
                 else
                 {
