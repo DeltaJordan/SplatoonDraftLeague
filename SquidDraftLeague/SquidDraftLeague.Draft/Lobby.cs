@@ -25,7 +25,14 @@ namespace SquidDraftLeague.Draft
 
                 ulong halvedId = this.Halved?.DiscordId ?? 0;
 
-                return Math.Round(this.players.Where(e => e.DiscordId != halvedId).Select(e => e.PowerLevel).Average(), 2);
+                try
+                {
+                    return Math.Round(this.players.Where(e => e.DiscordId != halvedId).Select(e => e.PowerLevel).Average(), 2);
+                }
+                catch
+                {
+                    return 0;
+                }
             }
         }
 

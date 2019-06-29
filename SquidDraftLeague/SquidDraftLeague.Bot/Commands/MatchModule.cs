@@ -314,6 +314,11 @@ namespace SquidDraftLeague.Bot.Commands
                 return;
             }
 
+            if (this.Context.Channel.Id != CommandHelper.ChannelFromSet(playerSet.SetNumber).Id)
+            {
+                return;
+            }
+
             if (!playerSet.AlphaTeam.IsCaptain(this.Context.User.Id) && 
                 !playerSet.BravoTeam.IsCaptain(this.Context.User.Id))
             {
