@@ -16,7 +16,10 @@ using NLog;
 using NLog.Config;
 using NLog.Targets;
 using SquidDraftLeague.AirTable;
+using SquidDraftLeague.Bot.Commands;
 using SquidDraftLeague.Bot.Commands.Limitations;
+using SquidDraftLeague.Draft;
+using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot
@@ -118,6 +121,39 @@ namespace SquidDraftLeague.Bot
             {
                 await arg.Guild.GetTextChannel(579790669007290370)
                     .SendMessageAsync($"{arg.Username}#{arg.DiscriminatorValue} ({arg.Mention}) has left the server.");
+
+                if (Matchmaker.Lobbies.Any(e => e.Players.Any(f => f.DiscordId == arg.Id)))
+                {
+                    Lobby lobby = Matchmaker.Lobbies.First(e => e.Players.Any(f => f.DiscordId == arg.Id));
+                    lobby.RemovePlayer(lobby.Players.First(e => e.DiscordId == arg.Id));
+
+                    await arg.Guild.GetTextChannel(572536965833162753).SendMessageAsync(
+                        $"{arg.Username} has left the server. They have been forcefully removed from lobby #{lobby.LobbyNumber}.");
+                }
+                else if (Matchmaker.Sets.Any(e => e.AllPlayers.Any(f => f.DiscordId == arg.Id)))
+                {
+                    Set set = Matchmaker.Sets.First(e => e.AllPlayers.Any(f => f.DiscordId == arg.Id));
+
+                    await CommandHelper.ChannelFromSet(set.SetNumber).SendMessageAsync($"<@&572539082039885839> {arg.Username} left the server. Force closing the set.");
+
+                    if (set.AlphaTeam.Players.Any(e => e.DiscordId == arg.Id))
+                    {
+                        set.AlphaTeam.RemovePlayer(set.AllPlayers.First(e => e.DiscordId == arg.Id));
+                    }
+                    else
+                    {
+                        set.BravoTeam.RemovePlayer(set.AllPlayers.First(e => e.DiscordId == arg.Id));
+                    }
+
+                    List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => arg.Guild.GetRole(e)).ToList();
+
+                    foreach (SdlPlayer sdlPlayer in set.AllPlayers)
+                    {
+                        await arg.Guild.GetUser(sdlPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
+                    }
+
+                    set.Close();
+                }
             }
         }
 

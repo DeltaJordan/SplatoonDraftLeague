@@ -378,10 +378,34 @@ namespace SquidDraftLeague.Bot.Commands
                         return;
                     }
 
+                    double penalty = 10;
+                    double gain;
+                    double loss;
+
+                    /* TODO
+                    if (joinedSet.DraftPlayers.Any())
+                    {
+                        penalty = 10;
+                    }
+                    else
+                    {
+                        if (joinedSet.AlphaTeam.Score == joinedSet.BravoTeam.Score)
+                        {
+                            penalty = 10;
+                            gain = 0;
+                            loss = 0;
+                        }
+                        else
+                        {
+                            
+                        }
+                    }
+                    */
+
                     string penaltyDir = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Penalties")).FullName;
                     string penaltyFile = Path.Combine(penaltyDir, $"{user.Id}.penalty");
 
-                    string penaltyMessage = "If you leave the set, you will be instated with a penalty of 10 points. ";
+                    string penaltyMessage = $"If you leave the set, you will be instated with a penalty of {penalty} points. ";
                     Record record;
 
                     if (File.Exists(penaltyFile))
