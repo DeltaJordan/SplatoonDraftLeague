@@ -53,6 +53,27 @@ namespace SquidDraftLeague.Bot.Commands
 
             set.MatchNum = 1;
 
+            SelectHostResponse selectHostResponse = Matchmaker.SelectHost(set);
+
+            if (!selectHostResponse.Success || selectHostResponse.DiscordId == null)
+            {
+                if (selectHostResponse.Message != null)
+                    await context.SendMessageAsync(selectHostResponse.Message);
+
+                if (selectHostResponse.Exception != null)
+                    Logger.Error(selectHostResponse.Exception);
+
+                return;
+            }
+
+            IUser hostUser = context.GetUser(selectHostResponse.DiscordId.Value);
+
+            set.Host = set.AllPlayers.First(e => e.DiscordId == hostUser.Id);
+
+            await context.SendMessageAsync($"{hostUser.Mention} has been selected as host! The password will be **{hostUser.DiscriminatorValue}**. " +
+                                           $"Note that if this person is not capable of hosting (due to internet connection etc.) " +
+                                           $"it is fine for another person to do so, however keep in mind that situation permitting this person is **first choice** as host.");
+
             Stage[] mapList = await AirTableClient.GetMapList();
 
             Stage selectedStage = set.PickStage(mapList);
@@ -83,6 +104,53 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 await context.Guild.GetUser(allPlayer.DiscordId).RemoveRoleAsync(setRole);
             }
+        }
+
+        [Command("canhost"),
+         Summary("Toggles whether you wish to be a prioritized candidate to host sets.")]
+        public async Task CanHost()
+        {
+            if (Matchmaker.ToggleCanHost(this.Context.User.Id))
+            {
+                await this.ReplyAsync("You are now a priority candidate to host during sets.");
+            }
+            else
+            {
+                await this.ReplyAsync("You are no longer a priority candidate to host during sets.");
+            }
+        }
+
+        [Command("host"),
+         Summary("Shows information about the host of this set.")]
+        public async Task Host()
+        {
+            Set playerSet =
+                Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == this.Context.User.Id));
+
+            if (playerSet == null ||
+                CommandHelper.ChannelFromSet(playerSet.SetNumber).Id == this.Context.Channel.Id)
+            {
+                return;
+            }
+
+            SocketGuildUser hostUser = this.Context.Guild.GetUser(playerSet.Host.DiscordId);
+
+            EmbedBuilder builder = new EmbedBuilder();
+            builder.AddField(e =>
+            {
+                e.Name = "Host";
+                e.Value = hostUser.Mention;
+                e.IsInline = true;
+            });
+
+            builder.AddField(e =>
+            {
+                e.Name = "Generated Password";
+                e.Value = hostUser.DiscriminatorValue;
+                e.IsInline = true;
+            });
+
+            await this.ReplyAsync(embed: builder.Build());
         }
 
         [Command("dispute"),

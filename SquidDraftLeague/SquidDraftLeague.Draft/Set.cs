@@ -12,7 +12,9 @@ namespace SquidDraftLeague.Draft
     {
         public int SetNumber { get; }
 
-        public SdlPlayer Halved { get; set; }
+        public SdlPlayer Halved { get; private set; }
+
+        public SdlPlayer Host { get; set; }
 
         public IEnumerable<SdlPlayer> AllPlayers => this.AlphaTeam.Players.Concat(this.BravoTeam.Players).Concat(this.DraftPlayers);
 

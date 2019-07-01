@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Draft.Matchmaking
 {
@@ -185,6 +188,71 @@ namespace SquidDraftLeague.Draft.Matchmaking
             catch (Exception e)
             {
                 return new PickPlayerResponse(false, exception: e);
+            }
+        }
+
+        /// <summary>
+        /// Toggles whether or not the user wishes to be selected as a host.
+        /// </summary>
+        /// <param name="discordId">The discord id of the user.</param>
+        /// <returns>True if toggled on, otherwise false.</returns>
+        public static bool ToggleCanHost(ulong discordId)
+        {
+            List<ulong> setHostIds = File.Exists(Path.Combine(Globals.AppPath, "sethosts.json"))
+                ? JsonConvert.DeserializeObject<List<ulong>>(Path.Combine(Globals.AppPath, "sethosts.json"))
+                : new List<ulong>();
+
+            bool canHost;
+
+            if (setHostIds.Contains(discordId))
+            {
+                setHostIds.Remove(discordId);
+
+                canHost = false;
+            }
+            else
+            {
+                setHostIds.Add(discordId);
+
+                canHost = true;
+            }
+
+            File.WriteAllText(Path.Combine(Globals.AppPath, "sethosts.json"),
+                JsonConvert.SerializeObject(setHostIds));
+
+            return canHost;
+        }
+
+        public static SelectHostResponse SelectHost(Set set)
+        {
+            try
+            {
+                List<ulong> setHostIds;
+
+                if (File.Exists(Path.Combine(Globals.AppPath, "sethosts.json")))
+                {
+                    setHostIds = JsonConvert.DeserializeObject<List<ulong>>(Path.Combine(Globals.AppPath, "sethosts.json"));
+                }
+                else
+                {
+                    setHostIds = new List<ulong>();
+
+                    File.WriteAllText(Path.Combine(Globals.AppPath, "sethosts.json"),
+                        JsonConvert.SerializeObject(setHostIds));
+                }
+
+                if (set.AllPlayers.Any(e => setHostIds.Contains(e.DiscordId)))
+                {
+                    return new SelectHostResponse(true, discordId: set.AllPlayers.First(e => setHostIds.Contains(e.DiscordId)).DiscordId);
+                }
+
+                int randIndex = Globals.Random.Next(0, 7);
+
+                return new SelectHostResponse(true, discordId: set.AllPlayers.ElementAt(randIndex).DiscordId);
+            }
+            catch (Exception e)
+            {
+                return new SelectHostResponse(false, exception: e);
             }
         }
     }
