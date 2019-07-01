@@ -189,7 +189,7 @@ namespace SquidDraftLeague.Draft.Matchmaking
         public static bool ToggleCanHost(ulong discordId)
         {
             List<ulong> setHostIds = File.Exists(Path.Combine(Globals.AppPath, "sethosts.json"))
-                ? JsonConvert.DeserializeObject<List<ulong>>(Path.Combine(Globals.AppPath, "sethosts.json"))
+                ? JsonConvert.DeserializeObject<List<ulong>>(File.ReadAllText(Path.Combine(Globals.AppPath, "sethosts.json")))
                 : new List<ulong>();
 
             bool canHost;
@@ -221,7 +221,7 @@ namespace SquidDraftLeague.Draft.Matchmaking
 
                 if (File.Exists(Path.Combine(Globals.AppPath, "sethosts.json")))
                 {
-                    setHostIds = JsonConvert.DeserializeObject<List<ulong>>(Path.Combine(Globals.AppPath, "sethosts.json"));
+                    setHostIds = JsonConvert.DeserializeObject<List<ulong>>(File.ReadAllText(Path.Combine(Globals.AppPath, "sethosts.json")));
                 }
                 else
                 {
