@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using SquidDraftLeague.Draft.Map;
+using SquidDraftLeague.Draft.Matchmaking;
 
 namespace SquidDraftLeague.Draft
 {
     public class SdlPlayer : IEquatable<SdlPlayer>
     {
+
         public string AirtableId { get; set; }
         public string AirtableName { get; set; }
         public ulong DiscordId { get; }
@@ -21,6 +23,8 @@ namespace SquidDraftLeague.Draft
         {
             this.DiscordId = discordId;
         }
+
+        public SdlClass Class => Matchmaker.GetClass(this.PowerLevel);
 
         public override bool Equals(object obj)
         {

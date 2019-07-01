@@ -18,14 +18,24 @@ namespace SquidDraftLeague.Bot.Extensions
             EmbedFieldBuilder powerLevelFieldBuilder = new EmbedFieldBuilder
             {
                 Name = "Power Level Range",
-                Value = $"{lobby.LobbyPowerLevel - lobby.CurrentDelta} - {lobby.LobbyPowerLevel + lobby.CurrentDelta}"
+                Value = $"{lobby.LobbyPowerLevel - lobby.CurrentDelta} - {lobby.LobbyPowerLevel + lobby.CurrentDelta}",
+                IsInline = true
             };
             builder.Fields.Add(powerLevelFieldBuilder);
+
+            EmbedFieldBuilder classFieldBuilder = new EmbedFieldBuilder
+            {
+                Name = "Class",
+                Value = $"{lobby.Class}",
+                IsInline = true
+            };
+            builder.Fields.Add(classFieldBuilder);
 
             EmbedFieldBuilder playersFieldBuilder = new EmbedFieldBuilder
             {
                 Name = "Players",
-                Value = string.Join('\n', lobby.Players.Select(e => Program.Client.GetUser(e.DiscordId).Mention))
+                Value = string.Join('\n', lobby.Players.Select(e => Program.Client.GetUser(e.DiscordId).Mention)),
+                IsInline = false
             };
             builder.Fields.Add(playersFieldBuilder);
 

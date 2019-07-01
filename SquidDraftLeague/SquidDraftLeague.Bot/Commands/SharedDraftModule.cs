@@ -373,6 +373,11 @@ namespace SquidDraftLeague.Bot.Commands
                         return;
                     }
 
+                    if (this.Context.Channel.Id != CommandHelper.ChannelFromSet(joinedSet.SetNumber).Id)
+                    {
+                        return;
+                    }
+
                     string penaltyDir = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Penalties")).FullName;
                     string penaltyFile = Path.Combine(penaltyDir, $"{user.Id}.penalty");
 

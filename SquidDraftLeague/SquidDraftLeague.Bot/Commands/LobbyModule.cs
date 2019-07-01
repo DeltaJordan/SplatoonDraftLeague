@@ -15,6 +15,7 @@ using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
@@ -246,7 +247,7 @@ namespace SquidDraftLeague.Bot.Commands
 
             await setChannel.SendMessageAsync("Choosing team member due to timeout.");
 
-            await SetModule.PickPlayer(set, set.DraftPlayers[0], setChannel);
+            await SetModule.PickPlayer(set, set.DraftPlayers[Globals.Random.Next(0, set.DraftPlayers.Count - 1)], setChannel);
         }
 
         private async void NewMatch_Closed(object sender, EventArgs eventArgs)

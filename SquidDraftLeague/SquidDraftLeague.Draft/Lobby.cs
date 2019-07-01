@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Timers;
+using SquidDraftLeague.Draft.Matchmaking;
 
 namespace SquidDraftLeague.Draft
 {
@@ -27,14 +28,22 @@ namespace SquidDraftLeague.Draft
 
                 try
                 {
-                    return Math.Round(this.players.Where(e => e.DiscordId != halvedId).Select(e => e.PowerLevel).Average(), 2);
+                    return Math.Round(
+                        this.players.Where(e => e.DiscordId != halvedId).Select(e => e.PowerLevel).Average(), 2);
                 }
                 catch
                 {
+                    if (this.players.Count == 1)
+                    {
+                        return this.players.First().PowerLevel;
+                    }
+
                     return 0;
                 }
             }
         }
+
+        public SdlClass Class => Matchmaker.GetClass(this.LobbyPowerLevel);
 
         public SdlPlayer Halved { get; set; }
 
@@ -77,7 +86,7 @@ namespace SquidDraftLeague.Draft
 
         public bool IsWithinThreshold(double power)
         {
-            if (!this.players.Any())
+            if (!this.players.Any() || Matchmaker.GetClass(power) == this.Class)
             {
                 return true;
             }

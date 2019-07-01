@@ -31,6 +31,26 @@ namespace SquidDraftLeague.Draft.Matchmaking
             new Set(5)
         }.AsReadOnly();
 
+        public static SdlClass GetClass(double powerLevel)
+        {
+            if (powerLevel >= 2200)
+            {
+                return SdlClass.One;
+            }
+
+            if (powerLevel >= 2000)
+            {
+                return SdlClass.Two;
+            }
+
+            if (powerLevel >= 1800)
+            {
+                return SdlClass.Three;
+            }
+
+            return SdlClass.Four;
+        }
+
         public static LobbyEligibilityResponse LobbyEligibility(ulong discordId)
         {
             try
