@@ -125,9 +125,10 @@ namespace SquidDraftLeague.Bot
         {
             try
             {
-                if (channel.Id == 588806681303973931)
+                if (channel.Id == 595219144488648704)
                 {
                     IUserMessage newUserMessage = (IUserMessage) await channel.GetMessageAsync(messageCacheable.Id);
+                    ITextChannel registeredChannel = (ITextChannel) Client.GetChannel(588806681303973931);
 
                     if (!File.Exists(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}")))
                     {
@@ -136,12 +137,12 @@ namespace SquidDraftLeague.Bot
 
                     if (newUserMessage.Content == "Approved.")
                     {
-                        KeyValuePair<IEmote, ReactionMetadata> selectedNumberEmote = newUserMessage.Reactions
+                        (IEmote emote, ReactionMetadata reactionMetadata) = newUserMessage.Reactions
                             .Where(e => e.Key.Name != "\u274E" && e.Key.Name != "\u2705")
                             .OrderByDescending(e => e.Value.ReactionCount)
                             .FirstOrDefault();
 
-                        if (selectedNumberEmote.Value.ReactionCount > 1)
+                        if (reactionMetadata.ReactionCount > 1)
                         {
                             string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath, "Registrations",
                                 $"{newUserMessage.Id}"));
@@ -150,7 +151,7 @@ namespace SquidDraftLeague.Bot
 
                             ulong userId = Convert.ToUInt64(allRegLines[0]);
 
-                            switch (selectedNumberEmote.Key.Name)
+                            switch (emote.Name)
                             {
                                 case "\u0031\u20E3":
                                     await AirTableClient.RegisterPlayer(userId, 2200, allRegLines[1]);
@@ -170,14 +171,51 @@ namespace SquidDraftLeague.Bot
                                     break;
                             }
 
-                            IDMChannel dmChannel = await Client.GetDMChannelAsync(userId);
+                            SocketGuild guild = Client.GetGuild(570743985530863649);
+                            SocketGuildUser registeredUser = guild.GetUser(userId);
+                            IDMChannel dmChannel = await registeredUser.GetOrCreateDMChannelAsync();
                             await dmChannel.SendMessageAsync($"You have been approved! You have been placed in class {classNum}. " +
                                                              $"To jump into a set, head into #draft and use %join.");
 
-                            SocketGuild guild = Client.GetGuild(570743985530863649);
-                            await guild.GetUser(userId).AddRoleAsync(guild.GetRole(572537013949956105));
+                            await registeredUser.AddRoleAsync(guild.GetRole(572537013949956105));
 
                             File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
+
+                            IEmbed registrationEmbed = newUserMessage.Embeds.First();
+
+                            EmbedBuilder builder = new EmbedBuilder
+                            {
+                                Description =
+                                    $"**User {registeredUser.Mention} ({registeredUser.Username}#{registeredUser.DiscriminatorValue}) has been approved!**"
+                            };
+
+                            builder.AddField(e =>
+                            {
+                                e.Name = "Class";
+                                e.Value = $"{classNum}";
+                                e.IsInline = false;
+                            });
+
+                            builder.WithFields(registrationEmbed.Fields.Select(e =>
+                            {
+                                EmbedFieldBuilder builderSelect = new EmbedFieldBuilder
+                                {
+                                    Name = e.Name,
+                                    Value = e.Value,
+                                    IsInline = e.Inline
+                                };
+
+                                return builderSelect;
+                            }));
+
+                            if (registrationEmbed.Image.HasValue)
+                            {
+                                builder.ImageUrl = registrationEmbed.Image.Value.Url;
+                            }
+
+                            await registeredChannel.SendMessageAsync(embed: builder.Build());
+
+                            await newUserMessage.DeleteAsync();
                         }
                     }
 
@@ -188,7 +226,42 @@ namespace SquidDraftLeague.Bot
                     }
                     else if (newUserMessage.Reactions.FirstOrDefault(e => e.Key.Name == "\u274E").Value.ReactionCount > 1)
                     {
-                        await newUserMessage.ModifyAsync(e => e.Content = "Denied.");
+                        string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath, "Registrations",
+                            $"{newUserMessage.Id}"));
+
+                        ulong userId = Convert.ToUInt64(allRegLines[0]);
+
+                        SocketGuild guild = Client.GetGuild(570743985530863649);
+                        SocketGuildUser registeredUser = guild.GetUser(userId);
+
+                        IEmbed registrationEmbed = newUserMessage.Embeds.First();
+
+                        EmbedBuilder builder = new EmbedBuilder
+                        {
+                            Description =
+                                $"**User {registeredUser.Mention} ({registeredUser.Username}#{registeredUser.DiscriminatorValue}) has been denied.**"
+                        };
+
+                        builder.WithFields(registrationEmbed.Fields.Select(e =>
+                        {
+                            EmbedFieldBuilder builderSelect = new EmbedFieldBuilder
+                            {
+                                Name = e.Name,
+                                Value = e.Value,
+                                IsInline = e.Inline
+                            };
+
+                            return builderSelect;
+                        }));
+
+                        if (registrationEmbed.Image.HasValue)
+                        {
+                            builder.ImageUrl = registrationEmbed.Image.Value.Url;
+                        }
+
+                        await registeredChannel.SendMessageAsync(embed: builder.Build());
+
+                        await newUserMessage.DeleteAsync();
                         File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
                     }
                 }

@@ -241,7 +241,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await this.ReplyAsync(Resources.RegistrationProcessing);
 
-                SocketTextChannel regChannel = (SocketTextChannel) Program.Client.GetChannel(588806681303973931);
+                SocketTextChannel regChannel = (SocketTextChannel) Program.Client.GetChannel(595219144488648704);
 
                 RestUserMessage userMessage = await regChannel.SendMessageAsync("Needs Approval.", embed: builder.Build());
 
