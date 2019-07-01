@@ -87,16 +87,6 @@ namespace SquidDraftLeague.Draft.Matchmaking
                     return new LobbySelectResponse(true, result: selectedLobby);
                 }
 
-                if (selectedLobby.IsWithinThreshold(sdlPlayer.PowerLevel - 100))
-                {
-                    if ((selectedLobby.Halved?.PowerLevel ?? 0) < sdlPlayer.PowerLevel)
-                        selectedLobby.Halved = sdlPlayer;
-
-                    return new LobbySelectResponse(true,
-                        "You will be added to this lobby but please note that winning will cause you to gain half the points.",
-                        result: selectedLobby);
-                }
-
                 return new LobbySelectResponse(false, $"You are not eligible to join lobby #{lobbyNumber} " +
                                                       $"due to your power level being either less than {selectedLobby.LobbyPowerLevel - selectedLobby.CurrentDelta} " +
                                                       $"or greater than {selectedLobby.LobbyPowerLevel + selectedLobby.CurrentDelta + 100}.");

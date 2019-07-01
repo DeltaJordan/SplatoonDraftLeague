@@ -24,12 +24,10 @@ namespace SquidDraftLeague.Draft
                     return 0;
                 }
 
-                ulong halvedId = this.Halved?.DiscordId ?? 0;
-
                 try
                 {
                     return Math.Round(
-                        this.players.Where(e => e.DiscordId != halvedId).Select(e => e.PowerLevel).Average(), 2);
+                        this.players.Select(e => e.PowerLevel).Average(), 2);
                 }
                 catch
                 {
@@ -44,8 +42,6 @@ namespace SquidDraftLeague.Draft
         }
 
         public SdlClass Class => Matchmaker.GetClass(this.LobbyPowerLevel);
-
-        public SdlPlayer Halved { get; set; }
 
         /// <summary>
         /// Fired when the delta has been updated. Event argument is true if the lobby was closed.
@@ -74,7 +70,6 @@ namespace SquidDraftLeague.Draft
 
         public void Close()
         {
-            this.Halved = null;
             this.DeltaUpdated = null;
             this.players.Clear();
             this.stalePlayers.Clear();

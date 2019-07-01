@@ -70,10 +70,6 @@ namespace SquidDraftLeague.Bot.Commands
 
             set.Host = set.AllPlayers.First(e => e.DiscordId == hostUser.Id);
 
-            await context.SendMessageAsync($"{hostUser.Mention} has been selected as host! The password will be **{hostUser.DiscriminatorValue}**. " +
-                                           $"Note that if this person is not capable of hosting (due to internet connection etc.) " +
-                                           $"it is fine for another person to do so, however keep in mind that situation permitting this person is **first choice** as host.");
-
             Stage[] mapList = await AirTableClient.GetMapList();
 
             Stage selectedStage = set.PickStage(mapList);
@@ -96,7 +92,11 @@ namespace SquidDraftLeague.Bot.Commands
                 })
                 .Build());
 
-            await context.SendMessageAsync("🦑Let the games commence!🐙");
+            await context.SendMessageAsync($"{hostUser.Mention} has been selected as host! The password will be **{hostUser.DiscriminatorValue}**. " +
+                                           $"Note that if this person is not capable of hosting (due to internet connection etc.) " +
+                                           $"it is fine for another person to do so, however keep in mind that situation permitting this person is **first choice** as host.");
+
+            await context.SendMessageAsync("🦑Now then. let the games commence!🐙");
 
             IRole setRole = context.Guild.Roles.First(e => e.Name == $"In Set ({set.SetNumber})");
 
@@ -440,7 +440,7 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     if (replyMessage == null)
                     {
-                        await this.ReplyAsync("Times up! Assuming the losing team has accepted their loss.");
+                        await this.ReplyAsync("Time's up! Assuming the losing team has accepted their loss.");
 
                         await this.EndMatchAsync(playerSet, winner);
 
@@ -544,6 +544,21 @@ namespace SquidDraftLeague.Bot.Commands
             }
 
             playerSet.Close();
+
+            if (this.Context.Channel.Id == CommandHelper.ChannelFromSet(playerSet.SetNumber).Id)
+            {
+                IEnumerable<IMessage> messages = await this.Context.Channel.GetMessagesAsync(1000 + 1).FlattenAsync();
+
+                await ((ITextChannel) this.Context.Channel).DeleteMessagesAsync(messages);
+
+                IUserMessage reply =
+                    await this.ReplyAsync(
+                        "Cleared the channel of 1000 messages. This message will be deleted in 10 seconds as well.");
+
+                await Task.Delay(10000);
+
+                await reply.DeleteAsync();
+            }
         }
 
         private static async Task ReportScores(Set playerSet, string winner)
@@ -556,29 +571,11 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 powerDifference = 200F / (playerSet.MatchNum *
                                   (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)));
-
-                if (playerSet.Halved != null)
-                {
-                    if (playerSet.BravoTeam.Players.Any(e => e.DiscordId == playerSet.Halved.DiscordId) &&
-                        playerSet.AllPlayers.Select(e => e.PowerLevel).Average() + 125 < playerSet.Halved.PowerLevel)
-                    {
-                        powerDifference /= 2;
-                    }
-                }
             }
             else
             {
                 powerDifference = 200F / (playerSet.MatchNum *
                                           (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)));
-
-                if (playerSet.Halved != null)
-                {
-                    if (playerSet.AlphaTeam.Players.Any(e => e.DiscordId == playerSet.Halved.DiscordId) &&
-                        playerSet.AllPlayers.Select(e => e.PowerLevel).Average() + 125 < playerSet.Halved.PowerLevel)
-                    {
-                        powerDifference /= 2;
-                    }
-                }
             }
 
             await AirTableClient.ReportScores(playerSet, powerDifference, powerDifference);
