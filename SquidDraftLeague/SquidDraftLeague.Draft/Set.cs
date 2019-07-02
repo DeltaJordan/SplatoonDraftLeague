@@ -14,6 +14,8 @@ namespace SquidDraftLeague.Draft
 
         public SdlPlayer Host { get; set; }
 
+        public SdlPlayer Halved { get; private set; }
+
         public IEnumerable<SdlPlayer> AllPlayers => this.AlphaTeam.Players.Concat(this.BravoTeam.Players).Concat(this.DraftPlayers);
 
         public SdlTeam AlphaTeam { get; }
@@ -107,11 +109,14 @@ namespace SquidDraftLeague.Draft
             this.BravoTeam.AddPlayer(orderedPlayers[1], true);
 
             this.DraftPlayers.AddRange(orderedPlayers.Skip(2));
+
+            this.Halved = lobby.Halved;
         }
 
         public void Close()
         {
             this.DraftTimeout = null;
+            this.Halved = null;
             this.AlphaTeam.Clear();
             this.BravoTeam.Clear();
             this.DraftPlayers.Clear();

@@ -545,7 +545,8 @@ namespace SquidDraftLeague.Bot.Commands
 
             playerSet.Close();
 
-            if (this.Context.Channel.Id == CommandHelper.ChannelFromSet(playerSet.SetNumber).Id)
+            // TODO Removed message clearing for the time being.
+            if (this.Context.Channel.Id == 0 /*CommandHelper.ChannelFromSet(playerSet.SetNumber).Id*/)
             {
                 IEnumerable<IMessage> messages = await this.Context.Channel.GetMessagesAsync(1000 + 1).FlattenAsync();
 
@@ -571,11 +572,21 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 powerDifference = 200F / (playerSet.MatchNum *
                                   (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)));
+
+                if (playerSet.BravoTeam.Players.Any(e => e == playerSet.Halved))
+                {
+                    powerDifference /= 2;
+                }
             }
             else
             {
                 powerDifference = 200F / (playerSet.MatchNum *
                                           (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)));
+
+                if (playerSet.AlphaTeam.Players.Any(e => e == playerSet.Halved))
+                {
+                    powerDifference /= 2;
+                }
             }
 
             await AirTableClient.ReportScores(playerSet, powerDifference, powerDifference);
