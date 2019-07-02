@@ -150,6 +150,11 @@ namespace SquidDraftLeague.Draft
                 this.players.Remove(player);
             }
 
+            if (this.Halved == player)
+            {
+                this.Halved = null;
+            }
+
             if (this.players.Count == 0)
             {
                 this.Close();
