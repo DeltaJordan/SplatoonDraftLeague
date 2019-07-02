@@ -128,7 +128,7 @@ namespace SquidDraftLeague.Bot.Commands
                 Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == this.Context.User.Id));
 
             if (playerSet == null ||
-                CommandHelper.ChannelFromSet(playerSet.SetNumber).Id == this.Context.Channel.Id)
+                CommandHelper.ChannelFromSet(playerSet.SetNumber).Id != this.Context.Channel.Id)
             {
                 return;
             }
