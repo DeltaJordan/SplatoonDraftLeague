@@ -214,6 +214,7 @@ namespace SquidDraftLeague.Bot
                                                              $"To jump into a set, head into #draft and use %join.");
 
                             await registeredUser.AddRoleAsync(guild.GetRole(572537013949956105));
+                            await registeredUser.AddRoleAsync(guild.GetRole(592448366831730708));
 
                             File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
 

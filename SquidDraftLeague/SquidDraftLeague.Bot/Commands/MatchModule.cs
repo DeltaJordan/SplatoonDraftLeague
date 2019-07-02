@@ -567,29 +567,29 @@ namespace SquidDraftLeague.Bot.Commands
             double alphaPowerAverage = playerSet.AlphaTeam.Players.Select(e => e.PowerLevel).Average();
             double bravoPowerAverage = playerSet.BravoTeam.Players.Select(e => e.PowerLevel).Average();
 
-            double powerDifference;
+            double points;
             if (winner == "Bravo")
             {
-                powerDifference = 200F / (playerSet.MatchNum *
+                points = 200F / (playerSet.MatchNum *
                                   (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)));
 
                 if (playerSet.BravoTeam.Players.Any(e => e == playerSet.Halved))
                 {
-                    powerDifference /= 2;
+                    points /= 2;
                 }
             }
             else
             {
-                powerDifference = 200F / (playerSet.MatchNum *
+                points = 200F / (playerSet.MatchNum *
                                           (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)));
 
                 if (playerSet.AlphaTeam.Players.Any(e => e == playerSet.Halved))
                 {
-                    powerDifference /= 2;
+                    points /= 2;
                 }
             }
 
-            await AirTableClient.ReportScores(playerSet, powerDifference, powerDifference);
+            await AirTableClient.ReportScores(playerSet, points, points);
         }
     }
 }

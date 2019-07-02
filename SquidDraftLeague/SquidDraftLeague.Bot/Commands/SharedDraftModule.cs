@@ -499,18 +499,6 @@ namespace SquidDraftLeague.Bot.Commands
 
                         joinedSet.Close();
 
-                        SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({joinedSet.SetNumber})");
-                        SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
-
-                        if (setRole == null)
-                        {
-                            await devRole.ModifyAsync(e => e.Mentionable = true);
-                            await this.ReplyAsync(
-                                $"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({joinedSet.SetNumber})\".");
-                            await devRole.ModifyAsync(e => e.Mentionable = false);
-                            return;
-                        }
-
                         await Task.Delay(TimeSpan.FromSeconds(30));
 
                         List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
@@ -522,15 +510,13 @@ namespace SquidDraftLeague.Bot.Commands
                             await this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
                         }
 
-                        await ((IGuildUser) this.Context.User).RemoveRolesAsync(roleRemovalList);
-
                         await ((ITextChannel) this.Context.Client.GetChannel(572536965833162753))
                             .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.", 
                                 embed: movedLobby.GetEmbedBuilder().Build());
                     }
                     else
                     {
-                        await this.ReplyAsync("K. Please continue with the set.");
+                        await this.ReplyAsync("Assuming you declined leaving since you did not reply with \"Y\". Please continue with the set.");
                     }
                 }
             }
