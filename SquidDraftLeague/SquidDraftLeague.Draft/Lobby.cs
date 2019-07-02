@@ -29,14 +29,16 @@ namespace SquidDraftLeague.Draft
 
                 try
                 {
+
+
                     return Math.Round(
-                        this.players.Where(e => e.DiscordId != this.Halved.DiscordId).Select(e => e.PowerLevel).Average(), 2);
+                        this.players.Where(e => e.DiscordId != this.Halved?.DiscordId).Select(e => e.PowerLevel).Average(), 2);
                 }
                 catch
                 {
                     if (this.players.Count == 1)
                     {
-                        return this.players.First().PowerLevel;
+                        return Math.Round(this.players.First().PowerLevel, 2);
                     }
 
                     return 0;
