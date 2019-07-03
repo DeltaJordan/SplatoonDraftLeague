@@ -169,17 +169,15 @@ namespace SquidDraftLeague.Draft
         {
             if (DateTime.Now > this.StartTime + TimeSpan.FromMinutes(40) && this.players.Count < 6)
             {
-                this.Close();
                 this.DeltaUpdated?.Invoke(this, true);
-
+                this.Close();
                 return;
             }
 
             if (DateTime.Now >= this.LastUpdate + this.TimeRemaining)
             {
-                this.Close();
                 this.DeltaUpdated?.Invoke(this, true);
-
+                this.Close();
                 return;
             }
 

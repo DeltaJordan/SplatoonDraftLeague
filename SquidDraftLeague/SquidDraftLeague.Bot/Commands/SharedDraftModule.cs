@@ -25,7 +25,6 @@ namespace SquidDraftLeague.Bot.Commands
     public class SharedDraftModule : InteractiveBase
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private static readonly List<int> LeaveLockedSets = new List<int>();
 
         [Command("cleanup"),
          RequireUserPermission(GuildPermission.ManageGuild)]
@@ -53,6 +52,12 @@ namespace SquidDraftLeague.Bot.Commands
          Summary("Gets the status of all lobbies.")]
         public async Task StatusAll()
         {
+            if (Matchmaker.Lobbies.All(e => !e.Players.Any()))
+            {
+                await this.ReplyAsync("There are currently no lobbies with players.");
+                return;
+            }
+
             foreach (Lobby lobby in Matchmaker.Lobbies.Where(e => e.Players.Any()))
             {
                 await this.ReplyAsync(embed: lobby.GetEmbedBuilder().Build());
