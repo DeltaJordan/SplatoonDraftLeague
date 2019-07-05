@@ -75,6 +75,10 @@ namespace SquidDraftLeague.Bot
             };
             config.AddRule(LogLevel.Trace, LogLevel.Fatal, logfile);
 
+
+            ColoredConsoleTarget coloredConsoleTarget = new ColoredConsoleTarget();
+            config.AddRule(LogLevel.Info, LogLevel.Fatal, coloredConsoleTarget);
+
             LogManager.Configuration = config;
 
             string settingsLocation = Path.Combine(Globals.AppPath, "Data", "settings.json");
@@ -428,9 +432,42 @@ namespace SquidDraftLeague.Bot
 
             IResult result = await commands.ExecuteAsync(context, argPos, services);
 
-            if (!result.IsSuccess && result.Error != CommandError.UnknownCommand)
+            if (!result.IsSuccess)
             {
-                ClassLogger.Warn($"Something went wrong with executing a command. Text: {context.Message.Content} | Error: {result.ErrorReason}");
+                switch (result.Error)
+                {
+                    case CommandError.UnknownCommand:
+                        ClassLogger.Warn($"Unable to find command that matches \"{context.Message.Content}\".");
+                        break;
+                    case CommandError.ParseFailed:
+                        ClassLogger.Warn($"{result.ErrorReason} | Message: {context.Message.Content}");
+                        break;
+                    case CommandError.BadArgCount:
+                        ClassLogger.Warn($"{result.ErrorReason} | Message: {context.Message.Content}");
+                        break;
+                    case CommandError.ObjectNotFound:
+                        ClassLogger.Warn($"{result.ErrorReason} | Message: {context.Message.Content}");
+                        break;
+                    case CommandError.MultipleMatches:
+                        ClassLogger.Warn($"{result.ErrorReason} | Message: {context.Message.Content}");
+                        break;
+                    case CommandError.UnmetPrecondition:
+                        ClassLogger.Warn($"{result.ErrorReason} | Message: {context.Message.Content}");
+                        break;
+                    case CommandError.Exception:
+                        if (result is ExecuteResult executeResult)
+                        {
+                            ClassLogger.Error(executeResult.Exception);
+                        }
+                        break;
+                    case CommandError.Unsuccessful:
+                        ClassLogger.Warn($"{result.ErrorReason} | Message: {context.Message.Content}");
+                        break;
+                    case null:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
             /*else if (result.Error == CommandError.UnknownCommand)
             {
