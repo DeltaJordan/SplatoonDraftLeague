@@ -24,6 +24,7 @@ using SixLabors.Shapes;
 using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
+using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Map;
 using SquidDraftLeague.Settings;
 using Image = SixLabors.ImageSharp.Image;
@@ -177,10 +178,12 @@ namespace SquidDraftLeague.Bot.Commands
                     .WithReferences(typeof(object).GetTypeInfo().Assembly, typeof(Enumerable).GetTypeInfo().Assembly,
                                     typeof(PropertyInfo).GetTypeInfo().Assembly, typeof(Decoder).GetTypeInfo().Assembly,
                                     typeof(Regex).GetTypeInfo().Assembly, typeof(Task).GetTypeInfo().Assembly, typeof(CommandContext).GetTypeInfo().Assembly,
-                                    typeof(MessageActivity).GetTypeInfo().Assembly, typeof(Settings.Settings).GetTypeInfo().Assembly)
+                                    typeof(MessageActivity).GetTypeInfo().Assembly, typeof(Settings.Settings).GetTypeInfo().Assembly,
+                                    typeof(Program).Assembly, typeof(AirTableClient).Assembly, typeof(Lobby).Assembly)
                     .WithImports("System", "System.Collections.Generic", "System.Linq", "System.Reflection", "System.Text",
                                  "System.Text.RegularExpressions", "System.Threading.Tasks", "Discord.Commands", "Discord", "SquidDraftLeague.Bot",
-                                 "SquidDraftLeague.Bot.Commands", "SquidDraftLeague.Bot.Commands.Preconditions"), typeof(GlobalEvalContext))
+                                 "SquidDraftLeague.Bot.Commands", "SquidDraftLeague.Settings", "SquidDraftLeague.Draft", "SquidDraftLeague.AirTable",
+                                 "SquidDraftLeague.Bot.Commands.Preconditions"), typeof(GlobalEvalContext))
                     .CreateDelegate();
             }
             catch (Exception e)
