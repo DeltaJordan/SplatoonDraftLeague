@@ -13,6 +13,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NLog;
+using NLog.Conditions;
 using NLog.Config;
 using NLog.Targets;
 using SquidDraftLeague.AirTable;
@@ -76,9 +77,11 @@ namespace SquidDraftLeague.Bot
             config.AddRule(LogLevel.Trace, LogLevel.Fatal, logfile);
 
 
-            ColoredConsoleTarget coloredConsoleTarget = new ColoredConsoleTarget();
+            ColoredConsoleTarget coloredConsoleTarget = new ColoredConsoleTarget
+            {
+                UseDefaultRowHighlightingRules = true
+            };
             config.AddRule(LogLevel.Info, LogLevel.Fatal, coloredConsoleTarget);
-
             LogManager.Configuration = config;
 
             string settingsLocation = Path.Combine(Globals.AppPath, "Data", "settings.json");

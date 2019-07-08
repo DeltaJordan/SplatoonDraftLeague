@@ -29,7 +29,8 @@ namespace SquidDraftLeague.Bot.Extensions
             EmbedFieldBuilder alphaTeamBuilder = new EmbedFieldBuilder
             {
                 Name = "Alpha Team",
-                Value = string.Join('\n', alphaTeamInfo)
+                Value = string.Join('\n', alphaTeamInfo),
+                IsInline = false
             };
 
             builder.Fields.Add(alphaTeamBuilder);
@@ -49,7 +50,8 @@ namespace SquidDraftLeague.Bot.Extensions
             EmbedFieldBuilder bravoTeamBuilder = new EmbedFieldBuilder
             {
                 Name = "Bravo Team",
-                Value = string.Join('\n', bravoTeamInfo)
+                Value = string.Join('\n', bravoTeamInfo),
+                IsInline = false
             };
 
             builder.Fields.Add(bravoTeamBuilder);
@@ -60,13 +62,36 @@ namespace SquidDraftLeague.Bot.Extensions
                 {
                     Name = "Players Awaiting Team",
                     Value = string.Join('\n',
-                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $"[{e.PowerLevel:0.0}] [{e.Role}]"))
+                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $"[{e.PowerLevel:0.0}] [{e.Role}]")),
+                    IsInline = false
                 };
 
                 builder.Fields.Add(draftTeamBuilder);
             }
 
             return builder;
+        }
+
+        public static EmbedBuilder GetScoreEmbedBuilder(this Set set, double pointsWinning, double pointsLosing)
+        {
+            return set.GetEmbedBuilder()
+                .AddField(e =>
+                {
+                    e.Name = "Alpha Team's Score";
+                    e.Value = set.AlphaTeam.Score;
+                    e.IsInline = true;
+                })
+                .AddField(e =>
+                {
+                    e.Name = "Bravo Team's Score";
+                    e.Value = set.BravoTeam.Score;
+                    e.IsInline = true;
+                })
+                .AddField(e =>
+                {
+                    e.Name = "Points Gained/Lost";
+                    e.Value = $"+{pointsWinning:0.0} -{pointsLosing:0.0}";
+                });
         }
     }
 }

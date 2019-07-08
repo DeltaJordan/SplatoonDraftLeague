@@ -204,8 +204,7 @@ namespace SquidDraftLeague.Bot.Commands
                     playerSet.BravoTeam.Score > SET_MATCH_NUMBER / 2 ||
                     playerSet.MatchNum == SET_MATCH_NUMBER)
                 {
-                    string winner = playerSet.AlphaTeam.Score > playerSet.BravoTeam.Score ? "Alpha" : "Bravo";
-                    await this.EndMatchAsync(playerSet, winner);
+                    await this.EndMatchAsync(playerSet);
 
                     return;
                 }
@@ -298,8 +297,7 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     await this.ReplyAsync("Resolved all issues! All scores will be reported to Airtable.");
 
-                    string winner = selectedSet.AlphaTeam.Score > selectedSet.BravoTeam.Score ? "Alpha" : "Bravo";
-                    await this.EndMatchAsync(selectedSet, winner);
+                    await this.EndMatchAsync(selectedSet);
                 }
                 else
                 {
@@ -442,7 +440,7 @@ namespace SquidDraftLeague.Bot.Commands
                     {
                         await this.ReplyAsync("Time's up! Assuming the losing team has accepted their loss.");
 
-                        await this.EndMatchAsync(playerSet, winner);
+                        await this.EndMatchAsync(playerSet);
 
                         return;
                     }
@@ -453,7 +451,7 @@ namespace SquidDraftLeague.Bot.Commands
                     {
                         if (DateTime.Now > timeoutDateTime)
                         {
-                            await this.EndMatchAsync(playerSet, winner);
+                            await this.EndMatchAsync(playerSet);
 
                             return;
                         }
@@ -464,7 +462,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                     if (replyMessage.Content.ToLower() == "confirm")
                     {
-                        await this.EndMatchAsync(playerSet, winner);
+                        await this.EndMatchAsync(playerSet);
 
                         return;
                     }
@@ -515,15 +513,17 @@ namespace SquidDraftLeague.Bot.Commands
             }
         }
 
-        private async Task EndMatchAsync(Set playerSet, string winner)
+        private async Task EndMatchAsync(Set playerSet)
         {
-            await ReportScores(playerSet, winner);
+            double points = await ReportScores(playerSet);
 
-            await this.ReplyAsync($"Congratulations Team {winner} on their victory! " +
+            Embed setEmbed = playerSet.GetScoreEmbedBuilder(points, points).Build();
+
+            await this.ReplyAsync($"Congratulations Team {playerSet.Winning} on their victory! " +
                                   $"Everyone's power levels have been updated to reflect this match. " +
-                                  $"Use `%profile` to check that. " +
                                   $"Beginning removal of access to this channel in 30 seconds. " +
-                                  $"Rate limiting may cause the full process to take up to two minutes.");
+                                  $"Rate limiting may cause the full process to take up to two minutes.",
+                embed: setEmbed);
 
             await Task.Delay(30000);
 
@@ -536,11 +536,6 @@ namespace SquidDraftLeague.Bot.Commands
                 await guildUser.RemoveRolesAsync(roleRemovalList.Where(e =>
                     this.Context.Guild.GetUser(guildUser.Id).Roles
                         .Any(f => e.Id == f.Id)));
-
-                if (guildUser.VoiceChannel != null)
-                {
-                    await guildUser.VoiceChannel.DisconnectAsync();
-                }
             }
 
             playerSet.Close();
@@ -562,34 +557,60 @@ namespace SquidDraftLeague.Bot.Commands
             }
         }
 
-        private static async Task ReportScores(Set playerSet, string winner)
+        public static double CalculatePoints(Set playerSet)
         {
             double alphaPowerAverage = playerSet.AlphaTeam.Players.Select(e => e.PowerLevel).Average();
             double bravoPowerAverage = playerSet.BravoTeam.Players.Select(e => e.PowerLevel).Average();
 
             double points;
-            if (winner == "Bravo")
+            switch (playerSet.Winning)
             {
-                points = 200F / (playerSet.MatchNum *
-                                  (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)));
-
-                if (playerSet.BravoTeam.Players.Any(e => e == playerSet.Halved))
+                case Set.WinningTeam.Tie:
+                    points = 1;
+                    break;
+                case Set.WinningTeam.Bravo:
                 {
-                    points /= 2;
+                    points = 200F * playerSet.BravoTeam.Score /
+                             ((7 * playerSet.AlphaTeam.Score / playerSet.MatchNum + 4) *
+                              (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)) * 4);
+
+                    if (playerSet.BravoTeam.Players.Any(e => e == playerSet.Halved))
+                    {
+                        points /= 2;
+                    }
+
+                    break;
                 }
+                case Set.WinningTeam.Alpha:
+                {
+                    points = 200F * playerSet.AlphaTeam.Score /
+                             ((7 * playerSet.BravoTeam.Score / playerSet.MatchNum + 4) *
+                              (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)) * 4);
+
+                    if (playerSet.AlphaTeam.Players.Any(e => e == playerSet.Halved))
+                    {
+                        points /= 2;
+                    }
+
+                    break;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
+
+            return points;
+        }
+
+        public static async Task<double> ReportScores(Set playerSet, bool forgiveLosing = false)
+        {
+            double points = CalculatePoints(playerSet);
+
+            if (forgiveLosing)
+                await AirTableClient.ReportScores(playerSet, points, points / 2);
             else
-            {
-                points = 200F / (playerSet.MatchNum *
-                                          (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)));
+                await AirTableClient.ReportScores(playerSet, points, points);
 
-                if (playerSet.AlphaTeam.Players.Any(e => e == playerSet.Halved))
-                {
-                    points /= 2;
-                }
-            }
-
-            await AirTableClient.ReportScores(playerSet, points, points);
+            return points;
         }
     }
 }

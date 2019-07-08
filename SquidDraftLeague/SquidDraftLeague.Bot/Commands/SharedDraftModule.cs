@@ -119,9 +119,13 @@ namespace SquidDraftLeague.Bot.Commands
                     await this.Context.Guild.GetUser(sdlPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
                 }
 
-                set.Close();
+                double points = await MatchModule.ReportScores(set, true);
 
-                await this.ReplyAsync($"An admin has closed set number {number}.");
+                Embed setEmbed = set.GetScoreEmbedBuilder(points, points / 2).Build();
+
+                await this.ReplyAsync($"An admin has closed set number {number}.", embed: setEmbed);
+
+                set.Close();
             }
             else if (type == "lobby")
             {
@@ -242,6 +246,8 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 Set joinedSet = Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == user.Id));
 
+                double points = await MatchModule.ReportScores(joinedSet, true);
+
                 if (joinedSet == null)
                 {
                     return;
@@ -265,11 +271,11 @@ namespace SquidDraftLeague.Bot.Commands
                         };
                     }
 
-                    await AirTableClient.PenalizePlayer(user.Id, 10, "Was kicked from a set.");
+                    await AirTableClient.PenalizePlayer(user.Id, (int) (10 + points / 2), "Was kicked from a set.");
 
                     record.AllInfractions.Add(new Infraction
                     {
-                        Penalty = 10,
+                        Penalty = (int) (10 + points / 2),
                         Notes = "Was kicked from a set.",
                         TimeOfOffense = DateTime.Now
                     });
@@ -297,7 +303,8 @@ namespace SquidDraftLeague.Bot.Commands
                     $"{user.Mention} was kicked from the set. " +
                     $"To the rest of the set, you will return to <#572536965833162753> to requeue. " +
                     $"Beginning removal of access to this channel in 30 seconds. " +
-                    $"Rate limiting may cause the full process to take up to two minutes.");
+                    $"Rate limiting may cause the full process to take up to two minutes.",
+                    embed: joinedSet.GetScoreEmbedBuilder(points, points / 2).Build());
 
                 Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
 
@@ -314,30 +321,17 @@ namespace SquidDraftLeague.Bot.Commands
 
                 joinedSet.Close();
 
-                SocketRole setRole = this.Context.Guild.Roles.FirstOrDefault(e => e.Name == $"In Set ({joinedSet.SetNumber})");
-                SocketRole devRole = this.Context.Guild.Roles.First(e => e.Name == "Developer");
-
-                if (setRole == null)
-                {
-                    await devRole.ModifyAsync(e => e.Mentionable = true);
-                    await this.ReplyAsync(
-                        $"{devRole.Mention} Fatal Error! Unable to find In Set role with name \"In Set ({joinedSet.SetNumber})\".");
-                    await devRole.ModifyAsync(e => e.Mentionable = false);
-                    return;
-                }
-
                 await Task.Delay(TimeSpan.FromSeconds(30));
 
                 List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
 
-                await user.RemoveRolesAsync(roleRemovalList);
+                await user.RemoveRolesAsync(roleRemovalList.Where(x => user.RoleIds.Contains(x.Id)));
 
                 foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
                 {
-                    await this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
+                    SocketGuildUser movedGuildUser = this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId);
+                    await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
                 }
-
-                await ((IGuildUser)this.Context.User).RemoveRolesAsync(roleRemovalList);
 
                 await ((ITextChannel)this.Context.Client.GetChannel(572536965833162753))
                     .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.",
@@ -345,7 +339,7 @@ namespace SquidDraftLeague.Bot.Commands
             }
         }
 
-        [Command("leave", RunMode = RunMode.Async),
+        [Command("leave"),
          Summary("Leaves a currently joined lobby.")]
         public async Task Leave()
         {
@@ -383,29 +377,7 @@ namespace SquidDraftLeague.Bot.Commands
                         return;
                     }
 
-                    double penalty = 10;
-                    double gain;
-                    double loss;
-
-                    /* TODO
-                    if (joinedSet.DraftPlayers.Any())
-                    {
-                        penalty = 10;
-                    }
-                    else
-                    {
-                        if (joinedSet.AlphaTeam.Score == joinedSet.BravoTeam.Score)
-                        {
-                            penalty = 10;
-                            gain = 0;
-                            loss = 0;
-                        }
-                        else
-                        {
-                            
-                        }
-                    }
-                    */
+                    double penalty = MatchModule.CalculatePoints(joinedSet) / 2 + 10;
 
                     string penaltyDir = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Penalties")).FullName;
                     string penaltyFile = Path.Combine(penaltyDir, $"{user.Id}.penalty");
@@ -456,11 +428,12 @@ namespace SquidDraftLeague.Bot.Commands
                     }
                     else if (response.Content.ToLower() == "y")
                     {
-                        await AirTableClient.PenalizePlayer(user.Id, 10, "Left a set.");
+                        double points = await MatchModule.ReportScores(joinedSet, true);
+                        await AirTableClient.PenalizePlayer(user.Id, (int) penalty, "Left a set.");
 
                         record.AllInfractions.Add(new Infraction
                         {
-                            Penalty = 10,
+                            Penalty = (int) penalty,
                             Notes = "Left a set.",
                             TimeOfOffense = DateTime.Now
                         });
@@ -487,7 +460,8 @@ namespace SquidDraftLeague.Bot.Commands
                             $"{user.Mention} Aforementioned penalty applied. Don't make a habit of this! " +
                             $"As for the rest of the set, you will return to <#572536965833162753> to requeue. " +
                             $"Beginning removal of access to this channel in 30 seconds. " +
-                            $"Rate limiting may cause the full process to take up to two minutes.");
+                            $"Rate limiting may cause the full process to take up to two minutes.",
+                            embed: joinedSet.GetScoreEmbedBuilder(points, points / 2).Build());
 
                         Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
 
@@ -508,11 +482,12 @@ namespace SquidDraftLeague.Bot.Commands
 
                         List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
 
-                        await user.RemoveRolesAsync(roleRemovalList);
+                        await user.RemoveRolesAsync(roleRemovalList.Where(x => user.RoleIds.Contains(x.Id)));
 
                         foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
                         {
-                            await this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
+                            SocketGuildUser movedGuildUser = this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId);
+                            await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
                         }
 
                         await ((ITextChannel) this.Context.Client.GetChannel(572536965833162753))

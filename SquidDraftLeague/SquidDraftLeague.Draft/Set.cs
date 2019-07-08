@@ -10,6 +10,13 @@ namespace SquidDraftLeague.Draft
 {
     public class Set
     {
+        public enum WinningTeam
+        {
+            Alpha,
+            Bravo,
+            Tie
+        }
+
         public int SetNumber { get; }
 
         public SdlPlayer Host { get; set; }
@@ -17,6 +24,10 @@ namespace SquidDraftLeague.Draft
         public SdlPlayer Halved { get; private set; }
 
         public IEnumerable<SdlPlayer> AllPlayers => this.AlphaTeam.Players.Concat(this.BravoTeam.Players).Concat(this.DraftPlayers);
+
+        public WinningTeam Winning =>
+            this.AlphaTeam.Score == this.BravoTeam.Score ? WinningTeam.Tie :
+            this.AlphaTeam.Score > this.BravoTeam.Score ? WinningTeam.Alpha : WinningTeam.Bravo;
 
         public SdlTeam AlphaTeam { get; }
         public SdlTeam BravoTeam { get; }
