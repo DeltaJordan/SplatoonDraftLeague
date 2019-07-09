@@ -598,6 +598,8 @@ namespace SquidDraftLeague.Bot.Commands
                     throw new ArgumentOutOfRangeException();
             }
 
+            TimePeriod happyPeriod = new TimePeriod();
+
             return points;
         }
 
@@ -606,7 +608,7 @@ namespace SquidDraftLeague.Bot.Commands
             double points = CalculatePoints(playerSet);
 
             if (forgiveLosing)
-                await AirTableClient.ReportScores(playerSet, points, points / 2);
+                await AirTableClient.ReportScores(playerSet, points, 0);
             else
                 await AirTableClient.ReportScores(playerSet, points, points);
 
