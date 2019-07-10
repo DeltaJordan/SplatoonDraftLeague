@@ -121,7 +121,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 double points = await MatchModule.ReportScores(set, true);
 
-                Embed setEmbed = set.GetScoreEmbedBuilder(points, points / 2).Build();
+                Embed setEmbed = set.GetScoreEmbedBuilder(points, 0).Build();
 
                 await this.ReplyAsync($"An admin has closed set number {number}.", embed: setEmbed);
 
@@ -304,7 +304,7 @@ namespace SquidDraftLeague.Bot.Commands
                     $"To the rest of the set, you will return to <#572536965833162753> to requeue. " +
                     $"Beginning removal of access to this channel in 30 seconds. " +
                     $"Rate limiting may cause the full process to take up to two minutes.",
-                    embed: joinedSet.GetScoreEmbedBuilder(points, points / 2).Build());
+                    embed: joinedSet.GetScoreEmbedBuilder(points, 0).Build());
 
                 Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
 

@@ -598,7 +598,11 @@ namespace SquidDraftLeague.Bot.Commands
                     throw new ArgumentOutOfRangeException();
             }
 
-            TimePeriod happyPeriod = new TimePeriod();
+            TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("11:00"), TimeSpan.Parse("12:00"));
+            if (happyPeriod.IsWithPeriod(playerSet.StartTime.GetValueOrDefault()))
+            {
+                points *= 2;
+            }
 
             return points;
         }

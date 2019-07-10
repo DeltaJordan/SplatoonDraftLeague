@@ -23,6 +23,8 @@ namespace SquidDraftLeague.Draft
 
         public SdlPlayer Halved { get; private set; }
 
+        public DateTime? StartTime { get; set; }
+
         public IEnumerable<SdlPlayer> AllPlayers => this.AlphaTeam.Players.Concat(this.BravoTeam.Players).Concat(this.DraftPlayers);
 
         public WinningTeam Winning =>
@@ -122,10 +124,12 @@ namespace SquidDraftLeague.Draft
             this.DraftPlayers.AddRange(orderedPlayers.Skip(2));
 
             this.Halved = lobby.Halved;
+            this.StartTime = DateTime.UtcNow;
         }
 
         public void Close()
         {
+            this.StartTime = null;
             this.DraftTimeout = null;
             this.Halved = null;
             this.AlphaTeam.Clear();
