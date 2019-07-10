@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Timers;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
@@ -33,6 +34,8 @@ namespace SquidDraftLeague.Bot
 
         private static readonly Logger ClassLogger = LogManager.GetCurrentClassLogger();
         private static readonly Logger DiscordLogger = LogManager.GetLogger("Discord API");
+
+        private static Timer happyNotificationTimer;
 
         /// <summary>
         /// Main async method for the bot.
@@ -116,10 +119,39 @@ namespace SquidDraftLeague.Bot
 
             Client.Ready += Client_Ready;
             Client.Log += Client_Log;
-            
+
             await Client.LoginAsync(TokenType.Bot, Globals.BotSettings.BotToken);
             await Client.StartAsync();
+
+            TimeSpan dayLength = new TimeSpan(24, 0, 0);
+            TimeSpan nowTimeSpan = DateTime.UtcNow.TimeOfDay;
+            TimeSpan activationTime = TimeSpan.Parse("20:00");
+            TimeSpan activationInterval = dayLength - nowTimeSpan + activationTime;
+            activationInterval = activationInterval.TotalHours > 24
+                ? activationInterval - new TimeSpan(24, 0, 0)
+                : activationInterval;
+
+            happyNotificationTimer = new Timer
+            {
+                Interval = activationInterval.TotalMilliseconds
+            };
+
+            happyNotificationTimer.Elapsed += HappyNotificationTimer_Elapsed;
+            happyNotificationTimer.Start();
+
             await Task.Delay(-1);
+        }
+
+        private static async void HappyNotificationTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            await Client.GetGuild(570743985530863649).GetTextChannel(572536965833162753).SendMessageAsync(
+                "<@&592448366831730708> Double points hour has begun! " +
+                "Any sets started in the next hour will gain double points when winning. " +
+                "Points lost are not affected.");
+
+            happyNotificationTimer.Interval = new TimeSpan(24, 0, 0).TotalMilliseconds;
+            happyNotificationTimer.Stop();
+            happyNotificationTimer.Start();
         }
 
         private static async Task Client_UserLeft(SocketGuildUser arg)
