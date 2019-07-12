@@ -36,6 +36,7 @@ namespace SquidDraftLeague.Bot
         private static readonly Logger DiscordLogger = LogManager.GetLogger("Discord API");
 
         private static Timer happyNotificationTimer;
+        private static Timer halfNotificationTimer;
 
         /// <summary>
         /// Main async method for the bot.
@@ -125,21 +126,47 @@ namespace SquidDraftLeague.Bot
 
             TimeSpan dayLength = new TimeSpan(24, 0, 0);
             TimeSpan nowTimeSpan = DateTime.UtcNow.TimeOfDay;
-            TimeSpan activationTime = TimeSpan.Parse("20:00");
-            TimeSpan activationInterval = dayLength - nowTimeSpan + activationTime;
-            activationInterval = activationInterval.TotalHours > 24
-                ? activationInterval - new TimeSpan(24, 0, 0)
-                : activationInterval;
+            TimeSpan happyActivationTime = TimeSpan.Parse("20:00");
+            TimeSpan happyActivationInterval = dayLength - nowTimeSpan + happyActivationTime;
+            happyActivationInterval = happyActivationInterval.TotalHours > 24
+                ? happyActivationInterval - new TimeSpan(24, 0, 0)
+                : happyActivationInterval;
 
             happyNotificationTimer = new Timer
             {
-                Interval = activationInterval.TotalMilliseconds
+                Interval = happyActivationInterval.TotalMilliseconds
             };
 
             happyNotificationTimer.Elapsed += HappyNotificationTimer_Elapsed;
             happyNotificationTimer.Start();
 
+            TimeSpan halfActivationTime = TimeSpan.Parse("4:00");
+            TimeSpan halfActivationInterval = dayLength - nowTimeSpan + halfActivationTime;
+            halfActivationInterval = halfActivationInterval.TotalHours > 24
+                ? halfActivationInterval - new TimeSpan(24, 0, 0)
+                : halfActivationInterval;
+
+            halfNotificationTimer = new Timer
+            {
+                Interval = halfActivationInterval.TotalMilliseconds
+            };
+
+            halfNotificationTimer.Elapsed += HalfNotificationTimer_Elapsed;
+            halfNotificationTimer.Start();
+
             await Task.Delay(-1);
+        }
+
+        private static async void HalfNotificationTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            await Client.GetGuild(570743985530863649).GetTextChannel(572536965833162753).SendMessageAsync(
+                "<@&592448366831730708> Half points hour has begun! " +
+                "Any sets started in the next hour will lose half points when losing. " +
+                "Points won are not affected.");
+
+            halfNotificationTimer.Interval = new TimeSpan(24, 0, 0).TotalMilliseconds;
+            halfNotificationTimer.Stop();
+            halfNotificationTimer.Start();
         }
 
         private static async void HappyNotificationTimer_Elapsed(object sender, ElapsedEventArgs e)
