@@ -15,7 +15,7 @@ namespace SquidDraftLeague.Bot
             this.End = end;
         }
 
-        public bool IsWithPeriod(DateTime datetime)
+        public bool IsWithinPeriod(DateTime datetime)
         {
             // convert datetime to a TimeSpan
             TimeSpan now = datetime.TimeOfDay;

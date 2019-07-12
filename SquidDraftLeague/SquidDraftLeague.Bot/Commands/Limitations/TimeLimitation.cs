@@ -21,7 +21,7 @@ namespace SquidDraftLeague.Bot.Commands.Limitations
         {
             foreach (TimePeriod timePeriod in this.TimePeriods)
             {
-                if (timePeriod.IsWithPeriod(DateTime.UtcNow))
+                if (timePeriod.IsWithinPeriod(DateTime.UtcNow))
                 {
                     return !this.Inverse;
                 }

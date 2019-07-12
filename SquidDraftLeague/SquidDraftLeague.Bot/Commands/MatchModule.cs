@@ -599,7 +599,7 @@ namespace SquidDraftLeague.Bot.Commands
             }
 
             TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
-            if (happyPeriod.IsWithPeriod(playerSet.StartTime.GetValueOrDefault()))
+            if (happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()))
             {
                 points *= 2;
             }
@@ -616,8 +616,8 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (forgiveLosing)
                 await AirTableClient.ReportScores(playerSet, points, 0);
-            else if (happyPeriod.IsWithPeriod(playerSet.StartTime.GetValueOrDefault()) ||
-                     halfPeriod.IsWithPeriod(playerSet.StartTime.GetValueOrDefault()))
+            else if (happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()) ||
+                     halfPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()))
             {
                 await AirTableClient.ReportScores(playerSet, points, points / 2);
             }

@@ -30,7 +30,7 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
         {
             foreach (TimePeriod timePeriod in this.timePeriods)
             {
-                if (timePeriod.IsWithPeriod(DateTime.UtcNow))
+                if (timePeriod.IsWithinPeriod(DateTime.UtcNow))
                 {
                     return PreconditionResult.FromSuccess();
                 }
