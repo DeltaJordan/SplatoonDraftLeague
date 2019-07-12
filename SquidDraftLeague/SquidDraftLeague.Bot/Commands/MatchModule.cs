@@ -612,7 +612,7 @@ namespace SquidDraftLeague.Bot.Commands
             double points = CalculatePoints(playerSet);
 
             TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
-            TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("4:00"), TimeSpan.Parse("5:00"));
+            TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("1:00"), TimeSpan.Parse("2:00"));
 
             if (forgiveLosing)
                 await AirTableClient.ReportScores(playerSet, points, 0);
