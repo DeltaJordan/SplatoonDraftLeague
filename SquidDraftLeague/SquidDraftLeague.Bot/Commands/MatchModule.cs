@@ -517,7 +517,14 @@ namespace SquidDraftLeague.Bot.Commands
         {
             double points = await ReportScores(playerSet);
 
-            Embed setEmbed = playerSet.GetScoreEmbedBuilder(points, points).Build();
+            TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
+            TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("1:00"), TimeSpan.Parse("2:00"));
+
+            Embed setEmbed = playerSet.GetScoreEmbedBuilder(points,
+                happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()) ||
+                halfPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault())
+                    ? points / 2
+                    : points).Build();
 
             await this.ReplyAsync($"Congratulations Team {playerSet.Winning} on their victory! " +
                                   $"Everyone's power levels have been updated to reflect this match. " +
