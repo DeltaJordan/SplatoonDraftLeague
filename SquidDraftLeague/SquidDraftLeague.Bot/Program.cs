@@ -140,7 +140,7 @@ namespace SquidDraftLeague.Bot
             happyNotificationTimer.Elapsed += HappyNotificationTimer_Elapsed;
             happyNotificationTimer.Start();
 
-            TimeSpan halfActivationTime = TimeSpan.Parse("4:00");
+            TimeSpan halfActivationTime = TimeSpan.Parse("1:00");
             TimeSpan halfActivationInterval = dayLength - nowTimeSpan + halfActivationTime;
             halfActivationInterval = halfActivationInterval.TotalHours > 24
                 ? halfActivationInterval - new TimeSpan(24, 0, 0)
