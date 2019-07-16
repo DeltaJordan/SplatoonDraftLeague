@@ -194,13 +194,20 @@ namespace SquidDraftLeague.Bot.Commands
                         $"{sdlPlayer.DiscordId.ToUserMention()} has been added to " +
                         $"Lobby #{matchedLobby.LobbyNumber}. {8 - matchedLobby.Players.Count} players needed to begin.";
 
-                    IRole notifRole = this.Context.Guild.GetRole(592448366831730708);
+                    IRole classOneRole = this.Context.Guild.GetRole(600770643075661824);
+                    IRole classTwoRole = this.Context.Guild.GetRole(600770814521901076);
+                    IRole classThreeRole = this.Context.Guild.GetRole(600770862307606542);
+                    IRole classFourRole = this.Context.Guild.GetRole(600770905282576406);
+
+                    IRole[] notifRoles = {classOneRole, classTwoRole, classThreeRole, classFourRole};
 
                     if (matchedLobby.Players.Count == 1)
                     {
                         matchedLobby.DeltaUpdated += this.MatchedLobby_DeltaUpdated;
 
-                        message = $"{notifRole.Mention} A new lobby has been started! " + message;
+                        message = $"{notifRoles[(int)matchedLobby.Class - 1].Mention} " +
+                                  $"{((int)matchedLobby.Class - 2 > 0 ? notifRoles[(int)matchedLobby.Class - 2].Mention + " " : "")}" +
+                                  $"A new lobby has been started! {message}";
                     }
 
                     EmbedBuilder builder = matchedLobby.GetEmbedBuilder();

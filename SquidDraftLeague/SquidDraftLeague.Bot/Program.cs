@@ -244,6 +244,8 @@ namespace SquidDraftLeague.Bot
                             .OrderByDescending(e => e.Value.ReactionCount)
                             .FirstOrDefault();
 
+                        double powerLevel = 0;
+
                         if (reactionMetadata.ReactionCount > 1)
                         {
                             string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath, "Registrations",
@@ -256,18 +258,22 @@ namespace SquidDraftLeague.Bot
                             switch (emote.Name)
                             {
                                 case "\u0031\u20E3":
+                                    powerLevel = 2200;
                                     await AirTableClient.RegisterPlayer(userId, 2200, allRegLines[1]);
                                     classNum = 1;
                                     break;
                                 case "\u0032\u20E3":
+                                    powerLevel = 2000;
                                     await AirTableClient.RegisterPlayer(userId, 2000, allRegLines[1]);
                                     classNum = 2;
                                     break;
                                 case "\u0033\u20E3":
+                                    powerLevel = 1800;
                                     await AirTableClient.RegisterPlayer(userId, 1800, allRegLines[1]);
                                     classNum = 3;
                                     break;
                                 case "\u0034\u20E3":
+                                    powerLevel = 1700;
                                     await AirTableClient.RegisterPlayer(userId, 1700, allRegLines[1]);
                                     classNum = 4;
                                     break;
@@ -281,6 +287,55 @@ namespace SquidDraftLeague.Bot
 
                             await registeredUser.AddRoleAsync(guild.GetRole(572537013949956105));
                             await registeredUser.AddRoleAsync(guild.GetRole(592448366831730708));
+
+
+                            IRole classOneRole = guild.GetRole(600770643075661824);
+                            IRole classTwoRole = guild.GetRole(600770814521901076);
+                            IRole classThreeRole = guild.GetRole(600770862307606542);
+                            IRole classFourRole = guild.GetRole(600770905282576406);
+
+                            try
+                            {
+                                switch (Matchmaker.GetClass(powerLevel))
+                                {
+                                    case SdlClass.Zero:
+                                        break;
+                                    case SdlClass.One:
+                                        if (registeredUser.Roles.All(e => e.Id != classOneRole.Id))
+                                        {
+                                            await registeredUser.AddRoleAsync(classOneRole);
+                                        }
+
+                                        break;
+                                    case SdlClass.Two:
+                                        if (registeredUser.Roles.All(e => e.Id != classTwoRole.Id))
+                                        {
+                                            await registeredUser.AddRoleAsync(classTwoRole);
+                                        }
+
+                                        break;
+                                    case SdlClass.Three:
+                                        if (registeredUser.Roles.All(e => e.Id != classThreeRole.Id))
+                                        {
+                                            await registeredUser.AddRoleAsync(classThreeRole);
+                                        }
+
+                                        break;
+                                    case SdlClass.Four:
+                                        if (registeredUser.Roles.All(e => e.Id != classFourRole.Id))
+                                        {
+                                            await registeredUser.AddRoleAsync(classFourRole);
+                                        }
+
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine(e);
+                            }
 
                             File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
 

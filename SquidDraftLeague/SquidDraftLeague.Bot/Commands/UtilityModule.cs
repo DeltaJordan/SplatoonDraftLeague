@@ -26,6 +26,7 @@ using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Map;
+using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Settings;
 using Image = SixLabors.ImageSharp.Image;
 using Path = System.IO.Path;
@@ -46,18 +47,100 @@ namespace SquidDraftLeague.Bot.Commands
             if (user.Roles.All(e => e.Name != "Player"))
                 return;
 
-            IRole role = this.Context.Guild.GetRole(592448366831730708);
+            SdlPlayer player = await AirTableClient.RetrieveSdlPlayer(user.Id);
 
-            if (user.Roles.Any(e => e == role))
+            IRole classOneRole = this.Context.Guild.GetRole(600770643075661824);
+            IRole classTwoRole = this.Context.Guild.GetRole(600770814521901076);
+            IRole classThreeRole = this.Context.Guild.GetRole(600770862307606542);
+            IRole classFourRole = this.Context.Guild.GetRole(600770905282576406);
+
+            IRole selectedRole = null;
+
+            switch (Matchmaker.GetClass(player.PowerLevel))
             {
-                await user.RemoveRoleAsync(role);
+                case SdlClass.Zero:
+                    break;
+                case SdlClass.One:
+                    selectedRole = classOneRole;
+                    break;
+                case SdlClass.Two:
+                    selectedRole = classTwoRole;
+                    break;
+                case SdlClass.Three:
+                    selectedRole = classThreeRole;
+                    break;
+                case SdlClass.Four:
+                    selectedRole = classFourRole;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            if (user.Roles.Any(e => e.Id == selectedRole?.Id))
+            {
+                await user.RemoveRoleAsync(selectedRole);
                 await this.ReplyAsync("Disabled lobby notifications.");
             }
             else
             {
-                await user.AddRoleAsync(role);
+                await user.AddRoleAsync(selectedRole);
                 await this.ReplyAsync("Enabled lobby notifications.");
             }
+        }
+
+        [Command("distributeRoles")]
+        public async Task DistributeRoles()
+        {
+            IRole classOneRole = this.Context.Guild.GetRole(600770643075661824);
+            IRole classTwoRole = this.Context.Guild.GetRole(600770814521901076);
+            IRole classThreeRole = this.Context.Guild.GetRole(600770862307606542);
+            IRole classFourRole = this.Context.Guild.GetRole(600770905282576406);
+
+            foreach (SdlPlayer sdlPlayer in await AirTableClient.RetrieveAllSdlPlayers())
+            {
+                try
+                {
+                    SocketGuildUser sdlGuildUser = this.Context.Guild.GetUser(sdlPlayer.DiscordId);
+
+                    switch (Matchmaker.GetClass(sdlPlayer.PowerLevel))
+                    {
+                        case SdlClass.Zero:
+                            break;
+                        case SdlClass.One:
+                            if (sdlGuildUser.Roles.All(e => e.Id != classOneRole.Id))
+                            {
+                                await sdlGuildUser.AddRoleAsync(classOneRole);
+                            }
+                            break;
+                        case SdlClass.Two:
+                            if (sdlGuildUser.Roles.All(e => e.Id != classTwoRole.Id))
+                            {
+                                await sdlGuildUser.AddRoleAsync(classTwoRole);
+                            }
+                            break;
+                        case SdlClass.Three:
+                            if (sdlGuildUser.Roles.All(e => e.Id != classThreeRole.Id))
+                            {
+                                await sdlGuildUser.AddRoleAsync(classThreeRole);
+                            }
+                            break;
+                        case SdlClass.Four:
+                            if (sdlGuildUser.Roles.All(e => e.Id != classFourRole.Id))
+                            {
+                                await sdlGuildUser.AddRoleAsync(classFourRole);
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            }
+
+            await this.ReplyAsync("I'm Sam, the dancing Matzo man. Making Matzos fast I can. I'm Sam the dancing Matzo man.");
         }
 
         [Command("sendhelp")]

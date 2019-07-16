@@ -547,6 +547,55 @@ namespace SquidDraftLeague.Bot.Commands
 
             playerSet.Close();
 
+            IRole classOneRole = this.Context.Guild.GetRole(600770643075661824);
+            IRole classTwoRole = this.Context.Guild.GetRole(600770814521901076);
+            IRole classThreeRole = this.Context.Guild.GetRole(600770862307606542);
+            IRole classFourRole = this.Context.Guild.GetRole(600770905282576406);
+
+            foreach (SdlPlayer sdlPlayer in await AirTableClient.RetrieveAllSdlPlayers())
+            {
+                try
+                {
+                    SocketGuildUser sdlGuildUser = this.Context.Guild.GetUser(sdlPlayer.DiscordId);
+
+                    switch (Matchmaker.GetClass(sdlPlayer.PowerLevel))
+                    {
+                        case SdlClass.Zero:
+                            break;
+                        case SdlClass.One:
+                            if (sdlGuildUser.Roles.All(e => e.Id != classOneRole.Id))
+                            {
+                                await sdlGuildUser.AddRoleAsync(classOneRole);
+                            }
+                            break;
+                        case SdlClass.Two:
+                            if (sdlGuildUser.Roles.All(e => e.Id != classTwoRole.Id))
+                            {
+                                await sdlGuildUser.AddRoleAsync(classTwoRole);
+                            }
+                            break;
+                        case SdlClass.Three:
+                            if (sdlGuildUser.Roles.All(e => e.Id != classThreeRole.Id))
+                            {
+                                await sdlGuildUser.AddRoleAsync(classThreeRole);
+                            }
+                            break;
+                        case SdlClass.Four:
+                            if (sdlGuildUser.Roles.All(e => e.Id != classFourRole.Id))
+                            {
+                                await sdlGuildUser.AddRoleAsync(classFourRole);
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            }
+
             // TODO Removed message clearing for the time being.
             if (this.Context.Channel.Id == 0 /*CommandHelper.ChannelFromSet(playerSet.SetNumber).Id*/)
             {
