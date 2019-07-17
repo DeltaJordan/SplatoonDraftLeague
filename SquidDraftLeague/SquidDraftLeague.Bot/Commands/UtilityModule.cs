@@ -76,13 +76,20 @@ namespace SquidDraftLeague.Bot.Commands
                     throw new ArgumentOutOfRangeException();
             }
 
+            string optOutDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Opt Out")).FullName;
+
             if (user.Roles.Any(e => e.Id == selectedRole?.Id))
             {
+                await File.WriteAllTextAsync(Path.Combine(optOutDirectory, $"{this.Context.User.Id}.dat"), "bruh");
+
                 await user.RemoveRoleAsync(selectedRole);
                 await this.ReplyAsync("Disabled lobby notifications.");
             }
             else
             {
+                if (File.Exists(Path.Combine(optOutDirectory, $"{this.Context.User.Id}.dat")))
+                    File.Delete(Path.Combine(optOutDirectory, $"{this.Context.User.Id}.dat"));
+
                 await user.AddRoleAsync(selectedRole);
                 await this.ReplyAsync("Enabled lobby notifications.");
             }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -16,6 +17,7 @@ using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Map;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
@@ -552,11 +554,20 @@ namespace SquidDraftLeague.Bot.Commands
             IRole classThreeRole = this.Context.Guild.GetRole(600770862307606542);
             IRole classFourRole = this.Context.Guild.GetRole(600770905282576406);
 
+            IRole[] allClassRoles = { classOneRole, classTwoRole, classThreeRole, classFourRole };
+
+            string optOutDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Opt Out")).FullName;
+
             foreach (SdlPlayer sdlPlayer in await AirTableClient.RetrieveAllSdlPlayers())
             {
                 try
                 {
                     SocketGuildUser sdlGuildUser = this.Context.Guild.GetUser(sdlPlayer.DiscordId);
+
+                    if (File.Exists(Path.Combine(optOutDirectory, $"{this.Context.User.Id}.dat")))
+                    {
+                        continue;
+                    }
 
                     switch (Matchmaker.GetClass(sdlPlayer.PowerLevel))
                     {
@@ -565,24 +576,36 @@ namespace SquidDraftLeague.Bot.Commands
                         case SdlClass.One:
                             if (sdlGuildUser.Roles.All(e => e.Id != classOneRole.Id))
                             {
+                                await sdlGuildUser.RemoveRolesAsync(allClassRoles.Where(e =>
+                                    sdlGuildUser.Roles.Any(f => f.Id == e.Id)));
+
                                 await sdlGuildUser.AddRoleAsync(classOneRole);
                             }
                             break;
                         case SdlClass.Two:
                             if (sdlGuildUser.Roles.All(e => e.Id != classTwoRole.Id))
                             {
+                                await sdlGuildUser.RemoveRolesAsync(allClassRoles.Where(e =>
+                                    sdlGuildUser.Roles.Any(f => f.Id == e.Id)));
+
                                 await sdlGuildUser.AddRoleAsync(classTwoRole);
                             }
                             break;
                         case SdlClass.Three:
                             if (sdlGuildUser.Roles.All(e => e.Id != classThreeRole.Id))
                             {
+                                await sdlGuildUser.RemoveRolesAsync(allClassRoles.Where(e =>
+                                    sdlGuildUser.Roles.Any(f => f.Id == e.Id)));
+
                                 await sdlGuildUser.AddRoleAsync(classThreeRole);
                             }
                             break;
                         case SdlClass.Four:
                             if (sdlGuildUser.Roles.All(e => e.Id != classFourRole.Id))
                             {
+                                await sdlGuildUser.RemoveRolesAsync(allClassRoles.Where(e =>
+                                    sdlGuildUser.Roles.Any(f => f.Id == e.Id)));
+
                                 await sdlGuildUser.AddRoleAsync(classFourRole);
                             }
                             break;
