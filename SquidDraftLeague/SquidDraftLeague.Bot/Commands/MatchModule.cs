@@ -73,10 +73,17 @@ namespace SquidDraftLeague.Bot.Commands
             set.Host = set.AllPlayers.First(e => e.DiscordId == hostUser.Id);
 
             Stage[] mapList = await AirTableClient.GetMapList();
+            set.PickStages(mapList);
+            Stage selectedStage = set.GetCurrentStage();
 
-            Stage selectedStage = set.PickStage(mapList);
+            EmbedBuilder embed = new EmbedBuilder
+            {
+                Title = $"Stages for Set #{set.SetNumber}",
+                Description = 
+                    string.Join("\n", set.Stages.Select(x => $"<:{x.GetModeEmote().Name}:{x.GetModeEmote().Id}>{x.MapName}"))
+            };
 
-            set.PlayedStages.Add(selectedStage);
+            await context.Guild.GetTextChannel(601123765237186560).SendMessageAsync(embed: embed.Build());
 
             await context.SendMessageAsync(embed: selectedStage
                 .GetEmbedBuilder($"Match 1 of 7: {selectedStage.MapName}")
@@ -213,10 +220,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await this.ReplyAsync("The report has been resolved by a moderator. This is a final decision. Please continue with the set.");
 
-                Stage[] mapList = await AirTableClient.GetMapList();
-                Stage selectedRandomStage = playerSet.PickStage(mapList);
-
-                playerSet.PlayedStages.Add(selectedRandomStage);
+                Stage selectedRandomStage = playerSet.GetCurrentStage();
 
                 await this.ReplyAsync(embed: selectedRandomStage
                     .GetEmbedBuilder($"Match {playerSet.MatchNum} of 7: {selectedRandomStage.MapName}")
@@ -245,7 +249,7 @@ namespace SquidDraftLeague.Bot.Commands
             playerSet.AlphaTeam.OrderedMatchResults.Clear();
             playerSet.BravoTeam.OrderedMatchResults.Clear();
 
-            Stage selectedStage = playerSet.PlayedStages[0];
+            Stage selectedStage = playerSet.Stages[0];
             await this.ReplyAsync("Moderator, use `%overwrite [Team]` to select the winner for this map.", 
                 embed: selectedStage.GetEmbedBuilder($"Match 1 of 7: {selectedStage.MapName}")
                 .AddField(e =>
@@ -307,7 +311,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                     selectedSet.MatchNum++;
 
-                    Stage selectedStage = selectedSet.PlayedStages[selectedSet.MatchNum - 1];
+                    Stage selectedStage = selectedSet.Stages[selectedSet.MatchNum - 1];
 
                     await this.ReplyAsync(embed: selectedStage
                         .GetEmbedBuilder($"Match {selectedSet.MatchNum} of 7: {selectedStage.MapName}")
@@ -328,7 +332,7 @@ namespace SquidDraftLeague.Bot.Commands
             }
             else
             {
-                Stage selectedStage = selectedSet.PlayedStages[selectedSet.MatchNum];
+                Stage selectedStage = selectedSet.Stages[selectedSet.MatchNum];
                 await this.ReplyAsync("Moderator, use `%overwrite [Team]` to select the winner for this map.",
                     embed: selectedStage.GetEmbedBuilder($"Match {selectedSet.MatchNum + 1} of 7: {selectedStage.MapName}")
                         .AddField(e =>
@@ -486,10 +490,7 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     playerSet.MatchNum++;
 
-                    Stage[] mapList = await AirTableClient.GetMapList();
-                    Stage selectedStage = playerSet.PickStage(mapList);
-
-                    playerSet.PlayedStages.Add(selectedStage);
+                    Stage selectedStage = playerSet.GetCurrentStage();
 
                     await this.ReplyAsync(embed: selectedStage
                         .GetEmbedBuilder($"Match {playerSet.MatchNum} of 7: {selectedStage.MapName}")
@@ -564,7 +565,7 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     SocketGuildUser sdlGuildUser = this.Context.Guild.GetUser(sdlPlayer.DiscordId);
 
-                    if (File.Exists(Path.Combine(optOutDirectory, $"{this.Context.User.Id}.dat")))
+                    if (File.Exists(Path.Combine(optOutDirectory, $"{sdlGuildUser.Id}.dat")))
                     {
                         continue;
                     }

@@ -140,42 +140,42 @@ namespace SquidDraftLeague.AirTable
                 fields.AddField("Loss", loss);
                 fields.AddField("A SZ",
                     set.AlphaTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.PlayedStages[index].Mode })
+                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
                         .Where(e => e.Score == 1 && e.Mode == GameMode.SplatZones)
                         .Aggregate(0, (e, f) => e + f.Score));
                 fields.AddField("B SZ",
                     set.BravoTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.PlayedStages[index].Mode })
+                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
                         .Where(e => e.Score == 1 && e.Mode == GameMode.SplatZones)
                         .Aggregate(0, (e, f) => e + f.Score));
                 fields.AddField("A TC",
                     set.AlphaTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.PlayedStages[index].Mode })
+                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
                         .Where(e => e.Score == 1 && e.Mode == GameMode.TowerControl)
                         .Aggregate(0, (e, f) => e + f.Score));
                 fields.AddField("B TC",
                     set.BravoTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.PlayedStages[index].Mode })
+                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
                         .Where(e => e.Score == 1 && e.Mode == GameMode.TowerControl)
                         .Aggregate(0, (e, f) => e + f.Score));
                 fields.AddField("A RM",
                     set.AlphaTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.PlayedStages[index].Mode })
+                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
                         .Where(e => e.Score == 1 && e.Mode == GameMode.Rainmaker)
                         .Aggregate(0, (e, f) => e + f.Score));
                 fields.AddField("B RM",
                     set.BravoTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.PlayedStages[index].Mode })
+                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
                         .Where(e => e.Score == 1 && e.Mode == GameMode.Rainmaker)
                         .Aggregate(0, (e, f) => e + f.Score));
                 fields.AddField("A CB",
                     set.AlphaTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.PlayedStages[index].Mode })
+                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
                         .Where(e => e.Score == 1 && e.Mode == GameMode.ClamBlitz)
                         .Aggregate(0, (e, f) => e + f.Score));
                 fields.AddField("B CB",
                     set.BravoTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.PlayedStages[index].Mode })
+                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
                         .Where(e => e.Score == 1 && e.Mode == GameMode.ClamBlitz)
                         .Aggregate(0, (e, f) => e + f.Score));
 

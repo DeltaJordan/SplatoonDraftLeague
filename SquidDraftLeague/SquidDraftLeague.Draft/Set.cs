@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Timers;
 using SquidDraftLeague.Draft.Extensions;
@@ -37,7 +38,7 @@ namespace SquidDraftLeague.Draft
         public readonly List<SdlPlayer> DraftPlayers = new List<SdlPlayer>();
 
         public int MatchNum;
-        public List<Stage> PlayedStages = new List<Stage>();
+        public ReadOnlyCollection<Stage> Stages => this.stages.AsReadOnly();
 
         public int ResolveMode = 0;
         public bool Locked { get; set; }
@@ -46,6 +47,7 @@ namespace SquidDraftLeague.Draft
         public event EventHandler Closed;
 
         private Timer draftTimer;
+        private List<Stage> stages = new List<Stage>();
 
         private GameMode[] modeOrder;
 
@@ -135,7 +137,7 @@ namespace SquidDraftLeague.Draft
             this.AlphaTeam.Clear();
             this.BravoTeam.Clear();
             this.DraftPlayers.Clear();
-            this.PlayedStages.Clear();
+            this.stages.Clear();
             this.MatchNum = 0;
 
             this.modeOrder = null;
@@ -143,18 +145,30 @@ namespace SquidDraftLeague.Draft
             this.Closed?.Invoke(this, EventArgs.Empty);
         }
 
-        public Stage PickStage(Stage[] stages)
+        public Stage GetCurrentStage()
+        {
+            return this.stages[this.MatchNum - 1];
+        }
+
+        public void PickStages(Stage[] availableStages)
         {
             if (this.modeOrder == null)
             {
                 this.modeOrder = Enum.GetValues(typeof(GameMode)).Cast<GameMode>().Shuffle().ToArray();
             }
 
-            stages = stages
-                .Where(e => this.PlayedStages.All(f => f.MapName != e.MapName) && e.Mode == this.modeOrder[(this.MatchNum - 1) % 4])
-                .ToArray();
+            for (int i = 0; i < 7; i++)
+            {
+                List<Stage> selectedStages = availableStages
+                    .Where(e => this.stages.All(f => f.MapName != e.MapName) && e.Mode == this.modeOrder[i % 4])
+                    .ToList();
 
-            return stages[Globals.Random.Next(0, stages.Length - 1)];
+                int selectedIndex = Globals.Random.Next(0, availableStages.Length - 1);
+
+                this.stages.Add(selectedStages[Globals.Random.Next(0, availableStages.Length - 1)]);
+
+                selectedStages.RemoveAt(selectedIndex);
+            }
         }
     }
 }

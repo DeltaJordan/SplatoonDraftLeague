@@ -8,7 +8,7 @@ namespace SquidDraftLeague.Bot.Extensions
 {
     public static class StageExtensions
     {
-        public static Emote GetModeImageLink(this Stage stage)
+        public static Emote GetModeEmote(this Stage stage)
         {
             switch (stage.Mode)
             {
@@ -34,7 +34,7 @@ namespace SquidDraftLeague.Bot.Extensions
 
             embedBuilder.WithFooter(e =>
             {
-                e.IconUrl = stage.GetModeImageLink().Url;
+                e.IconUrl = stage.GetModeEmote().Url;
                 e.Text = stage.GetModeName();
             });
 
