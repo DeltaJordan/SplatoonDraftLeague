@@ -80,7 +80,7 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 Title = $"Stages for Set #{set.SetNumber}",
                 Description = 
-                    string.Join("\n", set.Stages.Select(x => $"<:{x.GetModeEmote().Name}:{x.GetModeEmote().Id}>{x.MapName}"))
+                    string.Join("\n", set.Stages.Select(x => $"<:{x.GetModeEmote().Name}:{x.GetModeEmote().Id}> {x.MapName}"))
             };
 
             await context.Guild.GetTextChannel(601123765237186560).SendMessageAsync(embed: embed.Build());

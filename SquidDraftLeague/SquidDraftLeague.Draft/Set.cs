@@ -163,11 +163,9 @@ namespace SquidDraftLeague.Draft
                     .Where(e => this.stages.All(f => f.MapName != e.MapName) && e.Mode == this.modeOrder[i % 4])
                     .ToList();
 
-                int selectedIndex = Globals.Random.Next(0, availableStages.Length - 1);
+                int selectedIndex = Globals.Random.Next(0, selectedStages.Count - 1);
 
-                this.stages.Add(selectedStages[Globals.Random.Next(0, availableStages.Length - 1)]);
-
-                selectedStages.RemoveAt(selectedIndex);
+                this.stages.Add(selectedStages[selectedIndex]);
             }
         }
     }
