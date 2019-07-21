@@ -27,6 +27,11 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
                 return Task.FromResult(PreconditionResult.FromSuccess());
             }
 
+            if (context.Guild.Id == 593978296027316224)
+            {
+                return Task.FromResult(PreconditionResult.FromSuccess());
+            }
+
             if (context.Guild == null || context.Guild.Id != 570743985530863649)
             {
                 return Task.FromResult(PreconditionResult.FromError("This bot can only be used in approved guilds."));

@@ -19,7 +19,6 @@ using NLog.Config;
 using NLog.Targets;
 using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands;
-using SquidDraftLeague.Bot.Commands.Limitations;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Settings;
@@ -491,60 +490,7 @@ namespace SquidDraftLeague.Bot
 
             string limitDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Limiters")).FullName;
 
-            if (context.Channel is IGuildChannel)
-            {
-                foreach (CommandMatch command in commands.Search(context, argPos).Commands)
-                {
-                    if (File.Exists(Path.Combine(limitDirectory, "all")))
-                    {
-                        CommandLimiter commandLimiter =
-                            JsonConvert.DeserializeObject<CommandLimiter>(
-                                await File.ReadAllTextAsync(Path.Combine(limitDirectory, "all")),
-                                new JsonSerializerSettings
-                                {
-                                    TypeNameHandling = TypeNameHandling.Auto
-                                });
-
-                        if (!await commandLimiter.CheckAllLimitationsAsync(context))
-                        {
-                            return;
-                        }
-                    }
-
-                    if (File.Exists(Path.Combine(limitDirectory, $"{command.Command.Name}")))
-                    {
-                        CommandLimiter commandLimiter =
-                            JsonConvert.DeserializeObject<CommandLimiter>(
-                                await File.ReadAllTextAsync(Path.Combine(limitDirectory, $"{command.Command.Name}")),
-                                new JsonSerializerSettings
-                                {
-                                    TypeNameHandling = TypeNameHandling.Auto
-                                });
-
-                        if (!await commandLimiter.CheckAllLimitationsAsync(context))
-                        {
-                            return;
-                        }
-                    }
-
-                    if (File.Exists(Path.Combine(limitDirectory, $"{command.Command.Module.Name}")))
-                    {
-                        CommandLimiter commandLimiter =
-                            JsonConvert.DeserializeObject<CommandLimiter>(
-                                await File.ReadAllTextAsync(Path.Combine(limitDirectory,
-                                    $"{command.Command.Module.Name}")),
-                                new JsonSerializerSettings
-                                {
-                                    TypeNameHandling = TypeNameHandling.Auto
-                                });
-
-                        if (!await commandLimiter.CheckAllLimitationsAsync(context))
-                        {
-                            return;
-                        }
-                    }
-                }
-            }
+            // TODO Removed limitations since they are really buggy.
 
             IResult result = await commands.ExecuteAsync(context, argPos, services);
 

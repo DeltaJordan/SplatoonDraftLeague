@@ -6,7 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Discord.Commands;
 using Newtonsoft.Json;
-using SquidDraftLeague.Bot.Commands.Limitations;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Settings;
 
@@ -15,7 +14,7 @@ namespace SquidDraftLeague.Bot.Commands
     [Name("Moderation")]
     public class ModerationModule : ModuleBase<SocketCommandContext>
     {
-        [Command("limit"),
+        /*[Command("limit"),
          Summary("Very complicated command to modify what commands can be used where and when. " +
                  "This command is used similarly to command prompt commands with arguments. " +
                  "This means that all arguments with spaces need to be wrapped in quotes. " +
@@ -243,6 +242,6 @@ namespace SquidDraftLeague.Bot.Commands
             }
 
             return "Unknown limitation " + limitation.GetType().FullName;
-        }
+        }*/
     }
 }
