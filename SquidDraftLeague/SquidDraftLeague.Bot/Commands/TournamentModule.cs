@@ -39,7 +39,7 @@ namespace SquidDraftLeague.Bot.Commands
             else
                 return;
 
-            if (now.Day <= 28 && now.Hour < 16 && now.Month == 7)
+            if ((now.Day < 28 && now.Month == 7) || (now.Day == 28 && now.Month == 7 && now.Hour < 16))
             {
                 List<ulong> signUpIds = new List<ulong>();
 
@@ -60,7 +60,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await dmChannel.SendMessageAsync(
                     $"Your battlefy code is {code}. " +
-                    $"SDL's battlefy page is located at https://battlefy.com/splatoon-draft-league/draft-cup-1/5d22d41ea0c700585fec7baf/info");
+                    $"Sign ups are located at https://battlefy.com/splatoon-draft-league/draft-cup-1/5d22d41ea0c700585fec7baf/info");
 
                 codes.Remove(code);
 
