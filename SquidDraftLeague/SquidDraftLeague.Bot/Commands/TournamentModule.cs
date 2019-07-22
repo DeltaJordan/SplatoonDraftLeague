@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
+using Discord.WebSocket;
 using Newtonsoft.Json;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Settings;
@@ -19,6 +20,20 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("signUp")]
         public async Task SignUp()
         {
+            if (!(this.Context.User is SocketGuildUser user))
+            {
+                return;
+            }
+
+            IDMChannel dmChannel = await this.Context.User.GetOrCreateDMChannelAsync();
+
+            if (user.Roles.All(e => !string.Equals(e.Name, "Player", StringComparison.InvariantCultureIgnoreCase)))
+            {
+                await dmChannel.SendMessageAsync(
+                    "You must be registered to the bot to register for SDL Draft Cup. Use %regapply to do so now.");
+                return;
+            }
+
             DateTime now = DateTime.UtcNow;
             string tournamentDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Tournament")).FullName;
             string codesFile = Path.Combine(tournamentDirectory, "codes.json");
@@ -54,13 +69,12 @@ namespace SquidDraftLeague.Bot.Commands
                     return;
                 }
 
-                IDMChannel dmChannel = await this.Context.User.GetOrCreateDMChannelAsync();
-
                 string code = codes.First();
 
                 await dmChannel.SendMessageAsync(
                     $"Your battlefy code is {code}. " +
-                    $"Sign ups are located at https://battlefy.com/splatoon-draft-league/draft-cup-1/5d22d41ea0c700585fec7baf/info");
+                    $"Sign ups are located at https://battlefy.com/splatoon-draft-league/draft-cup-1/5d22d41ea0c700585fec7baf/info. " +
+                    $"Enter your join code where the website says \"Enter Join Code\".");
 
                 codes.Remove(code);
 
