@@ -301,7 +301,10 @@ namespace SquidDraftLeague.Bot.Commands
                 Font ordinalFont = KarlaFontFamily.CreateFont(57, FontStyle.Bold);
 
                 WebClient webClient = new WebClient();
-                byte[] avatarBytes = await webClient.DownloadDataTaskAsync(user.GetAvatarUrl());
+
+                string avatarUrl = string.IsNullOrWhiteSpace(user.GetAvatarUrl()) ? user.GetDefaultAvatarUrl() : user.GetAvatarUrl();
+
+                byte[] avatarBytes = await webClient.DownloadDataTaskAsync(avatarUrl);
 
                 using (Image<Rgba32> image = Image.Load(Path.Combine(Globals.AppPath, "Data", "img", "profile-template.png")))
                 using (Image<Rgba32> rankImage = new Image<Rgba32>(225, 225))
