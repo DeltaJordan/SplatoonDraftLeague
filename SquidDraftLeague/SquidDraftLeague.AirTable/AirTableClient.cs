@@ -16,6 +16,61 @@ namespace SquidDraftLeague.AirTable
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+        public static async Task<bool> CheckHasPlayedSet(SdlPlayer player)
+        {
+            string offset = null;
+            string errorMessage = null;
+            List<AirtableRecord> records = new List<AirtableRecord>();
+
+            using (AirtableBase airtableBase = new AirtableBase(Globals.BotSettings.AppKey, Globals.BotSettings.BaseId))
+            {
+                do
+                {
+                    Logger.Info($"Retrieving data with offset {offset}.");
+
+                    Task<AirtableListRecordsResponse> task = airtableBase.ListRecords(
+                        "Draft Log",
+                        offset,
+                        null,
+                        null,
+                        null,
+                        null
+                    );
+
+                    AirtableListRecordsResponse response = await task;
+
+                    if (response.Success)
+                    {
+                        Logger.Info($"Success! Continuing with offset \"{response.Offset}\"");
+                        records.AddRange(response.Records.ToList());
+                        offset = response.Offset;
+                    }
+                    else if (response.AirtableApiError != null)
+                    {
+                        errorMessage = response.AirtableApiError.ErrorMessage;
+                        break;
+                    }
+                    else
+                    {
+                        errorMessage = "Unknown error";
+                        break;
+                    }
+                } while (offset != null);
+            }
+
+            if (!string.IsNullOrEmpty(errorMessage))
+            {
+                SdlAirTableException airTableException = new SdlAirTableException(
+                    errorMessage, SdlAirTableException.AirtableErrorType.CommunicationError);
+                Logger.Error(airTableException);
+                throw airTableException;
+            }
+
+            return records.Any(x =>
+                ((JArray) x.Fields["Alpha Players"]).Any(y => y.Value<string>() == player.AirtableId) ||
+                ((JArray) x.Fields["Bravo Players"]).Any(y => y.Value<string>() == player.AirtableId));
+        }
+
         public static async Task SetRoleAsync(SdlPlayer player, string role)
         {
             using (AirtableBase airtableBase = new AirtableBase(Globals.BotSettings.AppKey, Globals.BotSettings.BaseId))
@@ -347,7 +402,7 @@ namespace SquidDraftLeague.AirTable
                     }
                     catch (Exception exception)
                     {
-                        Logger.Warn(exception);
+                        // Logger.Warn(exception);
                     }
 
                     try
@@ -359,7 +414,7 @@ namespace SquidDraftLeague.AirTable
                     }
                     catch (Exception exception)
                     {
-                        Logger.Warn(exception);
+                        // Logger.Warn(exception);
                     }
 
                     try
@@ -371,7 +426,7 @@ namespace SquidDraftLeague.AirTable
                     }
                     catch (Exception exception)
                     {
-                        Logger.Warn(exception);
+                        // Logger.Warn(exception);
                     }
 
                     try
@@ -383,7 +438,7 @@ namespace SquidDraftLeague.AirTable
                     }
                     catch (Exception exception)
                     {
-                        Logger.Warn(exception);
+                        // Logger.Warn(exception);
                     }
 
                     return sdlPlayer;

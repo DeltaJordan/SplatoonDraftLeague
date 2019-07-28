@@ -36,6 +36,7 @@ namespace SquidDraftLeague.Bot
 
         private static Timer happyNotificationTimer;
         private static Timer halfNotificationTimer;
+        private static Timer draftCupTimer;
 
         /// <summary>
         /// Main async method for the bot.
