@@ -11,6 +11,7 @@ using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
+using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NLog;
@@ -33,10 +34,6 @@ namespace SquidDraftLeague.Bot
 
         private static readonly Logger ClassLogger = LogManager.GetCurrentClassLogger();
         private static readonly Logger DiscordLogger = LogManager.GetLogger("Discord API");
-
-        private static Timer happyNotificationTimer;
-        private static Timer halfNotificationTimer;
-        private static Timer draftCupTimer;
 
         /// <summary>
         /// Main async method for the bot.
@@ -124,61 +121,69 @@ namespace SquidDraftLeague.Bot
             await Client.LoginAsync(TokenType.Bot, Globals.BotSettings.BotToken);
             await Client.StartAsync();
 
-            TimeSpan dayLength = new TimeSpan(24, 0, 0);
-            TimeSpan nowTimeSpan = DateTime.UtcNow.TimeOfDay;
-            TimeSpan happyActivationTime = TimeSpan.Parse("20:00");
-            TimeSpan happyActivationInterval = dayLength - nowTimeSpan + happyActivationTime;
-            happyActivationInterval = happyActivationInterval.TotalHours > 24
-                ? happyActivationInterval - new TimeSpan(24, 0, 0)
-                : happyActivationInterval;
-
-            happyNotificationTimer = new Timer
-            {
-                Interval = happyActivationInterval.TotalMilliseconds
-            };
-
-            happyNotificationTimer.Elapsed += HappyNotificationTimer_Elapsed;
-            happyNotificationTimer.Start();
-
-            TimeSpan halfActivationTime = TimeSpan.Parse("1:00");
-            TimeSpan halfActivationInterval = dayLength - nowTimeSpan + halfActivationTime;
-            halfActivationInterval = halfActivationInterval.TotalHours > 24
-                ? halfActivationInterval - new TimeSpan(24, 0, 0)
-                : halfActivationInterval;
-
-            halfNotificationTimer = new Timer
-            {
-                Interval = halfActivationInterval.TotalMilliseconds
-            };
-
-            halfNotificationTimer.Elapsed += HalfNotificationTimer_Elapsed;
-            halfNotificationTimer.Start();
+            RecurringJob.AddOrUpdate(() => HappyNotification(), Cron.Daily(20));
+            RecurringJob.AddOrUpdate(() => HalfNotification(), Cron.Daily(1));
+            RecurringJob.AddOrUpdate(() => PointDecay(), Cron.Weekly(DayOfWeek.Wednesday, 16));
 
             await Task.Delay(-1);
         }
 
-        private static async void HalfNotificationTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private static async void PointDecay()
         {
-            await Client.GetGuild(570743985530863649).GetTextChannel(572536965833162753).SendMessageAsync(
-                "<@&592448366831730708> Half points hour has begun! " +
-                "Any sets started in the next hour will lose half points when losing. " +
-                "Points won are not affected.");
+            SdlPlayer[] allSdlPlayers = await AirTableClient.RetrieveAllSdlPlayers();
+            string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
 
-            halfNotificationTimer.Interval = new TimeSpan(24, 0, 0).TotalMilliseconds;
-            halfNotificationTimer.Stop();
-            halfNotificationTimer.Start();
+            foreach (SdlPlayer sdlPlayer in allSdlPlayers)
+            {
+                PlayerActivity playerActivity;
+                string playerFile = Path.Combine(activityDirectory, $"{sdlPlayer.DiscordId}.json");
+
+                if (File.Exists(playerFile))
+                {
+                    playerActivity =
+                        JsonConvert.DeserializeObject<PlayerActivity>(await File.ReadAllTextAsync(playerFile));
+                }
+                else
+                {
+                    playerActivity = new PlayerActivity
+                    {
+                        PlayedSets = new List<DateTime>(),
+                        Timeouts = new List<DateTime>()
+                    };
+                }
+
+                int timeouts = playerActivity.Timeouts.Select(e => e.Date).Distinct()
+                    .Count(e => e.Date > DateTime.UtcNow.Date - TimeSpan.FromDays(7));
+
+                timeouts = Math.Min(7, timeouts);
+
+                DateTime lastSetDateTime = await AirTableClient.GetDateOfLastSet(sdlPlayer);
+                int inactiveWeeks = (DateTime.UtcNow - lastSetDateTime).Days / 7;
+
+                // Constrain to 1-4 weeks
+                inactiveWeeks = Math.Min(Math.Max(inactiveWeeks, 1), 4);
+
+                double decay = (7 - timeouts) * Math.Pow(15D * Math.Pow(sdlPlayer.PowerLevel, 2) / 4840000,
+                                   Math.Pow(1.2, inactiveWeeks - 1)) / 7;
+
+                await AirTableClient.PenalizePlayer(sdlPlayer.DiscordId, decay, "Point decay.");
+            }
         }
 
-        private static async void HappyNotificationTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private static async void HalfNotification()
         {
             await Client.GetGuild(570743985530863649).GetTextChannel(572536965833162753).SendMessageAsync(
-                "<@&592448366831730708> Double points hour has begun! " +
+                "Half points hour has begun! " +
+                "Any sets started in the next hour will lose half points when losing. " +
+                "Points won are not affected.");
+        }
+
+        private static async void HappyNotification()
+        {
+            await Client.GetGuild(570743985530863649).GetTextChannel(572536965833162753).SendMessageAsync(
+                "Double points hour has begun! " +
                 "Any sets started in the next hour will gain double points when winning. " +
                 "Points lost are not affected.");
-
-            happyNotificationTimer.Interval = new TimeSpan(24, 0, 0).TotalMilliseconds;
-            happyNotificationTimer.Stop();
-            happyNotificationTimer.Start();
         }
 
         private static async Task Client_UserLeft(SocketGuildUser arg)

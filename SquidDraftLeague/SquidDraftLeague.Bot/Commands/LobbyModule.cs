@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -8,6 +9,7 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.Rest;
 using Discord.WebSocket;
+using Newtonsoft.Json;
 using NLog;
 using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Preconditions;
@@ -233,6 +235,35 @@ namespace SquidDraftLeague.Bot.Commands
                 await this.Context.Channel.SendMessageAsync(
                     $"{string.Join(" ", lobby.Players.Select(f => Program.Client.GetUser(f.DiscordId).Mention))}\n" +
                     $"Closing the lobby because not enough players have joined the battle. Please try again by using %join.");
+
+                string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
+
+                foreach (SdlPlayer lobbyPlayer in lobby.Players)
+                {
+                    PlayerActivity playerActivity;
+                    string playerFile = Path.Combine(activityDirectory, $"{lobbyPlayer.DiscordId}.json");
+
+                    if (File.Exists(playerFile))
+                    {
+                        playerActivity =
+                            JsonConvert.DeserializeObject<PlayerActivity>(await File.ReadAllTextAsync(playerFile));
+                    }
+                    else
+                    {
+                        playerActivity = new PlayerActivity
+                        {
+                            PlayedSets = new List<DateTime>(),
+                            Timeouts = new List<DateTime>()
+                        };
+                    }
+
+                    if (playerActivity.Timeouts.All(e => e.Date != DateTime.UtcNow.Date))
+                    {
+                        playerActivity.Timeouts.Add(DateTime.UtcNow);
+                    }
+
+                    await File.WriteAllTextAsync(playerFile, JsonConvert.SerializeObject(playerActivity));
+                }
 
                 return;
             }
