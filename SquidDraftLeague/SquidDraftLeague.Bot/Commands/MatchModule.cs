@@ -654,11 +654,6 @@ namespace SquidDraftLeague.Bot.Commands
                              ((7 * playerSet.AlphaTeam.Score / playerSet.MatchNum + 4) *
                               (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)) * 4);
 
-                    if (playerSet.BravoTeam.Players.Any(e => e == playerSet.Halved))
-                    {
-                        points /= 2;
-                    }
-
                     break;
                 }
                 case Set.WinningTeam.Alpha:
@@ -666,17 +661,16 @@ namespace SquidDraftLeague.Bot.Commands
                     points = 200F * playerSet.AlphaTeam.Score /
                              ((7 * playerSet.BravoTeam.Score / playerSet.MatchNum + 4) *
                               (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)) * 4);
-
-                    if (playerSet.AlphaTeam.Players.Any(e => e == playerSet.Halved))
-                    {
-                        points /= 2;
-                    }
-
                     break;
                 }
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+            points /=
+                (int) Matchmaker.GetClass(playerSet.AllPlayers.OrderBy(x => x.PowerLevel).First().PowerLevel) -
+                (int) Matchmaker.GetClass(playerSet.AllPlayers.OrderByDescending(x => x.PowerLevel).First().PowerLevel)
+                + 1;
 
             TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
             if (happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()))

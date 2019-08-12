@@ -29,7 +29,7 @@
     <PackageReference Include="SixLabors.Shapes" Version="1.0.0-beta0008" />
     <PackageReference Include="SixLabors.Shapes.Text" Version="1.0.0-beta0008" />
     <PackageReference Include="SquidDraftLeague.Airtable" Version="1.0.2" />
-    <PackageReference Include="SquidDraftLeague.Draft" Version="1.0.7162.12393" />
+    <PackageReference Include="SquidDraftLeague.Draft" Version="1.0.7163.26666" />
     <PackageReference Include="SquidDraftLeague.Language" Version="1.0.0" />
     <PackageReference Include="SquidDraftLeague.Settings" Version="1.0.0" />
   </ItemGroup>
