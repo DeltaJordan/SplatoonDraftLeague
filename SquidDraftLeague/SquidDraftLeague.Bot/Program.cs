@@ -5,13 +5,13 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Discord;
 using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
-using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NLog;
@@ -20,6 +20,8 @@ using NLog.Config;
 using NLog.Targets;
 using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands;
+using SquidDraftLeague.Bot.Scheduling;
+using SquidDraftLeague.Bot.Scheduling.Services;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Settings;
@@ -93,7 +95,7 @@ namespace SquidDraftLeague.Bot
 
             Client = new DiscordSocketClient(new DiscordSocketConfig
             {
-                LogLevel = LogSeverity.Debug
+                LogLevel = LogSeverity.Verbose
             });
             
             commands = new CommandService(new CommandServiceConfig
@@ -101,12 +103,23 @@ namespace SquidDraftLeague.Bot
                 CaseSensitiveCommands = false,
                 SeparatorChar = ' ',
                 DefaultRunMode = RunMode.Async,
-                LogLevel = LogSeverity.Debug
+                LogLevel = LogSeverity.Verbose
             });
 
             services = new ServiceCollection()
                 .AddSingleton(Client)
                 .AddSingleton<InteractiveService>()
+                // .AddSingleton<IScheduledTask, PointDecayTask>()
+                .AddSingleton<IScheduledTask, HalfNotificationTask>()
+                .AddSingleton<IScheduledTask, HappyNotificationTask>()
+#if DEBUG_PREFIX
+                .AddSingleton<IScheduledTask, TestTask>()
+#endif
+                .AddScheduler((sender, arguments) =>
+                {
+                    ClassLogger.Error(arguments.Exception);
+                    arguments.SetObserved();
+                })
                 .BuildServiceProvider();
 
             Client.MessageReceived += Client_MessageReceived;
@@ -121,69 +134,10 @@ namespace SquidDraftLeague.Bot
             await Client.LoginAsync(TokenType.Bot, Globals.BotSettings.BotToken);
             await Client.StartAsync();
 
-            RecurringJob.AddOrUpdate(() => HappyNotification(), Cron.Daily(20));
-            RecurringJob.AddOrUpdate(() => HalfNotification(), Cron.Daily(1));
-            RecurringJob.AddOrUpdate(() => PointDecay(), Cron.Weekly(DayOfWeek.Wednesday, 16));
+            CancellationToken token = new CancellationToken(false);
+            await services.GetRequiredService<IHostedService>().StartAsync(token);
 
             await Task.Delay(-1);
-        }
-
-        private static async void PointDecay()
-        {
-            SdlPlayer[] allSdlPlayers = await AirTableClient.RetrieveAllSdlPlayers();
-            string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
-
-            foreach (SdlPlayer sdlPlayer in allSdlPlayers)
-            {
-                PlayerActivity playerActivity;
-                string playerFile = Path.Combine(activityDirectory, $"{sdlPlayer.DiscordId}.json");
-
-                if (File.Exists(playerFile))
-                {
-                    playerActivity =
-                        JsonConvert.DeserializeObject<PlayerActivity>(await File.ReadAllTextAsync(playerFile));
-                }
-                else
-                {
-                    playerActivity = new PlayerActivity
-                    {
-                        PlayedSets = new List<DateTime>(),
-                        Timeouts = new List<DateTime>()
-                    };
-                }
-
-                int timeouts = playerActivity.Timeouts.Select(e => e.Date).Distinct()
-                    .Count(e => e.Date > DateTime.UtcNow.Date - TimeSpan.FromDays(7));
-
-                timeouts = Math.Min(7, timeouts);
-
-                DateTime lastSetDateTime = await AirTableClient.GetDateOfLastSet(sdlPlayer);
-                int inactiveWeeks = (DateTime.UtcNow - lastSetDateTime).Days / 7;
-
-                // Constrain to 1-4 weeks
-                inactiveWeeks = Math.Min(Math.Max(inactiveWeeks, 1), 4);
-
-                double decay = (7 - timeouts) * Math.Pow(15D * Math.Pow(sdlPlayer.PowerLevel, 2) / 4840000,
-                                   Math.Pow(1.2, inactiveWeeks - 1)) / 7;
-
-                await AirTableClient.PenalizePlayer(sdlPlayer.DiscordId, decay, "Point decay.");
-            }
-        }
-
-        private static async void HalfNotification()
-        {
-            await Client.GetGuild(570743985530863649).GetTextChannel(572536965833162753).SendMessageAsync(
-                "Half points hour has begun! " +
-                "Any sets started in the next hour will lose half points when losing. " +
-                "Points won are not affected.");
-        }
-
-        private static async void HappyNotification()
-        {
-            await Client.GetGuild(570743985530863649).GetTextChannel(572536965833162753).SendMessageAsync(
-                "Double points hour has begun! " +
-                "Any sets started in the next hour will gain double points when winning. " +
-                "Points lost are not affected.");
         }
 
         private static async Task Client_UserLeft(SocketGuildUser arg)
