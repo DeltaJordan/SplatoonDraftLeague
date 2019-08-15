@@ -88,6 +88,14 @@ namespace SquidDraftLeague.Bot.Commands
             await this.JoinLobby(sdlPlayer, lobbyNumber: lobbyNum);
         }
 
+        [Command("tTimeout"), RequireOwner]
+        public async Task TestTimeout()
+        {
+            Matchmaker.Lobbies[0].AddPlayer(await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id), true);
+
+            this.MatchedLobby_DeltaUpdated(Matchmaker.Lobbies[0], true);
+        }
+
         private async Task JoinLobby(SdlPlayer sdlPlayer, bool debugFill = false, int? lobbyNumber = null)
         {
             try
@@ -232,37 +240,45 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (closed)
             {
-                await this.Context.Channel.SendMessageAsync(
-                    $"{string.Join(" ", lobby.Players.Select(f => Program.Client.GetUser(f.DiscordId).Mention))}\n" +
-                    $"Closing the lobby because not enough players have joined the battle. Please try again by using %join.");
-
-                string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
-
-                foreach (SdlPlayer lobbyPlayer in lobby.Players)
+                try
                 {
-                    PlayerActivity playerActivity;
-                    string playerFile = Path.Combine(activityDirectory, $"{lobbyPlayer.DiscordId}.json");
+                    await this.Context.Channel.SendMessageAsync(
+                        $"{string.Join(" ", lobby.Players.Select(f => Program.Client.GetUser(f.DiscordId).Mention))}\n" +
+                        $"Closing the lobby because not enough players have joined the battle. Please try again by using %join.");
 
-                    if (File.Exists(playerFile))
+                    string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
+
+                    foreach (SdlPlayer lobbyPlayer in lobby.Players)
                     {
-                        playerActivity =
-                            JsonConvert.DeserializeObject<PlayerActivity>(await File.ReadAllTextAsync(playerFile));
-                    }
-                    else
-                    {
-                        playerActivity = new PlayerActivity
+                        PlayerActivity playerActivity;
+                        string playerFile = Path.Combine(activityDirectory, $"{lobbyPlayer.DiscordId}.json");
+
+                        if (File.Exists(playerFile))
                         {
-                            PlayedSets = new List<DateTime>(),
-                            Timeouts = new List<DateTime>()
-                        };
-                    }
+                            playerActivity =
+                                JsonConvert.DeserializeObject<PlayerActivity>(await File.ReadAllTextAsync(playerFile));
+                        }
+                        else
+                        {
+                            playerActivity = new PlayerActivity
+                            {
+                                PlayedSets = new List<DateTime>(),
+                                Timeouts = new List<DateTime>()
+                            };
+                        }
 
-                    if (playerActivity.Timeouts.All(e => e.Date != DateTime.UtcNow.Date))
-                    {
-                        playerActivity.Timeouts.Add(DateTime.UtcNow);
-                    }
+                        if (playerActivity.Timeouts.All(e => e.Date != DateTime.UtcNow.Date))
+                        {
+                            playerActivity.Timeouts.Add(DateTime.UtcNow);
+                        }
 
-                    await File.WriteAllTextAsync(playerFile, JsonConvert.SerializeObject(playerActivity));
+                        await File.WriteAllTextAsync(playerFile, JsonConvert.SerializeObject(playerActivity));
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
                 }
 
                 return;
