@@ -236,7 +236,10 @@ namespace SquidDraftLeague.Bot.Commands
         private async void MatchedLobby_DeltaUpdated(object sender, bool closed)
         {
             if (sender == null || !(sender is Lobby lobby))
+            {
+                Logger.Warn("Abnormal behavoir detected in Lobby's DeltaUpdated event handler: sender is either not a lobby or is null.");
                 return;
+            }
 
             if (closed)
             {
@@ -267,18 +270,19 @@ namespace SquidDraftLeague.Bot.Commands
                             };
                         }
 
-                        if (playerActivity.Timeouts.All(e => e.Date != DateTime.UtcNow.Date))
+                        if (!playerActivity.Timeouts.Any() || playerActivity.Timeouts.All(e => e.Date != DateTime.UtcNow.Date))
                         {
                             playerActivity.Timeouts.Add(DateTime.UtcNow);
                         }
 
                         await File.WriteAllTextAsync(playerFile, JsonConvert.SerializeObject(playerActivity));
                     }
+
+                    Logger.Info($"Recorded {lobby.Players.Count} players timed out in lobby #{lobby.LobbyNumber}.");
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
-                    throw;
+                    Logger.Error(e);
                 }
 
                 return;
