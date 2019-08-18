@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NCrontab;
+using NLog;
 
 namespace SquidDraftLeague.Bot.Scheduling.Services
 {
@@ -13,10 +14,11 @@ namespace SquidDraftLeague.Bot.Scheduling.Services
     {
         public event EventHandler<UnobservedTaskExceptionEventArgs> UnobservedTaskException;
 
-        private readonly List<SchedulerTaskWrapper> scheduledTasks = new List<SchedulerTaskWrapper>();
-        private readonly IServiceScopeFactory serviceScopeFactory;
+        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        public SchedulerHostedService(IEnumerable<IScheduledTask> scheduledTasks, IServiceScopeFactory serviceScopeFactory)
+        private readonly List<SchedulerTaskWrapper> scheduledTasks = new List<SchedulerTaskWrapper>();
+
+        public SchedulerHostedService(IEnumerable<IScheduledTask> scheduledTasks)
         {
             DateTime referenceTime = DateTime.UtcNow;
 
@@ -30,7 +32,10 @@ namespace SquidDraftLeague.Bot.Scheduling.Services
                 });
             }
 
-            this.serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
+            foreach (SchedulerTaskWrapper schedulerTaskWrapper in this.scheduledTasks)
+            {
+                schedulerTaskWrapper.Increment();
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
@@ -58,39 +63,12 @@ namespace SquidDraftLeague.Bot.Scheduling.Services
                     async () => {
                         try
                         {
-                            using (IServiceScope scope = this.serviceScopeFactory.CreateScope())
-                            {
-                                Type t = taskThatShouldRun.Task.GetType();
-                                MethodInfo method = t.GetMethod("Invoke", BindingFlags.Instance | BindingFlags.Public);
-                                object[] arguments = method?.GetParameters()
-                                                .Select(a => a.ParameterType == typeof(CancellationToken) ? cancellationToken : scope.ServiceProvider.GetService(a.ParameterType))
-                                                .ToArray();
-
-
-
-                                //invoke.
-                                if (typeof(Task) == method?.ReturnType)
-                                {
-                                    await (Task)method.Invoke(taskThatShouldRun.Task, arguments);
-                                }
-                                else
-                                {
-                                    method?.Invoke(taskThatShouldRun.Task, arguments);
-                                }
-                            }
+                            await taskThatShouldRun.Task.ExecuteAsync(cancellationToken);
 
                         }
                         catch (Exception ex)
                         {
-                            UnobservedTaskExceptionEventArgs args = new UnobservedTaskExceptionEventArgs(
-                                ex as AggregateException ?? new AggregateException(ex));
-
-                            this.UnobservedTaskException?.Invoke(this, args);
-
-                            if (!args.Observed)
-                            {
-                                throw;
-                            }
+                            Logger.Error(ex);
                         }
                     },
                     cancellationToken);
@@ -105,10 +83,14 @@ namespace SquidDraftLeague.Bot.Scheduling.Services
             public DateTime LastRunTime { get; set; }
             public DateTime NextRunTime { get; set; }
 
+            private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+
             public void Increment()
             {
                 this.LastRunTime = this.NextRunTime;
                 this.NextRunTime = this.Schedule.GetNextOccurrence(this.NextRunTime);
+                Logger.Info(
+                    $"Next occurance for {this.Task.Schedule} is {this.NextRunTime}. It is currently {DateTime.UtcNow} and the last run time is {this.LastRunTime}.");
             }
 
             public bool ShouldRun(DateTime currentTime)

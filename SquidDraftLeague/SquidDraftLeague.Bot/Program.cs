@@ -134,7 +134,7 @@ namespace SquidDraftLeague.Bot
             };
 
             CancellationToken token = new CancellationToken(false);
-            SchedulerHostedService scheduler = new SchedulerHostedService(tasks, services.GetRequiredService<IServiceScopeFactory>());
+            SchedulerHostedService scheduler = new SchedulerHostedService(tasks);
             await scheduler.StartAsync(token);
 
             await Task.Delay(-1, token);

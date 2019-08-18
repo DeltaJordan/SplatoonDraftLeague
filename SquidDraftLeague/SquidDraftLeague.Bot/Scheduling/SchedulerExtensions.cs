@@ -16,9 +16,8 @@ namespace SquidDraftLeague.Bot.Scheduling
         {
             return services.AddSingleton<IHostedService, SchedulerHostedService>(serviceProvider =>
             {
-                SchedulerHostedService instance = new SchedulerHostedService(
-                    serviceProvider.GetServices<IScheduledTask>(),
-                    serviceProvider.GetRequiredService<IServiceScopeFactory>());
+                SchedulerHostedService instance =
+                    new SchedulerHostedService(serviceProvider.GetServices<IScheduledTask>());
                 instance.UnobservedTaskException += unobservedTaskExceptionHandler;
                 return instance;
             });
