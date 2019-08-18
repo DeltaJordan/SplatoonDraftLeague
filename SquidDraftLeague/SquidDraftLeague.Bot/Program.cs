@@ -109,17 +109,6 @@ namespace SquidDraftLeague.Bot
             services = new ServiceCollection()
                 .AddSingleton(Client)
                 .AddSingleton<InteractiveService>()
-                // .AddSingleton<IScheduledTask, PointDecayTask>()
-                .AddSingleton<IScheduledTask, HalfNotificationTask>()
-                .AddSingleton<IScheduledTask, HappyNotificationTask>()
-#if DEBUG_PREFIX
-                .AddSingleton<IScheduledTask, TestTask>()
-#endif
-                .AddScheduler((sender, arguments) =>
-                {
-                    ClassLogger.Error(arguments.Exception);
-                    arguments.SetObserved();
-                })
                 .BuildServiceProvider();
 
             Client.MessageReceived += Client_MessageReceived;
@@ -134,10 +123,21 @@ namespace SquidDraftLeague.Bot
             await Client.LoginAsync(TokenType.Bot, Globals.BotSettings.BotToken);
             await Client.StartAsync();
 
-            CancellationToken token = new CancellationToken(false);
-            await services.GetRequiredService<IHostedService>().StartAsync(token);
+            List<IScheduledTask> tasks = new List<IScheduledTask>
+            {
+                new HalfNotificationTask(),
+                new HappyNotificationTask(),
+                new PointDecayTask(),
+#if DEBUG_PREFIX
+                new TestTask()
+#endif
+            };
 
-            await Task.Delay(-1);
+            CancellationToken token = new CancellationToken(false);
+            SchedulerHostedService scheduler = new SchedulerHostedService(tasks, services.GetRequiredService<IServiceScopeFactory>());
+            await scheduler.StartAsync(token);
+
+            await Task.Delay(-1, token);
         }
 
         private static async Task Client_UserLeft(SocketGuildUser arg)

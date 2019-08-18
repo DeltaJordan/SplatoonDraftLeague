@@ -241,17 +241,20 @@ namespace SquidDraftLeague.Bot.Commands
                 return;
             }
 
+            // Temporary fix for Lobby class clearing this too early.
+            List<SdlPlayer> players = lobby.Players.Select(x => x).ToList();
+
             if (closed)
             {
                 try
                 {
                     await this.Context.Channel.SendMessageAsync(
-                        $"{string.Join(" ", lobby.Players.Select(f => Program.Client.GetUser(f.DiscordId).Mention))}\n" +
+                        $"{string.Join(" ", players.Select(f => Program.Client.GetUser(f.DiscordId).Mention))}\n" +
                         $"Closing the lobby because not enough players have joined the battle. Please try again by using %join.");
 
                     string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
 
-                    foreach (SdlPlayer lobbyPlayer in lobby.Players)
+                    foreach (SdlPlayer lobbyPlayer in players)
                     {
                         PlayerActivity playerActivity;
                         string playerFile = Path.Combine(activityDirectory, $"{lobbyPlayer.DiscordId}.json");
@@ -278,7 +281,7 @@ namespace SquidDraftLeague.Bot.Commands
                         await File.WriteAllTextAsync(playerFile, JsonConvert.SerializeObject(playerActivity));
                     }
 
-                    Logger.Info($"Recorded {lobby.Players.Count} players timed out in lobby #{lobby.LobbyNumber}.");
+                    Logger.Info($"Recorded {players.Count} players timed out in lobby #{lobby.LobbyNumber}.");
                 }
                 catch (Exception e)
                 {
