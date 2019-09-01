@@ -21,7 +21,9 @@ using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Lobby"), Group, RequireChannel(572536965833162753)]
+    [Name("Lobby"), Group, RequireChannel(572536965833162753), ]
+     // TODO Off-season
+     //TimeLimitPrecondition("18:00", "20:00", "00:00", "02:00")]
     public class LobbyModule : InteractiveBase
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -44,13 +46,14 @@ namespace SquidDraftLeague.Bot.Commands
 
             IGuildUser player = (IGuildUser)this.Context.User;
 
-            LobbyEligibilityResponse lobbyEligibility = Matchmaker.LobbyEligibility(player.Id);
+            // TODO Off-Season
+            /*LobbyEligibilityResponse lobbyEligibility = Matchmaker.LobbyEligibility(player.Id);
 
             if (!lobbyEligibility.Success)
             {
                 await this.ReplyAsync(lobbyEligibility.Message);
                 return;
-            }
+            }*/
 
             SdlPlayer sdlPlayer;
 
@@ -100,9 +103,17 @@ namespace SquidDraftLeague.Bot.Commands
         {
             try
             {
-                Lobby matchedLobby;
+                // TODO Off-Season
 
-                if (lobbyNumber != null)
+                if (Matchmaker.Lobbies.Any(y => y.Players.Any(x => x.DiscordId == sdlPlayer.DiscordId)))
+                {
+                    await this.ReplyAsync("You cannot join a lobby if you are already in one!");
+                    return;
+                }
+
+                Lobby matchedLobby = lobbyNumber != null ? Matchmaker.Lobbies[lobbyNumber.Value - 1] : Matchmaker.Lobbies.First(x => !x.IsFull);
+
+                /*if (lobbyNumber != null)
                 {
                     LobbySelectResponse lobbySelectResponse = Matchmaker.SelectLobbyByNumber(sdlPlayer, lobbyNumber.Value);
 
@@ -141,9 +152,9 @@ namespace SquidDraftLeague.Bot.Commands
                         await this.ReplyAsync(lobbySelectResponse.Message);
 
                     matchedLobby = lobbySelectResponse.Result;
-                }
+                }*/
 
-                matchedLobby.AddPlayer(sdlPlayer);
+                matchedLobby.AddPlayer(sdlPlayer, /*TODO Off-Season*/ true);
 
                 if (debugFill)
                 {
@@ -195,7 +206,7 @@ namespace SquidDraftLeague.Bot.Commands
                         embed: newSet.GetEmbedBuilder().Build());
                     await setRole.ModifyAsync(e => e.Mentionable = false);
 
-                    newSet.DraftTimeout += this.NewSet_DraftTimeout;
+                    newSet.DraftTimeout += NewSet_DraftTimeout;
                     newSet.ResetTimeout();
                 }
                 else
@@ -215,8 +226,9 @@ namespace SquidDraftLeague.Bot.Commands
                     {
                         matchedLobby.DeltaUpdated += this.MatchedLobby_DeltaUpdated;
 
-                        message = $"{notifRoles[(int)matchedLobby.Class - 1].Mention} " +
-                                  $"{((int)matchedLobby.Class - 2 > 0 ? notifRoles[(int)matchedLobby.Class - 2].Mention + " " : "")}" +
+                        // TODO Off-Season
+                        message = /*$"{notifRoles[(int)matchedLobby.Class - 1].Mention} " +
+                                  $"{((int)matchedLobby.Class - 2 > 0 ? notifRoles[(int)matchedLobby.Class - 2].Mention + " " : "")}" +*/
                                   $"A new lobby has been started! {message}";
                     }
 
@@ -299,7 +311,7 @@ namespace SquidDraftLeague.Bot.Commands
             await this.Context.Channel.SendMessageAsync(message, false, builder.Build());
         }
 
-        private async void NewSet_DraftTimeout(object sender, EventArgs e)
+        private static async void NewSet_DraftTimeout(object sender, EventArgs e)
         {
             if (sender == null || !(sender is Set set))
                 return;

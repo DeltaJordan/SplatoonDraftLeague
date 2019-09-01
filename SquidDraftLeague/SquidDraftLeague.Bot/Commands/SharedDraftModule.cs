@@ -48,6 +48,76 @@ namespace SquidDraftLeague.Bot.Commands
             await this.ReplyAsync("🦑");
         }
 
+        [Command("fixTimeouts"),
+         RequireOwner]
+        public async Task FixTimeouts()
+        {
+            try
+            {
+                DateTime initiationTime = new DateTime(2019, 8, 14, 16, 0, 0, DateTimeKind.Utc);
+
+                List<IMessage> messages = null;
+                IMessage lastMessage = this.Context.Message;
+                string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
+
+                while (messages == null || messages.All(x => x.Timestamp.UtcDateTime > initiationTime))
+                {
+                    Logger.Info($"Retriveing messages before message with timestamp {lastMessage.Timestamp}");
+                    messages = (await this.Context.Channel.GetMessagesAsync(lastMessage, Direction.Before).FlattenAsync()).ToList();
+
+                    foreach (IMessage message in messages.Where(x =>
+                        x.Content.Contains("Please try again by using") &&
+                        x.Author.Id == this.Context.Client.CurrentUser.Id &&
+                        x.Timestamp.UtcDateTime > initiationTime))
+                    {
+                        foreach (ulong messageMentionedUserId in message.MentionedUserIds)
+                        {
+                            try
+                            {
+                                PlayerActivity playerActivity;
+                                string playerFile = Path.Combine(activityDirectory, $"{messageMentionedUserId}.json");
+
+                                if (File.Exists(playerFile))
+                                {
+                                    playerActivity =
+                                        JsonConvert.DeserializeObject<PlayerActivity>(
+                                            await File.ReadAllTextAsync(playerFile));
+                                }
+                                else
+                                {
+                                    playerActivity = new PlayerActivity
+                                    {
+                                        PlayedSets = new List<DateTime>(),
+                                        Timeouts = new List<DateTime>()
+                                    };
+                                }
+
+                                if (!playerActivity.Timeouts.Any() ||
+                                    playerActivity.Timeouts.All(e => e.Date != message.Timestamp.UtcDateTime.Date))
+                                {
+                                    playerActivity.Timeouts.Add(message.Timestamp.UtcDateTime);
+                                }
+
+                                await File.WriteAllTextAsync(playerFile, JsonConvert.SerializeObject(playerActivity));
+                            }
+                            catch (Exception e)
+                            {
+                                Logger.Error(e);
+                            }
+                        }
+                    }
+
+                    lastMessage = messages.OrderByDescending(x => x.Timestamp).First();
+                }
+
+                await this.ReplyAsync("🦑");
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
+        }
+
         [Command("statusall"),
          Summary("Gets the status of all lobbies.")]
         public async Task StatusAll()

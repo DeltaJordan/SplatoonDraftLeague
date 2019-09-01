@@ -683,6 +683,9 @@ namespace SquidDraftLeague.Bot.Commands
 
         public static async Task<double> ReportScores(Set playerSet, bool forgiveLosing = false)
         {
+            // TODO Off-season
+            return 0;
+
             double points = CalculatePoints(playerSet);
 
             TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));

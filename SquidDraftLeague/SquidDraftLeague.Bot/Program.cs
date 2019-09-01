@@ -125,9 +125,10 @@ namespace SquidDraftLeague.Bot
 
             List<IScheduledTask> tasks = new List<IScheduledTask>
             {
-                new HalfNotificationTask(),
-                new HappyNotificationTask(),
-                new PointDecayTask(),
+                // TODO Off-season
+                // new HalfNotificationTask(),
+                // new HappyNotificationTask(),
+                // new PointDecayTask(),
 #if DEBUG_PREFIX
                 new TestTask()
 #endif
