@@ -21,9 +21,9 @@ using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Lobby"), Group, RequireChannel(572536965833162753), ]
+    [Name("Lobby"), Group, RequireChannel(572536965833162753),
      // TODO Off-season
-     //TimeLimitPrecondition("18:00", "20:00", "00:00", "02:00")]
+     TimeLimitPrecondition("18:00", "20:00", "00:00", "02:00")]
     public class LobbyModule : InteractiveBase
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
