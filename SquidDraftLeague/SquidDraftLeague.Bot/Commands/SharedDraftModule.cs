@@ -341,7 +341,7 @@ namespace SquidDraftLeague.Bot.Commands
                         };
                     }
 
-                    await AirTableClient.PenalizePlayer(user.Id, (int) (10 + points / 2), "Was kicked from a set.");
+                    // await AirTableClient.PenalizePlayer(user.Id, (int) (10 + points / 2), "Was kicked from a set.");
 
                     record.AllInfractions.Add(new Infraction
                     {
@@ -488,7 +488,10 @@ namespace SquidDraftLeague.Bot.Commands
                         };
                     }
 
-                    await this.ReplyAsync(penaltyMessage + " Are you sure you wish to leave the set? (Y/N)");
+                    // TODO Off-season
+                    penaltyMessage = ".";
+
+                    await this.ReplyAsync(penaltyMessage + "\nAre you sure you wish to leave the set? (Y/N)");
 
                     SocketMessage response = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(1));
 
@@ -499,7 +502,8 @@ namespace SquidDraftLeague.Bot.Commands
                     else if (response.Content.ToLower() == "y")
                     {
                         double points = await MatchModule.ReportScores(joinedSet, true);
-                        await AirTableClient.PenalizePlayer(user.Id, (int) penalty, "Left a set.");
+                        // TODO Off-season
+                        // await AirTableClient.PenalizePlayer(user.Id, (int) penalty, "Left a set.");
 
                         record.AllInfractions.Add(new Infraction
                         {
