@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Product>SquidDraftLeague.Draft</Product>
+    <Description>A full matchmaking and drafting system designed for Splatoon.</Description>
+    <PackageId>SquidDraftLeague.Draft</PackageId>
+    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+    <PackageReleaseNotes> Removed unneeded halved property and fixed a message reporting incorrect divisors for joining down.</PackageReleaseNotes>
+    <Version>1.0.7164.28927</Version>
+    <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+    <Company>SplatoonDraftLeague</Company>
+    <Authors>DeltaJordan</Authors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="NLog" Version="4.6.5" />
+    <PackageReference Include="SquidDraftLeague.Language" Version="1.0.0" />
+    <PackageReference Include="SquidDraftLeague.Settings" Version="1.0.0" />
+  </ItemGroup>
+
+</Project>

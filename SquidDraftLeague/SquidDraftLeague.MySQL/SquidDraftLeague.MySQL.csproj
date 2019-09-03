@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MySql.Data" Version="8.0.17" />
+    <PackageReference Include="NLog" Version="4.6.6" />
+    <PackageReference Include="UniqueIdGenerator" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SquidDraftLeague.Draft\SquidDraftLeague.Draft.csproj" />
+    <ProjectReference Include="..\SquidDraftLeague.Settings\SquidDraftLeague.Settings.csproj" />
+  </ItemGroup>
+
+</Project>

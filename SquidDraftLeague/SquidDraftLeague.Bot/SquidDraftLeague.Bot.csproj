@@ -28,10 +28,15 @@
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta0006" />
     <PackageReference Include="SixLabors.Shapes" Version="1.0.0-beta0008" />
     <PackageReference Include="SixLabors.Shapes.Text" Version="1.0.0-beta0008" />
-    <PackageReference Include="SquidDraftLeague.Airtable" Version="1.0.2" />
-    <PackageReference Include="SquidDraftLeague.Draft" Version="1.0.7164.28927" />
-    <PackageReference Include="SquidDraftLeague.Language" Version="1.0.0" />
-    <PackageReference Include="SquidDraftLeague.Settings" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SquidDraftLeague.Airtable\SquidDraftLeague.AirTable.csproj" />
+    <ProjectReference Include="..\SquidDraftLeague.Draft\SquidDraftLeague.Draft.csproj" />
+    <ProjectReference Include="..\SquidDraftLeague.Language\SquidDraftLeague.Language.csproj" />
+    <ProjectReference Include="..\SquidDraftLeague.MySQL\SquidDraftLeague.MySQL.csproj" />
+    <ProjectReference Include="..\SquidDraftLeague.Settings\SquidDraftLeague.Settings.csproj" />
+    <ProjectReference Include="..\SquidDraftLeague.Test\SquidDraftLeague.Test.csproj" />
   </ItemGroup>
 
   <ItemGroup>
