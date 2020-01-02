@@ -127,7 +127,8 @@ namespace SquidDraftLeague.Bot
             {
                 new HalfNotificationTask(),
                 new HappyNotificationTask(),
-                new PointDecayTask(),
+                // INFO No Point Decay for off-season.
+                // new PointDecayTask(),
 #if DEBUG_PREFIX
                 new TestTask()
 #endif
