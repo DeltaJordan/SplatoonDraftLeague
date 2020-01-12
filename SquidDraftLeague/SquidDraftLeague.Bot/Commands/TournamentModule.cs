@@ -40,7 +40,7 @@ namespace SquidDraftLeague.Bot.Commands
             if (user.Roles.All(e => !string.Equals(e.Name, "Player", StringComparison.InvariantCultureIgnoreCase)))
             {
                 await dmChannel.SendMessageAsync(
-                    "You must be registered to the bot to register for SDL Draft Cup. Use %regapply to do so now.");
+                    "You must be registered to the bot to register for SDL Draft Cup. Use %register to do so now.");
                 return;
             }
 
