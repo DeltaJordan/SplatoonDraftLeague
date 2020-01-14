@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Discord;
 using SquidDraftLeague.Draft;
+using Color = System.Drawing.Color;
 
 namespace SquidDraftLeague.Bot.Extensions
 {
@@ -92,6 +93,36 @@ namespace SquidDraftLeague.Bot.Extensions
                     e.Name = "Points Gained/Lost";
                     e.Value = $"+{pointsWinning:0.0} -{pointsLosing:0.0}";
                 });
+        }
+
+        public static EmbedBuilder GetFeedEmbedBuilder(this Set set)
+        {
+            string winningText = set.Winning switch
+            {
+                Set.WinningTeam.Alpha => "in favor of ",
+                Set.WinningTeam.Bravo => "in favor of ",
+                Set.WinningTeam.Tie => "a ",
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            return new EmbedBuilder()
+                .WithTitle($"Set {set.SetNumber}")
+                .WithDescription($"Match {set.MatchNum} of 7: {set.GetCurrentStage().MapName} {set.GetCurrentStage().Mode}\n" +
+                                 $"The score is **{set.AlphaTeam.Score}-{set.BravoTeam.Score}** {winningText}**{set.Winning}**!")
+                .WithColor(Color.Yellow)
+                .AddField(x =>
+                {
+                    x.Name = "Alpha";
+                    x.Value = string.Join("\n", set.AlphaTeam.Players.Select(e => e.DiscordId.ToUserMention()));
+                    x.IsInline = true;
+                })
+                .AddField(x =>
+                {
+                    x.Name = "Bravo";
+                    x.Value = string.Join("\n", set.BravoTeam.Players.Select(e => e.DiscordId.ToUserMention()));
+                    x.IsInline = true;
+                })
+                .WithCurrentTimestamp();
         }
     }
 }

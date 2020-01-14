@@ -26,6 +26,10 @@ namespace SquidDraftLeague.Bot.Commands
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
+        // TODO this will be eventually moved to the Set class.
+        // TODO It's too much of a hassle to update it for the debug stage.
+        private static readonly ulong[] OrderedFeedMessages = new ulong[5];
+
         // NOTE This is where we'll have to implement the different match amounts for cups.
         private const int SET_MATCH_NUMBER = 7;
 
@@ -106,6 +110,11 @@ namespace SquidDraftLeague.Bot.Commands
                                            $"it is fine for another person to do so, however keep in mind that situation permitting this person is **first choice** as host.");
 
             await context.SendMessageAsync("🦑Now then. let the games commence!🐙");
+
+            OrderedFeedMessages[set.SetNumber - 1] = 
+                (await context.Guild.GetTextChannel(666563839646760960)
+                    .SendMessageAsync(embed: set.GetFeedEmbedBuilder().Build()))
+                    .Id;
 
             IRole setRole = context.Guild.Roles.First(e => e.Name == $"In Set ({set.SetNumber})");
 
@@ -328,6 +337,9 @@ namespace SquidDraftLeague.Bot.Commands
                             e.IsInline = true;
                         })
                         .Build());
+
+                    IUserMessage feedMessage = (IUserMessage) await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[selectedSet.MatchNum - 1]);
+                    await feedMessage.ModifyAsync(x => { x.Embed = selectedSet.GetFeedEmbedBuilder().Build(); });
                 }
             }
             else
@@ -507,6 +519,9 @@ namespace SquidDraftLeague.Bot.Commands
                             e.IsInline = true;
                         })
                         .Build());
+
+                    IUserMessage feedMessage = (IUserMessage)await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.MatchNum - 1]);
+                    await feedMessage.ModifyAsync(x => { x.Embed = playerSet.GetFeedEmbedBuilder().Build(); });
                 }
                 catch (Exception e)
                 {
@@ -534,6 +549,14 @@ namespace SquidDraftLeague.Bot.Commands
                                   $"Beginning removal of access to this channel in 30 seconds. " +
                                   $"Rate limiting may cause the full process to take up to two minutes.",
                 embed: setEmbed);
+
+            IUserMessage feedMessage = (IUserMessage)await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.MatchNum - 1]);
+            await feedMessage.ModifyAsync(x =>
+            {
+                EmbedBuilder feedEmbedBuilder = playerSet.GetFeedEmbedBuilder().WithColor(Color.Green);
+                feedEmbedBuilder.Description = $"**{playerSet.Winning}** has won with a score of {playerSet.AlphaTeam.Score}-{playerSet.BravoTeam.Score}!";
+                x.Embed = feedEmbedBuilder.Build();
+            });
 
             await Task.Delay(30000);
 
@@ -683,6 +706,16 @@ namespace SquidDraftLeague.Bot.Commands
 
         public static async Task<double> ReportScores(Set playerSet, bool forgiveLosing = false)
         {
+            if (forgiveLosing)
+            {
+                IUserMessage feedMessage = (IUserMessage) await Program.Client.GetGuild(570743985530863649)
+                    .GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.MatchNum - 1]);
+                await feedMessage.ModifyAsync(x =>
+                {
+                    x.Embed = playerSet.GetFeedEmbedBuilder().WithDescription("The set ended unnaturally.").Build();
+                });
+            }
+
             double points = CalculatePoints(playerSet);
 
             TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
