@@ -338,7 +338,7 @@ namespace SquidDraftLeague.Bot.Commands
                         })
                         .Build());
 
-                    IUserMessage feedMessage = (IUserMessage) await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[selectedSet.MatchNum - 1]);
+                    IUserMessage feedMessage = (IUserMessage) await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[selectedSet.SetNumber - 1]);
                     await feedMessage.ModifyAsync(x => { x.Embed = selectedSet.GetFeedEmbedBuilder().Build(); });
                 }
             }
@@ -520,7 +520,7 @@ namespace SquidDraftLeague.Bot.Commands
                         })
                         .Build());
 
-                    IUserMessage feedMessage = (IUserMessage)await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.MatchNum - 1]);
+                    IUserMessage feedMessage = (IUserMessage)await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
                     await feedMessage.ModifyAsync(x => { x.Embed = playerSet.GetFeedEmbedBuilder().Build(); });
                 }
                 catch (Exception e)
@@ -550,7 +550,7 @@ namespace SquidDraftLeague.Bot.Commands
                                   $"Rate limiting may cause the full process to take up to two minutes.",
                 embed: setEmbed);
 
-            IUserMessage feedMessage = (IUserMessage)await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.MatchNum - 1]);
+            IUserMessage feedMessage = (IUserMessage)await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
             await feedMessage.ModifyAsync(x =>
             {
                 EmbedBuilder feedEmbedBuilder = playerSet.GetFeedEmbedBuilder().WithColor(Color.Green);
@@ -709,7 +709,7 @@ namespace SquidDraftLeague.Bot.Commands
             if (forgiveLosing)
             {
                 IUserMessage feedMessage = (IUserMessage) await Program.Client.GetGuild(570743985530863649)
-                    .GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.MatchNum - 1]);
+                    .GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
                 await feedMessage.ModifyAsync(x =>
                 {
                     x.Embed = playerSet.GetFeedEmbedBuilder().WithDescription("The set ended unnaturally.").Build();
