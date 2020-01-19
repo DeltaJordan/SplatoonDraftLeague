@@ -371,23 +371,27 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await this.ReplyAsync(
                     $"{user.Mention} was kicked from the set. " +
-                    $"To the rest of the set, you will return to <#572536965833162753> to requeue. " +
+                    $"Temporarily, players will not be requeued due to a bug that David is too stoopid to fix, please %join in draft to requeue " +
                     $"Beginning removal of access to this channel in 30 seconds. " +
                     $"Rate limiting may cause the full process to take up to two minutes.",
                     embed: joinedSet.GetScoreEmbedBuilder(points, 0).Build());
 
-                Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
+                #region RemovedForBug
 
-                if (movedLobby == null)
-                {
-                    // TODO Not sure what to do if all lobbies are filled.
-                    return;
-                }
+                //Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
 
-                foreach (SdlPlayer joinedSetPlayer in joinedSet.AllPlayers)
-                {
-                    movedLobby.AddPlayer(joinedSetPlayer, true);
-                }
+                //if (movedLobby == null)
+                //{
+                //    // TODO Not sure what to do if all lobbies are filled.
+                //    return;
+                //}
+
+                //foreach (SdlPlayer joinedSetPlayer in joinedSet.AllPlayers)
+                //{
+                //    movedLobby.AddPlayer(joinedSetPlayer, true);
+                //}
+
+                #endregion
 
                 joinedSet.Close();
 
@@ -397,15 +401,17 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await user.RemoveRolesAsync(roleRemovalList.Where(x => user.RoleIds.Contains(x.Id)));
 
-                foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
-                {
-                    SocketGuildUser movedGuildUser = this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId);
-                    await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
-                }
+                #region AlsoRemoved
+                //foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
+                //{
+                //    SocketGuildUser movedGuildUser = this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId);
+                //    await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
+                //}
 
-                await ((ITextChannel)this.Context.Client.GetChannel(572536965833162753))
-                    .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.",
-                        embed: movedLobby.GetEmbedBuilder().Build());
+                //await ((ITextChannel)this.Context.Client.GetChannel(572536965833162753))
+                //    .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.",
+                //        embed: movedLobby.GetEmbedBuilder().Build());
+                #endregion
             }
         }
 
