@@ -312,7 +312,7 @@ namespace SquidDraftLeague.Bot.Commands
                 using (Image<Rgba32> roleImage = new Image<Rgba32>(455, 115))
                 using (MemoryStream ms = new MemoryStream())
                 {
-                    string name = player.AirtableName.ToUpper();
+                    string name = player.Nickname.ToUpper();
                     string powerLevel = Math.Round(player.PowerLevel, 1).ToString(CultureInfo.InvariantCulture);
 
                     SizeF nameTextSize = TextMeasurer.Measure(name, new RendererOptions(nameFont));
@@ -439,7 +439,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                     Rgba32 roleColor;
 
-                    string role = player.Role;
+                    string role = player.RoleOne;
 
                     switch (role)
                     {

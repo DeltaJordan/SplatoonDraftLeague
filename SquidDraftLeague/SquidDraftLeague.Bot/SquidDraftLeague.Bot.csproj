@@ -31,7 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SquidDraftLeague.Airtable\SquidDraftLeague.AirTable.csproj" />
     <ProjectReference Include="..\SquidDraftLeague.Draft\SquidDraftLeague.Draft.csproj" />
     <ProjectReference Include="..\SquidDraftLeague.Language\SquidDraftLeague.Language.csproj" />
     <ProjectReference Include="..\SquidDraftLeague.MySQL\SquidDraftLeague.MySQL.csproj" />

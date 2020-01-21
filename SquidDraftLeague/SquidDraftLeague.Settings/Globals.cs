@@ -24,7 +24,22 @@ namespace SquidDraftLeague.Settings
         /// <summary>
         /// Gets or sets the bots settings.
         /// </summary>
-        public static Settings BotSettings { get; set; }
+        public static Settings BotSettings 
+        {
+            get
+            {
+                if (botSettings != null) return botSettings;
+
+                string settingsLocation = Path.Combine(AppPath, "Data", "settings.json");
+                string jsonFile = File.ReadAllText(settingsLocation);
+                botSettings = JsonConvert.DeserializeObject<Settings>(jsonFile);
+
+                return botSettings;
+            }
+            set => botSettings = value;
+        }
+
+        private static Settings botSettings;
 
         /// <summary>
         /// Returns the root directory of the application.

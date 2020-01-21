@@ -17,8 +17,11 @@
     <PackageReference Include="HtmlAgilityPack" Version="1.11.8" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
     <PackageReference Include="NLog" Version="4.6.5" />
-    <PackageReference Include="SquidDraftLeague.Language" Version="1.0.0" />
-    <PackageReference Include="SquidDraftLeague.Settings" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SquidDraftLeague.Language\SquidDraftLeague.Language.csproj" />
+    <ProjectReference Include="..\SquidDraftLeague.Settings\SquidDraftLeague.Settings.csproj" />
   </ItemGroup>
 
 </Project>

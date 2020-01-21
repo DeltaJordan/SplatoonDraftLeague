@@ -524,9 +524,9 @@ namespace SquidDraftLeague.Bot.Commands
 
                 displayText += $" [{sdlPlayer.PowerLevel:0.0}]";
 
-                if (!string.IsNullOrWhiteSpace(sdlPlayer.Role))
+                if (!string.IsNullOrWhiteSpace(sdlPlayer.RoleOne))
                 {
-                    displayText += $" [{sdlPlayer.Role}]";
+                    displayText += $" [{sdlPlayer.RoleOne}]";
                 }
 
                 displayText += "\n";

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Drawing;
 using System.Linq;
 
 namespace SquidDraftLeague.Draft
@@ -15,6 +16,9 @@ namespace SquidDraftLeague.Draft
         public readonly List<int> OrderedMatchResults = new List<int>();
 
         public SdlPlayer Captain { get; private set; }
+        public ulong Id { get; set; }
+        public string LogoUrl { get; set; }
+        public Color Color { get; set; }
 
         public SdlTeam(string name)
         {

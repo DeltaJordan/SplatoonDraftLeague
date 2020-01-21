@@ -16,7 +16,7 @@ namespace SquidDraftLeague.Draft
         public DateTime StartTime { get; set; }
         public TimeSpan TimeRemaining { get; set; }
         public DateTime LastUpdate { get; private set; }
-        public double LobbyPowerLevel
+        public decimal LobbyPowerLevel
         {
             get
             {
@@ -80,15 +80,15 @@ namespace SquidDraftLeague.Draft
             this.InStandby = false;
         }
 
-        public bool IsWithinThreshold(double power)
+        public bool IsWithinThreshold(decimal power)
         {
             if (!this.players.Any() || Matchmaker.GetClass(power) == this.Class)
             {
                 return true;
             }
 
-            double min = this.LobbyPowerLevel - this.CurrentDelta;
-            double max = this.LobbyPowerLevel + this.CurrentDelta;
+            decimal min = this.LobbyPowerLevel - this.CurrentDelta;
+            decimal max = this.LobbyPowerLevel + this.CurrentDelta;
 
             return power >= min && power <= max;
         }

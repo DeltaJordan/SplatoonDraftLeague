@@ -7,13 +7,14 @@ namespace SquidDraftLeague.Draft
 {
     public class SdlPlayer : IEquatable<SdlPlayer>
     {
-
-        public string AirtableId { get; set; }
-        public string AirtableName { get; set; }
+        public string Nickname { get; set; }
         public ulong DiscordId { get; }
-        public double PowerLevel { get; set; }
+        public decimal PowerLevel { get; set; }
         public string SwitchFriendCode { get; set; }
-        public string Role { get; set; }
+        public string RoleOne { get; set; }
+        public string RoleTwo { get; set; }
+
+        public ulong TeamId { get; set; }
 
         public readonly Dictionary<GameMode, double> WinRates = new Dictionary<GameMode, double>();
 

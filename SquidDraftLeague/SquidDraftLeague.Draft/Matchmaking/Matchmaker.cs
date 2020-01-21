@@ -34,7 +34,7 @@ namespace SquidDraftLeague.Draft.Matchmaking
             new Set(5)
         }.AsReadOnly();
 
-        public static SdlClass GetClass(double powerLevel)
+        public static SdlClass GetClass(decimal powerLevel)
         {
             if (powerLevel >= 2200)
             {

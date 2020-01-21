@@ -23,7 +23,7 @@ namespace SquidDraftLeague.Bot.Extensions
                     ? " [Captain]"
                     : "";
 
-                string roleText = alphaTeamPlayer.Role == string.Empty ? string.Empty : $"[{alphaTeamPlayer.Role}]";
+                string roleText = alphaTeamPlayer.RoleOne == string.Empty ? string.Empty : $"[{alphaTeamPlayer.RoleOne}]";
 
                 alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordId.ToUserMention()} [8008] {roleText} {captainText}");
             }
@@ -44,7 +44,7 @@ namespace SquidDraftLeague.Bot.Extensions
                     ? " [Captain]"
                     : "";
 
-                string roleText = bravoTeamPlayer.Role == string.Empty ? string.Empty : $"[{bravoTeamPlayer.Role}]";
+                string roleText = bravoTeamPlayer.RoleOne == string.Empty ? string.Empty : $"[{bravoTeamPlayer.RoleOne}]";
 
                 bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordId.ToUserMention()} [8008] {roleText} {captainText}");
             }
@@ -64,7 +64,7 @@ namespace SquidDraftLeague.Bot.Extensions
                 {
                     Name = "Players Awaiting Team",
                     Value = string.Join('\n',
-                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $"[8008] [{e.Role}]")),
+                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $"[8008] [{e.RoleOne}]")),
                     IsInline = false
                 };
 
