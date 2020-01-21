@@ -520,14 +520,14 @@ namespace SquidDraftLeague.Bot.Commands
         {
             double points = await ReportScores(playerSet);
 
-            TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
-            TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("1:00"), TimeSpan.Parse("2:00"));
+            //TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
+            //TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("1:00"), TimeSpan.Parse("2:00"));
 
             Embed setEmbed = playerSet.GetScoreEmbedBuilder(points,
-                happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()) ||
+                /*happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()) ||
                 halfPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault())
                     ? points / 2
-                    : points).Build();
+                    :*/ points).Build();
 
             await this.ReplyAsync($"Congratulations Team {playerSet.Winning} on their victory! " +
                                   $"Everyone's power levels have been updated to reflect this match. " +
@@ -672,11 +672,11 @@ namespace SquidDraftLeague.Bot.Commands
                 (int) Matchmaker.GetClass(playerSet.AllPlayers.OrderByDescending(x => x.PowerLevel).First().PowerLevel)
                 + 1;
 
-            TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
-            if (happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()))
-            {
-                points *= 2;
-            }
+            //TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
+            //if (happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()))
+            //{
+            //    points *= 2;
+            //}
 
             return points;
         }
@@ -688,16 +688,16 @@ namespace SquidDraftLeague.Bot.Commands
 
             double points = CalculatePoints(playerSet);
 
-            TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
-            TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("1:00"), TimeSpan.Parse("2:00"));
+            //TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
+            //TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("1:00"), TimeSpan.Parse("2:00"));
 
             if (forgiveLosing)
                 await AirTableClient.ReportScores(playerSet, points, 0);
-            else if (happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()) ||
-                     halfPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()))
-            {
-                await AirTableClient.ReportScores(playerSet, points, points / 2);
-            }
+            //else if (happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()) ||
+            //         halfPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()))
+            //{
+            //    await AirTableClient.ReportScores(playerSet, points, points / 2);
+            //}
             else
                 await AirTableClient.ReportScores(playerSet, points, points);
 

@@ -39,7 +39,7 @@ namespace SquidDraftLeague.Bot.Commands
         public static readonly FontFamily KarlaBoldItalicFontFamily = Fonts.Install(Path.Combine(Globals.AppPath, "Data", "font", "Karla-BoldItalic.ttf"));
         public static readonly FontFamily KarlaItalicFontFamily = Fonts.Install(Path.Combine(Globals.AppPath, "Data", "font", "Karla-Italic.ttf"));
 
-        [Command("regapply"),
+        [Command("register"),
          RequireContext(ContextType.DM)]
         public async Task ApplyForRegistration()
         {
