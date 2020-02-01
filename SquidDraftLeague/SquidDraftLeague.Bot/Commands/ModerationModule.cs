@@ -27,6 +27,9 @@ namespace SquidDraftLeague.Bot.Commands
 
                 foreach (SdlPlayer sdlPlayer in players)
                 {
+                    if (sdlPlayer == null)
+                        continue;
+
                     string nickname = sdlPlayer.Nickname;
 
                     if (string.IsNullOrWhiteSpace(nickname))
