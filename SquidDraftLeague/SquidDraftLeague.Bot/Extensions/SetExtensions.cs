@@ -22,7 +22,7 @@ namespace SquidDraftLeague.Bot.Extensions
                     ? " [Captain]"
                     : "";
 
-                string roleText = alphaTeamPlayer.Role == string.Empty ? string.Empty : $"[{alphaTeamPlayer.Role}]";
+                string roleText = alphaTeamPlayer.RoleOne == string.Empty ? string.Empty : $"[{alphaTeamPlayer.RoleOne}]";
 
                 alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordId.ToUserMention()} [{alphaTeamPlayer.PowerLevel:0.0}] {roleText} {captainText}");
             }
@@ -43,7 +43,7 @@ namespace SquidDraftLeague.Bot.Extensions
                     ? " [Captain]"
                     : "";
 
-                string roleText = bravoTeamPlayer.Role == string.Empty ? string.Empty : $"[{bravoTeamPlayer.Role}]";
+                string roleText = bravoTeamPlayer.RoleOne == string.Empty ? string.Empty : $"[{bravoTeamPlayer.RoleOne}]";
 
                 bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordId.ToUserMention()} [{bravoTeamPlayer.PowerLevel:0.0}] {roleText} {captainText}");
             }
@@ -63,7 +63,7 @@ namespace SquidDraftLeague.Bot.Extensions
                 {
                     Name = "Players Awaiting Team",
                     Value = string.Join('\n',
-                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $"[{e.PowerLevel:0.0}] [{e.Role}]")),
+                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $"[{e.PowerLevel:0.0}] [{e.RoleOne}]")),
                     IsInline = false
                 };
 
@@ -73,7 +73,7 @@ namespace SquidDraftLeague.Bot.Extensions
             return builder;
         }
 
-        public static EmbedBuilder GetScoreEmbedBuilder(this Set set, double pointsWinning, double pointsLosing)
+        public static EmbedBuilder GetScoreEmbedBuilder(this Set set, decimal pointsWinning, decimal pointsLosing)
         {
             return set.GetEmbedBuilder()
                 .AddField(e =>

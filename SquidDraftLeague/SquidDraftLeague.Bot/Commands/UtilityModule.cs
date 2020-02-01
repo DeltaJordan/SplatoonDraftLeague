@@ -21,12 +21,12 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 using SixLabors.Shapes;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Map;
 using SquidDraftLeague.Draft.Matchmaking;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 using Image = SixLabors.ImageSharp.Image;
 using Path = System.IO.Path;
@@ -47,7 +47,7 @@ namespace SquidDraftLeague.Bot.Commands
             if (user.Roles.All(e => e.Name != "Player"))
                 return;
 
-            SdlPlayer player = await AirTableClient.RetrieveSdlPlayer(user.Id);
+            SdlPlayer player = await MySqlClient.RetrieveSdlPlayer(user.Id);
 
             IRole classOneRole = this.Context.Guild.GetRole(600770643075661824);
             IRole classTwoRole = this.Context.Guild.GetRole(600770814521901076);
@@ -103,7 +103,7 @@ namespace SquidDraftLeague.Bot.Commands
             IRole classThreeRole = this.Context.Guild.GetRole(600770862307606542);
             IRole classFourRole = this.Context.Guild.GetRole(600770905282576406);
 
-            foreach (SdlPlayer sdlPlayer in await AirTableClient.RetrieveAllSdlPlayers())
+            foreach (SdlPlayer sdlPlayer in await MySqlClient.RetrieveAllSdlPlayers())
             {
                 try
                 {
@@ -176,7 +176,7 @@ namespace SquidDraftLeague.Bot.Commands
         {
             try
             {
-                Stage[] stages = await AirTableClient.GetMapList();
+                Stage[] stages = await MySqlClient.GetMapList();
 
                 Stage selectedStage = stages[Globals.Random.Next(0, stages.Length - 1)];
 
@@ -269,7 +269,7 @@ namespace SquidDraftLeague.Bot.Commands
                                     typeof(PropertyInfo).GetTypeInfo().Assembly, typeof(Decoder).GetTypeInfo().Assembly,
                                     typeof(Regex).GetTypeInfo().Assembly, typeof(Task).GetTypeInfo().Assembly, typeof(CommandContext).GetTypeInfo().Assembly,
                                     typeof(MessageActivity).GetTypeInfo().Assembly, typeof(Settings.Settings).GetTypeInfo().Assembly,
-                                    typeof(Program).Assembly, typeof(AirTableClient).Assembly, typeof(Lobby).Assembly)
+                                    typeof(Program).Assembly, typeof(MySqlClient).Assembly, typeof(Lobby).Assembly)
                     .WithImports("System", "System.Collections.Generic", "System.Linq", "System.Reflection", "System.Text",
                                  "System.Text.RegularExpressions", "System.Threading.Tasks", "Discord.Commands", "Discord", "SquidDraftLeague.Bot",
                                  "SquidDraftLeague.Bot.Commands", "SquidDraftLeague.Settings", "SquidDraftLeague.Draft", "SquidDraftLeague.AirTable",

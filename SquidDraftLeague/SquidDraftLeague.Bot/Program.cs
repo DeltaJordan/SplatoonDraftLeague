@@ -18,12 +18,12 @@ using NLog;
 using NLog.Conditions;
 using NLog.Config;
 using NLog.Targets;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands;
 using SquidDraftLeague.Bot.Scheduling;
 using SquidDraftLeague.Bot.Scheduling.Services;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot
@@ -127,8 +127,6 @@ namespace SquidDraftLeague.Bot
             {
                 new HalfNotificationTask(),
                 new HappyNotificationTask(),
-                // INFO No Point Decay for off-season.
-                // new PointDecayTask(),
 #if DEBUG_PREFIX
                 new TestTask()
 #endif
@@ -204,7 +202,7 @@ namespace SquidDraftLeague.Bot
                             .OrderByDescending(e => e.Value.ReactionCount)
                             .FirstOrDefault();
 
-                        double powerLevel = 0;
+                        decimal powerLevel = 0;
 
                         if (reactionMetadata.ReactionCount > 1)
                         {
@@ -219,22 +217,22 @@ namespace SquidDraftLeague.Bot
                             {
                                 case "\u0031\u20E3":
                                     powerLevel = 2200;
-                                    await AirTableClient.RegisterPlayer(userId, 2200, allRegLines[1]);
+                                    await MySqlClient.RegisterPlayer(userId, 2200, allRegLines[1]);
                                     classNum = 1;
                                     break;
                                 case "\u0032\u20E3":
                                     powerLevel = 2000;
-                                    await AirTableClient.RegisterPlayer(userId, 2000, allRegLines[1]);
+                                    await MySqlClient.RegisterPlayer(userId, 2000, allRegLines[1]);
                                     classNum = 2;
                                     break;
                                 case "\u0033\u20E3":
                                     powerLevel = 1800;
-                                    await AirTableClient.RegisterPlayer(userId, 1800, allRegLines[1]);
+                                    await MySqlClient.RegisterPlayer(userId, 1800, allRegLines[1]);
                                     classNum = 3;
                                     break;
                                 case "\u0034\u20E3":
                                     powerLevel = 1700;
-                                    await AirTableClient.RegisterPlayer(userId, 1700, allRegLines[1]);
+                                    await MySqlClient.RegisterPlayer(userId, 1700, allRegLines[1]);
                                     classNum = 4;
                                     break;
                             }

@@ -6,7 +6,7 @@ using Discord.Commands;
 
 namespace SquidDraftLeague.Bot.Commands.Preconditions
 {
-    public class BetaTimeLimitPreconditionAttribute : PreconditionAttribute
+    public class TimeLimitPreconditionAttribute : PreconditionAttribute
     {
         private readonly TimePeriod[] timePeriods;
 
@@ -14,7 +14,7 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
         /// Limits command(s) to certain time period(s).
         /// </summary>
         /// <param name="hours">Must be in pairs of two; times formatted HH:mm where the first of the pair is the start time and the second is the end time.</param>
-        public BetaTimeLimitPreconditionAttribute(params string[] hours)
+        public TimeLimitPreconditionAttribute(params string[] hours)
         {
             List<TimePeriod> periodList = new List<TimePeriod>();
 
@@ -36,8 +36,8 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
                 }
             }
 
-            await context.Channel.SendMessageAsync("Beta is currently closed.");
-            return PreconditionResult.FromError("Beta is currently closed.");
+            await context.Channel.SendMessageAsync("Draft is currently closed.");
+            return PreconditionResult.FromError("Draft is currently closed.");
         }
     }
 }

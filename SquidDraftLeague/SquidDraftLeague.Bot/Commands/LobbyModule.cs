@@ -11,12 +11,12 @@ using Discord.Rest;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 using NLog;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
@@ -30,7 +30,7 @@ namespace SquidDraftLeague.Bot.Commands
         RequireRole("Developer")]
         public async Task DebugPropagate()
         {
-            SdlPlayer sdlPlayer = await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id);
+            SdlPlayer sdlPlayer = await MySqlClient.RetrieveSdlPlayer(this.Context.User.Id);
 
             await this.JoinLobby(sdlPlayer, true);
         }
@@ -56,24 +56,22 @@ namespace SquidDraftLeague.Bot.Commands
 
             try
             {
-                sdlPlayer = await AirTableClient.RetrieveSdlPlayer(player.Id);
+                sdlPlayer = await MySqlClient.RetrieveSdlPlayer(player.Id);
             }
-            catch (SdlAirTableException exception)
+            catch (SdlMySqlException exception)
             {
                 Logger.Error(exception);
 
-                switch (exception.ErrorType)
+                switch (exception.Type)
                 {
-                    case SdlAirTableException.AirtableErrorType.NotFound:
-                        await (await (await Program.Client.GetApplicationInfoAsync()).Owner.GetOrCreateDMChannelAsync())
-                            .SendMessageAsync(exception.Message);
+                    case SdlMySqlException.ExceptionType.ZeroUpdates:
+                    await (await (await Program.Client.GetApplicationInfoAsync()).Owner.GetOrCreateDMChannelAsync())
+                        .SendMessageAsync(exception.Message);
 
-                        await this.ReplyAsync("Cannot find your record in the database. " +
-                                              "Most likely either you have not registered or are not registered correctly.");
-                        break;
-                    case SdlAirTableException.AirtableErrorType.UnexpectedDuplicate:
-                    case SdlAirTableException.AirtableErrorType.CommunicationError:
-                    case SdlAirTableException.AirtableErrorType.Generic:
+                    await this.ReplyAsync("Cannot find your record in the database. " +
+                                          "Most likely either you have not registered or are not registered correctly.");
+                    break;
+                    case SdlMySqlException.ExceptionType.DuplicateEntry:
                         await (await (await Program.Client.GetApplicationInfoAsync()).Owner.GetOrCreateDMChannelAsync())
                             .SendMessageAsync(exception.Message);
 
@@ -91,7 +89,7 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("tTimeout"), RequireOwner]
         public async Task TestTimeout()
         {
-            Matchmaker.Lobbies[0].AddPlayer(await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id), true);
+            Matchmaker.Lobbies[0].AddPlayer(await MySqlClient.RetrieveSdlPlayer(this.Context.User.Id), true);
 
             this.MatchedLobby_DeltaUpdated(Matchmaker.Lobbies[0], true);
         }
@@ -147,7 +145,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 if (debugFill)
                 {
-                    foreach (SdlPlayer nextPlayer in (await AirTableClient.RetrieveAllSdlPlayers()).Where(e => e != sdlPlayer).Take(7))
+                    foreach (SdlPlayer nextPlayer in (await MySqlClient.RetrieveAllSdlPlayers()).Where(e => e != sdlPlayer).Take(7))
                     {
                         matchedLobby.AddPlayer(nextPlayer, true);
                     }
@@ -195,7 +193,7 @@ namespace SquidDraftLeague.Bot.Commands
                         embed: newSet.GetEmbedBuilder().Build());
                     await setRole.ModifyAsync(e => e.Mentionable = false);
 
-                    newSet.DraftTimeout += this.NewSet_DraftTimeout;
+                    newSet.DraftTimeout += NewSet_DraftTimeout;
                     newSet.ResetTimeout();
                 }
                 else
@@ -299,7 +297,7 @@ namespace SquidDraftLeague.Bot.Commands
             await this.Context.Channel.SendMessageAsync(message, false, builder.Build());
         }
 
-        private async void NewSet_DraftTimeout(object sender, EventArgs e)
+        private static async void NewSet_DraftTimeout(object sender, EventArgs e)
         {
             if (sender == null || !(sender is Set set))
                 return;

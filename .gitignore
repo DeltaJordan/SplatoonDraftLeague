@@ -265,3 +265,4 @@ __pycache__/
 
 # Token File
 **/[Ss]ettings.json
+/SquidDraftLeague/SquidDraftLeague.Api/appsettings.json

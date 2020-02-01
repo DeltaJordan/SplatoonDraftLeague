@@ -9,7 +9,6 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 using NLog;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Attributes;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
@@ -17,6 +16,7 @@ using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Draft.Penalties;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
@@ -46,6 +46,76 @@ namespace SquidDraftLeague.Bot.Commands
             }
 
             await this.ReplyAsync("🦑");
+        }
+
+        [Command("fixTimeouts"),
+         RequireOwner]
+        public async Task FixTimeouts()
+        {
+            try
+            {
+                DateTime initiationTime = new DateTime(2019, 8, 14, 16, 0, 0, DateTimeKind.Utc);
+
+                List<IMessage> messages = null;
+                IMessage lastMessage = this.Context.Message;
+                string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
+
+                while (messages == null || messages.All(x => x.Timestamp.UtcDateTime > initiationTime))
+                {
+                    Logger.Info($"Retriveing messages before message with timestamp {lastMessage.Timestamp}");
+                    messages = (await this.Context.Channel.GetMessagesAsync(lastMessage, Direction.Before).FlattenAsync()).ToList();
+
+                    foreach (IMessage message in messages.Where(x =>
+                        x.Content.Contains("Please try again by using") &&
+                        x.Author.Id == this.Context.Client.CurrentUser.Id &&
+                        x.Timestamp.UtcDateTime > initiationTime))
+                    {
+                        foreach (ulong messageMentionedUserId in message.MentionedUserIds)
+                        {
+                            try
+                            {
+                                PlayerActivity playerActivity;
+                                string playerFile = Path.Combine(activityDirectory, $"{messageMentionedUserId}.json");
+
+                                if (File.Exists(playerFile))
+                                {
+                                    playerActivity =
+                                        JsonConvert.DeserializeObject<PlayerActivity>(
+                                            await File.ReadAllTextAsync(playerFile));
+                                }
+                                else
+                                {
+                                    playerActivity = new PlayerActivity
+                                    {
+                                        PlayedSets = new List<DateTime>(),
+                                        Timeouts = new List<DateTime>()
+                                    };
+                                }
+
+                                if (!playerActivity.Timeouts.Any() ||
+                                    playerActivity.Timeouts.All(e => e.Date != message.Timestamp.UtcDateTime.Date))
+                                {
+                                    playerActivity.Timeouts.Add(message.Timestamp.UtcDateTime);
+                                }
+
+                                await File.WriteAllTextAsync(playerFile, JsonConvert.SerializeObject(playerActivity));
+                            }
+                            catch (Exception e)
+                            {
+                                Logger.Error(e);
+                            }
+                        }
+                    }
+
+                    lastMessage = messages.OrderByDescending(x => x.Timestamp).First();
+                }
+
+                await this.ReplyAsync("🦑");
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
         }
 
         [Command("statusall"),
@@ -119,7 +189,7 @@ namespace SquidDraftLeague.Bot.Commands
                     await this.Context.Guild.GetUser(sdlPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
                 }
 
-                double points = await MatchModule.ReportScores(set, true);
+                decimal points = await MatchModule.ReportScores(set, true);
 
                 Embed setEmbed = set.GetScoreEmbedBuilder(points, 0).Build();
 
@@ -212,7 +282,7 @@ namespace SquidDraftLeague.Bot.Commands
                     return;
                 }
 
-                await AirTableClient.PenalizePlayer(user.Id, amount, notes);
+                await MySqlClient.PenalizePlayer(await MySqlClient.RetrieveSdlPlayer(user.Id), amount, notes);
             }
             catch (Exception e)
             {
@@ -246,7 +316,7 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 Set joinedSet = Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == user.Id));
 
-                double points = await MatchModule.ReportScores(joinedSet, true);
+                decimal points = await MatchModule.ReportScores(joinedSet, true);
 
                 if (joinedSet == null)
                 {
@@ -271,7 +341,7 @@ namespace SquidDraftLeague.Bot.Commands
                         };
                     }
 
-                    await AirTableClient.PenalizePlayer(user.Id, (int) (10 + points / 2), "Was kicked from a set.");
+                    // await AirTableClient.PenalizePlayer(user.Id, (int) (10 + points / 2), "Was kicked from a set.");
 
                     record.AllInfractions.Add(new Infraction
                     {
@@ -301,23 +371,27 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await this.ReplyAsync(
                     $"{user.Mention} was kicked from the set. " +
-                    $"To the rest of the set, you will return to <#572536965833162753> to requeue. " +
+                    $"Temporarily, players will not be requeued due to a bug that David is too stoopid to fix, please %join in draft to requeue " +
                     $"Beginning removal of access to this channel in 30 seconds. " +
                     $"Rate limiting may cause the full process to take up to two minutes.",
                     embed: joinedSet.GetScoreEmbedBuilder(points, 0).Build());
 
-                Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
+                #region RemovedForBug
 
-                if (movedLobby == null)
-                {
-                    // TODO Not sure what to do if all lobbies are filled.
-                    return;
-                }
+                //Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
 
-                foreach (SdlPlayer joinedSetPlayer in joinedSet.AllPlayers)
-                {
-                    movedLobby.AddPlayer(joinedSetPlayer, true);
-                }
+                //if (movedLobby == null)
+                //{
+                //    // TODO Not sure what to do if all lobbies are filled.
+                //    return;
+                //}
+
+                //foreach (SdlPlayer joinedSetPlayer in joinedSet.AllPlayers)
+                //{
+                //    movedLobby.AddPlayer(joinedSetPlayer, true);
+                //}
+
+                #endregion
 
                 joinedSet.Close();
 
@@ -327,15 +401,17 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await user.RemoveRolesAsync(roleRemovalList.Where(x => user.RoleIds.Contains(x.Id)));
 
-                foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
-                {
-                    SocketGuildUser movedGuildUser = this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId);
-                    await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
-                }
+                #region AlsoRemoved
+                //foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
+                //{
+                //    SocketGuildUser movedGuildUser = this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId);
+                //    await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
+                //}
 
-                await ((ITextChannel)this.Context.Client.GetChannel(572536965833162753))
-                    .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.",
-                        embed: movedLobby.GetEmbedBuilder().Build());
+                //await ((ITextChannel)this.Context.Client.GetChannel(572536965833162753))
+                //    .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.",
+                //        embed: movedLobby.GetEmbedBuilder().Build());
+                #endregion
             }
         }
 
@@ -377,7 +453,7 @@ namespace SquidDraftLeague.Bot.Commands
                         return;
                     }
 
-                    double penalty = MatchModule.CalculatePoints(joinedSet) / 2 + 10;
+                    decimal penalty = MatchModule.CalculatePoints(joinedSet) / 2 + 10;
 
                     string penaltyDir = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Penalties")).FullName;
                     string penaltyFile = Path.Combine(penaltyDir, $"{user.Id}.penalty");
@@ -418,7 +494,7 @@ namespace SquidDraftLeague.Bot.Commands
                         };
                     }
 
-                    await this.ReplyAsync(penaltyMessage + " Are you sure you wish to leave the set? (Y/N)");
+                    await this.ReplyAsync(penaltyMessage + "\nAre you sure you wish to leave the set? (Y/N)");
 
                     SocketMessage response = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(1));
 
@@ -428,8 +504,9 @@ namespace SquidDraftLeague.Bot.Commands
                     }
                     else if (response.Content.ToLower() == "y")
                     {
-                        double points = await MatchModule.ReportScores(joinedSet, true);
-                        await AirTableClient.PenalizePlayer(user.Id, (int) penalty, "Left a set.");
+                        decimal points = await MatchModule.ReportScores(joinedSet, true);
+                        
+                        await MySqlClient.PenalizePlayer(await MySqlClient.RetrieveSdlPlayer(user.Id), (int) penalty, "Left a set.");
 
                         record.AllInfractions.Add(new Infraction
                         {
