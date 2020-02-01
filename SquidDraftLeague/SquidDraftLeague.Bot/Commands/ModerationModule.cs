@@ -46,7 +46,6 @@ namespace SquidDraftLeague.Bot.Commands
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                    throw;
                 }
             }
 
