@@ -19,16 +19,26 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("migrate")]
         public async Task Migrate()
         {
-            SdlPlayer[] players =
-                JsonConvert.DeserializeObject<SdlPlayer[]>(
-                    File.ReadAllText(Path.Combine(Globals.AppPath, "players.json")));
-
-            foreach (SdlPlayer sdlPlayer in players)
+            try
             {
-                await MySqlClient.RegisterPlayer(sdlPlayer.DiscordId, (double) sdlPlayer.PowerLevel, sdlPlayer.Nickname);
-            }
+                SdlPlayer[] players =
+                    JsonConvert.DeserializeObject<SdlPlayer[]>(
+                        File.ReadAllText(Path.Combine(Globals.AppPath, "players.json")));
 
-            await this.ReplyAsync("Complete.");
+                foreach (SdlPlayer sdlPlayer in players)
+                {
+                    await MySqlClient.RegisterPlayer(sdlPlayer.DiscordId, (double) sdlPlayer.PowerLevel, sdlPlayer.Nickname);
+
+                    Console.WriteLine($"{sdlPlayer.Nickname} completed.");
+                }
+
+                await this.ReplyAsync("Complete.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
         /*[Command("limit"),
