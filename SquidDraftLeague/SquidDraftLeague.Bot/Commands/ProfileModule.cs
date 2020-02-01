@@ -441,18 +441,18 @@ namespace SquidDraftLeague.Bot.Commands
 
                     string role = player.RoleOne ?? "Flex";
 
-                    switch (role)
+                    switch (role.ToLower())
                     {
-                        case "Back":
+                        case "back":
                             roleColor = Rgba32.FromHex("#4BDFFA");
                             break;
-                        case "Front":
+                        case "front":
                             roleColor = Rgba32.FromHex("#EB5F5F");
                             break;
-                        case "Mid":
+                        case "mid":
                             roleColor = Rgba32.FromHex("#61E87B");
                             break;
-                        case "Flex":
+                        case "flex":
                             roleColor = Rgba32.RebeccaPurple;
                             break;
                         default:
