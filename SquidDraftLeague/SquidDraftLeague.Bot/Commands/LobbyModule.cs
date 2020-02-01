@@ -11,19 +11,17 @@ using Discord.Rest;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 using NLog;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Lobby"), Group, RequireChannel(572536965833162753),
-     // TODO Off-season
-     TimeLimitPrecondition("18:00", "20:00", "00:00", "02:00")]
+    [Name("Lobby"), Group, RequireChannel(572536965833162753)]
     public class LobbyModule : InteractiveBase
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
@@ -32,7 +30,7 @@ namespace SquidDraftLeague.Bot.Commands
         RequireRole("Developer")]
         public async Task DebugPropagate()
         {
-            SdlPlayer sdlPlayer = await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id);
+            SdlPlayer sdlPlayer = await MySqlClient.RetrieveSdlPlayer(this.Context.User.Id);
 
             await this.JoinLobby(sdlPlayer, true);
         }
@@ -46,37 +44,34 @@ namespace SquidDraftLeague.Bot.Commands
 
             IGuildUser player = (IGuildUser)this.Context.User;
 
-            // TODO Off-Season
-            /*LobbyEligibilityResponse lobbyEligibility = Matchmaker.LobbyEligibility(player.Id);
+            LobbyEligibilityResponse lobbyEligibility = Matchmaker.LobbyEligibility(player.Id);
 
             if (!lobbyEligibility.Success)
             {
                 await this.ReplyAsync(lobbyEligibility.Message);
                 return;
-            }*/
+            }
 
             SdlPlayer sdlPlayer;
 
             try
             {
-                sdlPlayer = await AirTableClient.RetrieveSdlPlayer(player.Id);
+                sdlPlayer = await MySqlClient.RetrieveSdlPlayer(player.Id);
             }
-            catch (SdlAirTableException exception)
+            catch (SdlMySqlException exception)
             {
                 Logger.Error(exception);
 
-                switch (exception.ErrorType)
+                switch (exception.Type)
                 {
-                    case SdlAirTableException.AirtableErrorType.NotFound:
-                        await (await (await Program.Client.GetApplicationInfoAsync()).Owner.GetOrCreateDMChannelAsync())
-                            .SendMessageAsync(exception.Message);
+                    case SdlMySqlException.ExceptionType.ZeroUpdates:
+                    await (await (await Program.Client.GetApplicationInfoAsync()).Owner.GetOrCreateDMChannelAsync())
+                        .SendMessageAsync(exception.Message);
 
-                        await this.ReplyAsync("Cannot find your record in the database. " +
-                                              "Most likely either you have not registered or are not registered correctly.");
-                        break;
-                    case SdlAirTableException.AirtableErrorType.UnexpectedDuplicate:
-                    case SdlAirTableException.AirtableErrorType.CommunicationError:
-                    case SdlAirTableException.AirtableErrorType.Generic:
+                    await this.ReplyAsync("Cannot find your record in the database. " +
+                                          "Most likely either you have not registered or are not registered correctly.");
+                    break;
+                    case SdlMySqlException.ExceptionType.DuplicateEntry:
                         await (await (await Program.Client.GetApplicationInfoAsync()).Owner.GetOrCreateDMChannelAsync())
                             .SendMessageAsync(exception.Message);
 
@@ -94,7 +89,7 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("tTimeout"), RequireOwner]
         public async Task TestTimeout()
         {
-            Matchmaker.Lobbies[0].AddPlayer(await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id), true);
+            Matchmaker.Lobbies[0].AddPlayer(await MySqlClient.RetrieveSdlPlayer(this.Context.User.Id), true);
 
             this.MatchedLobby_DeltaUpdated(Matchmaker.Lobbies[0], true);
         }
@@ -103,17 +98,9 @@ namespace SquidDraftLeague.Bot.Commands
         {
             try
             {
-                // TODO Off-Season
+                Lobby matchedLobby;
 
-                if (Matchmaker.Lobbies.Any(y => y.Players.Any(x => x.DiscordId == sdlPlayer.DiscordId)))
-                {
-                    await this.ReplyAsync("You cannot join a lobby if you are already in one!");
-                    return;
-                }
-
-                Lobby matchedLobby = lobbyNumber != null ? Matchmaker.Lobbies[lobbyNumber.Value - 1] : Matchmaker.Lobbies.First(x => !x.IsFull);
-
-                /*if (lobbyNumber != null)
+                if (lobbyNumber != null)
                 {
                     LobbySelectResponse lobbySelectResponse = Matchmaker.SelectLobbyByNumber(sdlPlayer, lobbyNumber.Value);
 
@@ -152,13 +139,13 @@ namespace SquidDraftLeague.Bot.Commands
                         await this.ReplyAsync(lobbySelectResponse.Message);
 
                     matchedLobby = lobbySelectResponse.Result;
-                }*/
+                }
 
-                matchedLobby.AddPlayer(sdlPlayer, /*TODO Off-Season*/ true);
+                matchedLobby.AddPlayer(sdlPlayer);
 
                 if (debugFill)
                 {
-                    foreach (SdlPlayer nextPlayer in (await AirTableClient.RetrieveAllSdlPlayers()).Where(e => e != sdlPlayer).Take(7))
+                    foreach (SdlPlayer nextPlayer in (await MySqlClient.RetrieveAllSdlPlayers()).Where(e => e != sdlPlayer).Take(7))
                     {
                         matchedLobby.AddPlayer(nextPlayer, true);
                     }
@@ -226,9 +213,8 @@ namespace SquidDraftLeague.Bot.Commands
                     {
                         matchedLobby.DeltaUpdated += this.MatchedLobby_DeltaUpdated;
 
-                        // TODO Off-Season
-                        message = /*$"{notifRoles[(int)matchedLobby.Class - 1].Mention} " +
-                                  $"{((int)matchedLobby.Class - 2 > 0 ? notifRoles[(int)matchedLobby.Class - 2].Mention + " " : "")}" +*/
+                        message = $"{notifRoles[(int)matchedLobby.Class - 1].Mention} " +
+                                  $"{((int)matchedLobby.Class - 2 > 0 ? notifRoles[(int)matchedLobby.Class - 2].Mention + " " : "")}" +
                                   $"A new lobby has been started! {message}";
                     }
 

@@ -9,7 +9,6 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using NLog;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Attributes;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
@@ -17,6 +16,7 @@ using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Map;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
@@ -72,7 +72,7 @@ namespace SquidDraftLeague.Bot.Commands
 
             set.Host = set.AllPlayers.First(e => e.DiscordId == hostUser.Id);
 
-            Stage[] mapList = await AirTableClient.GetMapList();
+            Stage[] mapList = await MySqlClient.GetMapList();
             set.PickStages(mapList);
             Stage selectedStage = set.GetCurrentStage();
 
@@ -518,7 +518,7 @@ namespace SquidDraftLeague.Bot.Commands
 
         private async Task EndMatchAsync(Set playerSet)
         {
-            double points = await ReportScores(playerSet);
+            decimal points = await ReportScores(playerSet);
 
             //TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
             //TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("1:00"), TimeSpan.Parse("2:00"));
@@ -559,7 +559,7 @@ namespace SquidDraftLeague.Bot.Commands
 
             string optOutDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Opt Out")).FullName;
 
-            foreach (SdlPlayer sdlPlayer in await AirTableClient.RetrieveAllSdlPlayers())
+            foreach (SdlPlayer sdlPlayer in await MySqlClient.RetrieveAllSdlPlayers())
             {
                 try
                 {
@@ -637,12 +637,12 @@ namespace SquidDraftLeague.Bot.Commands
             }
         }
 
-        public static double CalculatePoints(Set playerSet)
+        public static decimal CalculatePoints(Set playerSet)
         {
-            double alphaPowerAverage = playerSet.AlphaTeam.Players.Select(e => e.PowerLevel).Average();
-            double bravoPowerAverage = playerSet.BravoTeam.Players.Select(e => e.PowerLevel).Average();
+            decimal alphaPowerAverage = playerSet.AlphaTeam.Players.Select(e => e.PowerLevel).Average();
+            decimal bravoPowerAverage = playerSet.BravoTeam.Players.Select(e => e.PowerLevel).Average();
 
-            double points;
+            decimal points;
             switch (playerSet.Winning)
             {
                 case Set.WinningTeam.Tie:
@@ -650,17 +650,17 @@ namespace SquidDraftLeague.Bot.Commands
                     break;
                 case Set.WinningTeam.Bravo:
                 {
-                    points = 200F * playerSet.BravoTeam.Score /
-                             ((7 * playerSet.AlphaTeam.Score / playerSet.MatchNum + 4) *
-                              (1 + Math.Pow(10, (bravoPowerAverage - alphaPowerAverage) / 200)) * 4);
+                    points = (decimal) (200F * playerSet.BravoTeam.Score /
+                                        ((7 * playerSet.AlphaTeam.Score / playerSet.MatchNum + 4) *
+                                         (1 + Math.Pow(10, (double) ((bravoPowerAverage - alphaPowerAverage) / 200))) * 4));
 
                     break;
                 }
                 case Set.WinningTeam.Alpha:
                 {
-                    points = 200F * playerSet.AlphaTeam.Score /
-                             ((7 * playerSet.BravoTeam.Score / playerSet.MatchNum + 4) *
-                              (1 + Math.Pow(10, (alphaPowerAverage - bravoPowerAverage) / 200)) * 4);
+                    points = (decimal) (200F * playerSet.AlphaTeam.Score /
+                                        ((7 * playerSet.BravoTeam.Score / playerSet.MatchNum + 4) *
+                                         (1 + Math.Pow(10, (double) ((alphaPowerAverage - bravoPowerAverage) / 200))) * 4));
                     break;
                 }
                 default:
@@ -681,25 +681,22 @@ namespace SquidDraftLeague.Bot.Commands
             return points;
         }
 
-        public static async Task<double> ReportScores(Set playerSet, bool forgiveLosing = false)
+        public static async Task<decimal> ReportScores(Set playerSet, bool forgiveLosing = false)
         {
-            // TODO Off-season
-            return 0;
-
-            double points = CalculatePoints(playerSet);
+            decimal points = CalculatePoints(playerSet);
 
             //TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
             //TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("1:00"), TimeSpan.Parse("2:00"));
 
             if (forgiveLosing)
-                await AirTableClient.ReportScores(playerSet, points, 0);
+                await MySqlClient.ReportScores(playerSet, points, 0);
             //else if (happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()) ||
             //         halfPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()))
             //{
             //    await AirTableClient.ReportScores(playerSet, points, points / 2);
             //}
             else
-                await AirTableClient.ReportScores(playerSet, points, points);
+                await MySqlClient.ReportScores(playerSet, points, points);
 
             return points;
         }

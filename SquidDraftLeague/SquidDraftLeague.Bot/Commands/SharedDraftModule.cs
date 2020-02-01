@@ -9,7 +9,6 @@ using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
 using NLog;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Attributes;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
@@ -17,6 +16,7 @@ using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.Draft.Penalties;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
@@ -189,7 +189,7 @@ namespace SquidDraftLeague.Bot.Commands
                     await this.Context.Guild.GetUser(sdlPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
                 }
 
-                double points = await MatchModule.ReportScores(set, true);
+                decimal points = await MatchModule.ReportScores(set, true);
 
                 Embed setEmbed = set.GetScoreEmbedBuilder(points, 0).Build();
 
@@ -282,7 +282,7 @@ namespace SquidDraftLeague.Bot.Commands
                     return;
                 }
 
-                await AirTableClient.PenalizePlayer(user.Id, amount, notes);
+                await MySqlClient.PenalizePlayer(await MySqlClient.RetrieveSdlPlayer(user.Id), amount, notes);
             }
             catch (Exception e)
             {
@@ -316,7 +316,7 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 Set joinedSet = Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == user.Id));
 
-                double points = await MatchModule.ReportScores(joinedSet, true);
+                decimal points = await MatchModule.ReportScores(joinedSet, true);
 
                 if (joinedSet == null)
                 {
@@ -453,7 +453,7 @@ namespace SquidDraftLeague.Bot.Commands
                         return;
                     }
 
-                    double penalty = MatchModule.CalculatePoints(joinedSet) / 2 + 10;
+                    decimal penalty = MatchModule.CalculatePoints(joinedSet) / 2 + 10;
 
                     string penaltyDir = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Penalties")).FullName;
                     string penaltyFile = Path.Combine(penaltyDir, $"{user.Id}.penalty");
@@ -494,9 +494,6 @@ namespace SquidDraftLeague.Bot.Commands
                         };
                     }
 
-                    // TODO Off-season
-                    penaltyMessage = ".";
-
                     await this.ReplyAsync(penaltyMessage + "\nAre you sure you wish to leave the set? (Y/N)");
 
                     SocketMessage response = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(1));
@@ -507,9 +504,9 @@ namespace SquidDraftLeague.Bot.Commands
                     }
                     else if (response.Content.ToLower() == "y")
                     {
-                        double points = await MatchModule.ReportScores(joinedSet, true);
-                        // TODO Off-season
-                        // await AirTableClient.PenalizePlayer(user.Id, (int) penalty, "Left a set.");
+                        decimal points = await MatchModule.ReportScores(joinedSet, true);
+                        
+                        await MySqlClient.PenalizePlayer(await MySqlClient.RetrieveSdlPlayer(user.Id), (int) penalty, "Left a set.");
 
                         record.AllInfractions.Add(new Infraction
                         {

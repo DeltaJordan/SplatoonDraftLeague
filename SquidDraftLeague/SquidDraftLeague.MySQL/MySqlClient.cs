@@ -111,8 +111,11 @@ namespace SquidDraftLeague.MySQL
 
         public static async Task<(int Placement, string Ordinal)> GetPlayerStandings(SdlPlayer player)
         {
-            // TODO placement was a bit broken before so I'll wait on this. Also might be team standing instead of player.
-            return (1, GetOrdinal(1));
+            SdlPlayer[] players = await RetrieveAllSdlPlayers();
+
+            int rank = players.OrderByDescending(x => x.PowerLevel).ToList().FindLastIndex(x => x.PowerLevel == player.PowerLevel);
+
+            return (rank, GetOrdinal(rank));
         }
 
         private static string GetOrdinal(int num)
@@ -208,73 +211,83 @@ namespace SquidDraftLeague.MySQL
                 "Failed to insert new player into database; SQL responded with 0 updated rows.");
         }
 
-        public static async Task ReportTeamScores(Set set, decimal gain, decimal loss)
+        public static async Task ReportScores(Set set, decimal gain, decimal loss)
         {
             MySqlCommand insertCommand =
                 new MySqlCommand($"INSERT INTO `Draft Log` " +
-                                 $"(Date,`Alpha Team ID`,`Bravo Team ID`,`Alpha Players`,`Bravo Players`) " +
+                                 $"(Date,`Alpha Team ID`,`Bravo Team ID`,`Alpha Players`,`Bravo Players`," +
+                                 $"`A SZ`,`B SZ`,`A TC`,`B TC`,`A RM`,`B RM`,`A CB`,`B CB`) " +
                                  $"VALUES(@Date,{set.AlphaTeam.Id},{set.BravoTeam.Id}," +
                                  $"'{string.Join(",", set.AlphaTeam.Players.Select(x => x.DiscordId.ToString()))}'," +
-                                 $"'{string.Join(",", set.BravoTeam.Players.Select(x => x.DiscordId.ToString()))}')",
+                                 $"'{string.Join(",", set.BravoTeam.Players.Select(x => x.DiscordId.ToString()))}'," +
+                                 $"@ASZ,@BSZ,@ATC,@BTC,@ARM,@BRM,@ACB,@BCB)",
                     MySqlConnection);
 
             insertCommand.Parameters.AddWithValue("@Date", DateTime.UtcNow);
 
+            insertCommand.Parameters.AddWithValue("@ASZ",
+                    set.AlphaTeam.OrderedMatchResults
+                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
+                        .Where(e => e.Score == 1 && e.Mode == GameMode.SplatZones)
+                        .Aggregate(0, (e, f) => e + f.Score));
+            insertCommand.Parameters.AddWithValue("@BSZ",
+                set.BravoTeam.OrderedMatchResults
+                    .Select((e, index) => new { Score = e, set.Stages[index].Mode })
+                    .Where(e => e.Score == 1 && e.Mode == GameMode.SplatZones)
+                    .Aggregate(0, (e, f) => e + f.Score));
+            insertCommand.Parameters.AddWithValue("@ATC",
+                set.AlphaTeam.OrderedMatchResults
+                    .Select((e, index) => new { Score = e, set.Stages[index].Mode })
+                    .Where(e => e.Score == 1 && e.Mode == GameMode.TowerControl)
+                    .Aggregate(0, (e, f) => e + f.Score));
+            insertCommand.Parameters.AddWithValue("@BTC",
+                set.BravoTeam.OrderedMatchResults
+                    .Select((e, index) => new { Score = e, set.Stages[index].Mode })
+                    .Where(e => e.Score == 1 && e.Mode == GameMode.TowerControl)
+                    .Aggregate(0, (e, f) => e + f.Score));
+            insertCommand.Parameters.AddWithValue("@ARM",
+                set.AlphaTeam.OrderedMatchResults
+                    .Select((e, index) => new { Score = e, set.Stages[index].Mode })
+                    .Where(e => e.Score == 1 && e.Mode == GameMode.Rainmaker)
+                    .Aggregate(0, (e, f) => e + f.Score));
+            insertCommand.Parameters.AddWithValue("@BRM",
+                set.BravoTeam.OrderedMatchResults
+                    .Select((e, index) => new { Score = e, set.Stages[index].Mode })
+                    .Where(e => e.Score == 1 && e.Mode == GameMode.Rainmaker)
+                    .Aggregate(0, (e, f) => e + f.Score));
+            insertCommand.Parameters.AddWithValue("@ACB",
+                set.AlphaTeam.OrderedMatchResults
+                    .Select((e, index) => new { Score = e, set.Stages[index].Mode })
+                    .Where(e => e.Score == 1 && e.Mode == GameMode.ClamBlitz)
+                    .Aggregate(0, (e, f) => e + f.Score));
+            insertCommand.Parameters.AddWithValue("@BCB",
+                set.BravoTeam.OrderedMatchResults
+                    .Select((e, index) => new { Score = e, set.Stages[index].Mode })
+                    .Where(e => e.Score == 1 && e.Mode == GameMode.ClamBlitz)
+                    .Aggregate(0, (e, f) => e + f.Score));
+
             if (await insertCommand.ExecuteNonQueryAsync() <= 0)
             {
-                // TODO Throw exception that this didn't work.
+                throw new SdlMySqlException(SdlMySqlException.ExceptionType.ZeroUpdates,
+                    "Failed to log set into the database; SQL responded with 0 updated rows.");
             }
 
-            // TODO Below values are not in columns yet.
-            /*
-                fields.AddField("Alpha Score", set.AlphaTeam.Score);
-                fields.AddField("Bravo Score", set.BravoTeam.Score);
-                fields.AddField("Gain", gain);
-                fields.AddField("Loss", loss);
-                fields.AddField("A SZ",
-                    set.AlphaTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
-                        .Where(e => e.Score == 1 && e.Mode == GameMode.SplatZones)
-                        .Aggregate(0, (e, f) => e + f.Score));
-                fields.AddField("B SZ",
-                    set.BravoTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
-                        .Where(e => e.Score == 1 && e.Mode == GameMode.SplatZones)
-                        .Aggregate(0, (e, f) => e + f.Score));
-                fields.AddField("A TC",
-                    set.AlphaTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
-                        .Where(e => e.Score == 1 && e.Mode == GameMode.TowerControl)
-                        .Aggregate(0, (e, f) => e + f.Score));
-                fields.AddField("B TC",
-                    set.BravoTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
-                        .Where(e => e.Score == 1 && e.Mode == GameMode.TowerControl)
-                        .Aggregate(0, (e, f) => e + f.Score));
-                fields.AddField("A RM",
-                    set.AlphaTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
-                        .Where(e => e.Score == 1 && e.Mode == GameMode.Rainmaker)
-                        .Aggregate(0, (e, f) => e + f.Score));
-                fields.AddField("B RM",
-                    set.BravoTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
-                        .Where(e => e.Score == 1 && e.Mode == GameMode.Rainmaker)
-                        .Aggregate(0, (e, f) => e + f.Score));
-                fields.AddField("A CB",
-                    set.AlphaTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
-                        .Where(e => e.Score == 1 && e.Mode == GameMode.ClamBlitz)
-                        .Aggregate(0, (e, f) => e + f.Score));
-                fields.AddField("B CB",
-                    set.BravoTeam.OrderedMatchResults
-                        .Select((e, index) => new { Score = e, set.Stages[index].Mode })
-                        .Where(e => e.Score == 1 && e.Mode == GameMode.ClamBlitz)
-                        .Aggregate(0, (e, f) => e + f.Score));
-            */
+            foreach (SdlPlayer alphaTeamPlayer in set.AlphaTeam.Players)
+            {
+                decimal points = set.Winning == Set.WinningTeam.Alpha ? gain : -loss;
+
+                await ReportPlayerScores(alphaTeamPlayer, points);
+            }
+
+            foreach (SdlPlayer bravoTeamPlayer in set.BravoTeam.Players)
+            {
+                decimal points = set.Winning == Set.WinningTeam.Bravo ? gain : -loss;
+
+                await ReportPlayerScores(bravoTeamPlayer, points);
+            }
         }
 
-        public static async Task ReportPlayerScores(SdlPlayer player, decimal score)
+        private static async Task ReportPlayerScores(SdlPlayer player, decimal score)
         {
             MySqlCommand updateCommand = new MySqlCommand($"UPDATE Players SET `Power`={player.PowerLevel + score} WHERE `Discord ID`=@PlayerID", MySqlConnection);
             updateCommand.Parameters.AddWithValue("@PlayerID", player.DiscordId);
@@ -316,7 +329,12 @@ namespace SquidDraftLeague.MySQL
 
         public static async Task PenalizePlayer(SdlPlayer player, decimal points, string notes)
         {
-            // TODO Need to log the notes somewhere as well.
+            // Snowflake generator.
+            // Generator ID = May 5, 2015 the release date of Splatoon 1.
+            Generator generator = new Generator(8008,
+                new DateTime(2019, 6, 22, new GregorianCalendar(GregorianCalendarTypes.USEnglish)));
+
+            ulong reportId = generator.NextLong();
 
             MySqlCommand updateCommand = new MySqlCommand($"UPDATE Players SET `Power`={player.PowerLevel - points} WHERE `Discord ID`=@PlayerID", MySqlConnection);
             updateCommand.Parameters.AddWithValue("@PlayerID", player.DiscordId);

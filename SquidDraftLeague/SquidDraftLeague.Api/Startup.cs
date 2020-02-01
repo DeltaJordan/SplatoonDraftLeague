@@ -45,6 +45,11 @@ namespace SquidDraftLeague.Api
                     x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                     x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 })
+                .AddDiscord(x =>
+                {
+                    x.ClientId = this.Configuration["Discord:AppId"];
+                    x.ClientSecret = this.Configuration["Discord:AppSecret"];
+                })
                 .AddJwtBearer(x =>
                 {
                     x.RequireHttpsMetadata = false;

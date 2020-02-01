@@ -9,10 +9,10 @@ using Discord.Addons.Interactive;
 using Discord.Commands;
 using Discord.WebSocket;
 using Newtonsoft.Json;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Draft;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
@@ -264,11 +264,11 @@ namespace SquidDraftLeague.Bot.Commands
 
                     IUserMessage messageToDelete = await this.ReplyAsync("Retrieving available players please wait...");
 
-                    SdlPlayer[] allSdlPlayers = await AirTableClient.RetrieveAllSdlPlayers();
+                    SdlPlayer[] allSdlPlayers = await MySqlClient.RetrieveAllSdlPlayers();
 
                     for (int i = 0; i < RequiredCaptains[0]; i++)
                     {
-                        while (!await AirTableClient.CheckHasPlayedSet(allSdlPlayers.First(x =>
+                        while (!await MySqlClient.CheckHasPlayedSet(allSdlPlayers.First(x =>
                             x.DiscordId == AllAvailablePlayers[i + skipAmount])))
                         {
                             skipAmount++;
@@ -386,7 +386,7 @@ namespace SquidDraftLeague.Bot.Commands
                 List<ulong> checkedInIds =
                     JsonConvert.DeserializeObject<List<ulong>>(await File.ReadAllTextAsync(checkedInPlayersFile));
 
-                SdlPlayer[] allSdlPlayers = await AirTableClient.RetrieveAllSdlPlayers();
+                SdlPlayer[] allSdlPlayers = await MySqlClient.RetrieveAllSdlPlayers();
 
                 AllAvailablePlayers.AddRange(allSdlPlayers
                     .Where(x => checkedInIds.Contains(x.DiscordId))
@@ -401,7 +401,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 for (int i = 0; i < RequiredCaptains[0]; i++)
                 {
-                    while (!await AirTableClient.CheckHasPlayedSet(allSdlPlayers.First(x =>
+                    while (!await MySqlClient.CheckHasPlayedSet(allSdlPlayers.First(x =>
                         x.DiscordId == AllAvailablePlayers[i + skipAmount])))
                     {
                         skipAmount++;

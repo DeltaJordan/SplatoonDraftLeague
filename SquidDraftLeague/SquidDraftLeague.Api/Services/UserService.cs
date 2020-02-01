@@ -24,8 +24,6 @@ namespace SquidDraftLeague.Api.Services
 
         public async Task<ApiUser> Authenticate(string username, string password)
         {
-            
-
             ApiUser[] users = await MySqlClient.GetApiUsers();
             ApiUser user = users.SingleOrDefault(x => x.UserName == username && x.PasswordHash == password);
 

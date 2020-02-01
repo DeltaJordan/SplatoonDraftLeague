@@ -7,9 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using NLog;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Scheduling.Services;
 using SquidDraftLeague.Draft;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Scheduling
@@ -22,7 +22,7 @@ namespace SquidDraftLeague.Bot.Scheduling
 
         public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            SdlPlayer[] allSdlPlayers = await AirTableClient.RetrieveAllSdlPlayers();
+            SdlPlayer[] allSdlPlayers = await MySqlClient.RetrieveAllSdlPlayers();
             string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
 
             foreach (SdlPlayer sdlPlayer in allSdlPlayers)
@@ -51,7 +51,7 @@ namespace SquidDraftLeague.Bot.Scheduling
 
                     timeouts = Math.Min(7, timeouts);
 
-                    DateTime lastSetDateTime = await AirTableClient.GetDateOfLastSet(sdlPlayer);
+                    DateTime lastSetDateTime = await MySqlClient.GetDateOfLastSet(sdlPlayer);
                     int inactiveWeeks = (DateTime.UtcNow - lastSetDateTime).Days / 7;
 
                     if (inactiveWeeks == 0)
@@ -60,10 +60,10 @@ namespace SquidDraftLeague.Bot.Scheduling
                     // Constrain to 1-4 weeks
                     inactiveWeeks = Math.Min(Math.Max(inactiveWeeks, 1), 4);
 
-                    double decay = (7 - timeouts) * Math.Pow(15D * Math.Pow(sdlPlayer.PowerLevel, 2) / 4840000,
-                                       Math.Pow(1.2, inactiveWeeks - 1)) / 7;
+                    decimal decay = (decimal) ((7 - timeouts) * Math.Pow(15D * Math.Pow((double) sdlPlayer.PowerLevel, 2) / 4840000,
+                                                   Math.Pow(1.2, inactiveWeeks - 1)) / 7);
 
-                    await AirTableClient.PenalizePlayer(sdlPlayer.DiscordId, decay, "Point decay.");
+                    await MySqlClient.PenalizePlayer(await MySqlClient.RetrieveSdlPlayer(sdlPlayer.DiscordId), decay, "Point decay.");
                 }
                 catch (Exception e)
                 {

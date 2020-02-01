@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Discord.Commands;
 using Newtonsoft.Json;
 using SquidDraftLeague.Bot.Commands.Preconditions;
+using SquidDraftLeague.Draft;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
@@ -14,6 +16,18 @@ namespace SquidDraftLeague.Bot.Commands
     [Name("Moderation")]
     public class ModerationModule : ModuleBase<SocketCommandContext>
     {
+        public async Task Migrate()
+        {
+            SdlPlayer[] players =
+                JsonConvert.DeserializeObject<SdlPlayer[]>(
+                    File.ReadAllText(Path.Combine(Globals.AppPath, "players.json")));
+
+            foreach (SdlPlayer sdlPlayer in players)
+            {
+                await MySqlClient.RegisterPlayer(sdlPlayer.DiscordId, (double) sdlPlayer.PowerLevel, sdlPlayer.Nickname);
+            }
+        }
+
         /*[Command("limit"),
          Summary("Very complicated command to modify what commands can be used where and when. " +
                  "This command is used similarly to command prompt commands with arguments. " +

@@ -34,9 +34,6 @@ namespace SquidDraftLeague.Api.Controllers
             if (user == null)
                 return this.BadRequest(new { message = "Username or password is incorrect" });
 
-            // This might be enough?
-            user.PasswordHash = null;
-
             return this.Ok($"{{\"token\": \"{user.Token}\"}}");
         }
 

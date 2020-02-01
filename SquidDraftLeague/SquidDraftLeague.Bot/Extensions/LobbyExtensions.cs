@@ -15,8 +15,6 @@ namespace SquidDraftLeague.Bot.Extensions
 
             builder.WithTitle($"Lobby #{lobby.LobbyNumber}");
 
-            // TODO Off-Season
-            /*
             EmbedFieldBuilder powerLevelFieldBuilder = new EmbedFieldBuilder
             {
                 Name = "Power Level Range",
@@ -24,13 +22,11 @@ namespace SquidDraftLeague.Bot.Extensions
                 IsInline = true
             };
             builder.Fields.Add(powerLevelFieldBuilder);
-            */
 
             EmbedFieldBuilder classFieldBuilder = new EmbedFieldBuilder
             {
                 Name = "Class",
-                // TODO Off-Season
-                Value = $"Did you know that 10% of the people reading this are a part of the 100% reading this?",
+                Value = $"{lobby.Class}",
                 IsInline = true
             };
             builder.Fields.Add(classFieldBuilder);

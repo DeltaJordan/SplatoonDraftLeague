@@ -7,10 +7,10 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using NLog;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
+using SquidDraftLeague.MySQL;
 
 namespace SquidDraftLeague.Bot.Commands
 {
@@ -25,7 +25,7 @@ namespace SquidDraftLeague.Bot.Commands
         {
             Set playerMatch = Matchmaker.Sets[setNumber - 1];
 
-            SdlPlayer sdlPlayer = await AirTableClient.RetrieveSdlPlayer(pick.Id);
+            SdlPlayer sdlPlayer = await MySqlClient.RetrieveSdlPlayer(pick.Id);
 
             await PickPlayer(playerMatch, sdlPlayer, (SocketTextChannel) this.Context.Channel);
         }
@@ -61,7 +61,7 @@ namespace SquidDraftLeague.Bot.Commands
                 if (playerMatch == null || !CommandHelper.SetChannelIds.Contains(this.Context.Channel.Id))
                     return;
 
-                SdlPlayer sdlPlayer = await AirTableClient.RetrieveSdlPlayer(pick.Id);
+                SdlPlayer sdlPlayer = await MySqlClient.RetrieveSdlPlayer(pick.Id);
 
                 await PickPlayer(playerMatch, sdlPlayer, (SocketTextChannel) this.Context.Channel);
             }

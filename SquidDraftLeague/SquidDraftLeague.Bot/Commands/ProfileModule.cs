@@ -18,10 +18,10 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 using SixLabors.Shapes;
-using SquidDraftLeague.AirTable;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Map;
 using SquidDraftLeague.Language.Resources;
+using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
 using Image = SixLabors.ImageSharp.Image;
 using Path = System.IO.Path;
@@ -47,7 +47,7 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 IUser user = this.Context.User;
 
-                if ((await AirTableClient.RetrieveAllSdlPlayers()).Any(e => e.DiscordId == user.Id))
+                if ((await MySqlClient.RetrieveAllSdlPlayers()).Any(e => e.DiscordId == user.Id))
                 {
                     await this.ReplyAsync("You are already are registered or are awaiting registration for SDL!");
                     return;
@@ -276,7 +276,7 @@ namespace SquidDraftLeague.Bot.Commands
                 SdlPlayer player;
                 try
                 {
-                    player = await AirTableClient.RetrieveSdlPlayer(user.Id);
+                    player = await MySqlClient.RetrieveSdlPlayer(user.Id);
                 }
                 catch (Exception e)
                 {
@@ -470,7 +470,7 @@ namespace SquidDraftLeague.Bot.Commands
                     IPathCollection roleGlyphs = TextBuilder.GenerateGlyphs(role, new PointF(roleNameX, roleNameY),
                         new RendererOptions(roleFont));
 
-                    (int placement, string ordinal) = await AirTableClient.GetPlayerStandings(player);
+                    (int placement, string ordinal) = await MySqlClient.GetPlayerStandings(player);
 
                     SizeF placementSize =
                         TextMeasurer.Measure(placement.ToString(), new RendererOptions(placementFont));
@@ -556,9 +556,9 @@ namespace SquidDraftLeague.Bot.Commands
             SdlPlayer player;
             try
             {
-                player = await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id);
+                player = await MySqlClient.RetrieveSdlPlayer(this.Context.User.Id);
             }
-            catch (SdlAirTableException e)
+            catch (SdlMySqlException e)
             {
                 /*await e.OutputToDiscordUser(this.Context);*/
                 throw;
@@ -566,7 +566,8 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (role == "Front" || role == "Back" || role == "Mid" || role == "Flex")
             {
-                await AirTableClient.SetRoleAsync(player, role);
+                // TODO roleNum parameter
+                await MySqlClient.SetRoleAsync(player, role, 1);
             }
             else
             {
@@ -594,15 +595,15 @@ namespace SquidDraftLeague.Bot.Commands
             SdlPlayer player;
             try
             {
-                player = await AirTableClient.RetrieveSdlPlayer(this.Context.User.Id);
+                player = await MySqlClient.RetrieveSdlPlayer(this.Context.User.Id);
             }
-            catch (SdlAirTableException e)
+            catch (SdlMySqlException e)
             {
                 /*await e.OutputToDiscordUser(this.Context);*/
                 throw;
             }
 
-            await AirTableClient.SetFriendCodeAsync(player, code);
+            await MySqlClient.SetFriendCodeAsync(player, code);
 
             await this.ReplyAsync($"Set your friend code to {code}!");
         }

@@ -9,8 +9,6 @@ namespace SquidDraftLeague.Bot.Extensions
 {
     public static class SetExtensions
     {
-        // TODO 8008 = Off-Season
-
         public static EmbedBuilder GetEmbedBuilder(this Set set)
         {
             EmbedBuilder builder = new EmbedBuilder();
@@ -25,7 +23,7 @@ namespace SquidDraftLeague.Bot.Extensions
 
                 string roleText = alphaTeamPlayer.RoleOne == string.Empty ? string.Empty : $"[{alphaTeamPlayer.RoleOne}]";
 
-                alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordId.ToUserMention()} [8008] {roleText} {captainText}");
+                alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordId.ToUserMention()} [{alphaTeamPlayer.PowerLevel:0.0}] {roleText} {captainText}");
             }
 
             EmbedFieldBuilder alphaTeamBuilder = new EmbedFieldBuilder
@@ -46,7 +44,7 @@ namespace SquidDraftLeague.Bot.Extensions
 
                 string roleText = bravoTeamPlayer.RoleOne == string.Empty ? string.Empty : $"[{bravoTeamPlayer.RoleOne}]";
 
-                bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordId.ToUserMention()} [8008] {roleText} {captainText}");
+                bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordId.ToUserMention()} [{bravoTeamPlayer.PowerLevel:0.0}] {roleText} {captainText}");
             }
 
             EmbedFieldBuilder bravoTeamBuilder = new EmbedFieldBuilder
@@ -64,7 +62,7 @@ namespace SquidDraftLeague.Bot.Extensions
                 {
                     Name = "Players Awaiting Team",
                     Value = string.Join('\n',
-                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $"[8008] [{e.RoleOne}]")),
+                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $"[{e.PowerLevel:0.0}] [{e.RoleOne}]")),
                     IsInline = false
                 };
 
@@ -74,7 +72,7 @@ namespace SquidDraftLeague.Bot.Extensions
             return builder;
         }
 
-        public static EmbedBuilder GetScoreEmbedBuilder(this Set set, double pointsWinning, double pointsLosing)
+        public static EmbedBuilder GetScoreEmbedBuilder(this Set set, decimal pointsWinning, decimal pointsLosing)
         {
             return set.GetEmbedBuilder()
                 .AddField(e =>
