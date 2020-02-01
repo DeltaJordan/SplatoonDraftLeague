@@ -439,7 +439,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                     Rgba32 roleColor;
 
-                    string role = player.RoleOne;
+                    string role = player.RoleOne ?? "Flex";
 
                     switch (role)
                     {
