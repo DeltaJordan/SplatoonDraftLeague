@@ -371,17 +371,17 @@ namespace SquidDraftLeague.MySQL
 
                         if (retrievePlayerReader.TryGetValue("Friend Code", out object friendCode))
                         {
-                            sdlPlayer.SwitchFriendCode = friendCode.ToString();
+                            sdlPlayer.SwitchFriendCode = friendCode?.ToString();
                         }
 
                         if (retrievePlayerReader.TryGetValue("Role 1", out object roleOne))
                         {
-                            sdlPlayer.RoleOne = roleOne.ToString();
+                            sdlPlayer.RoleOne = roleOne?.ToString();
                         }
 
                         if (retrievePlayerReader.TryGetValue("Role 2", out object roleTwo))
                         {
-                            sdlPlayer.RoleTwo = roleTwo.ToString();
+                            sdlPlayer.RoleTwo = roleTwo?.ToString();
                         }
 
                         if (retrievePlayerReader.TryGetValue("Active Team", out object activeTeam))
@@ -429,17 +429,17 @@ namespace SquidDraftLeague.MySQL
 
                         if (retrievePlayerReader.TryGetValue("Friend Code", out object friendCode))
                         {
-                            sdlPlayer.SwitchFriendCode = friendCode.ToString();
+                            sdlPlayer.SwitchFriendCode = friendCode?.ToString();
                         }
 
                         if (retrievePlayerReader.TryGetValue("Role 1", out object roleOne))
                         {
-                            sdlPlayer.RoleOne = roleOne.ToString();
+                            sdlPlayer.RoleOne = roleOne?.ToString();
                         }
 
                         if (retrievePlayerReader.TryGetValue("Role 2", out object roleTwo))
                         {
-                            sdlPlayer.RoleTwo = roleTwo.ToString();
+                            sdlPlayer.RoleTwo = roleTwo?.ToString();
                         }
 
                         if (retrievePlayerReader.TryGetValue("Active Team", out object activeTeam))
