@@ -16,14 +16,18 @@ namespace SquidDraftLeague.MySQL.Extensions
 
             try
             {
-                value = reader[columnName];
+                int ordinal = reader.GetOrdinal(columnName);
+                if (!reader.IsDBNull(ordinal))
+                {
+                    value = reader[ordinal];
+                }
             }
             catch (Exception e)
             {
                 Logger.Error(e);
             }
 
-            return value == null;
+            return value != null;
         }
     }
 }

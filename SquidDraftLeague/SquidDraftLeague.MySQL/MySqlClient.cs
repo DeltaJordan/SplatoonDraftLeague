@@ -113,7 +113,7 @@ namespace SquidDraftLeague.MySQL
         {
             SdlPlayer[] players = await RetrieveAllSdlPlayers();
 
-            int rank = players.OrderByDescending(x => x.PowerLevel).ToList().FindLastIndex(x => x.PowerLevel == player.PowerLevel);
+            int rank = players.OrderByDescending(x => x.PowerLevel).ToList().FindLastIndex(x => x.PowerLevel == player.PowerLevel) + 1;
 
             return (rank, GetOrdinal(rank));
         }
