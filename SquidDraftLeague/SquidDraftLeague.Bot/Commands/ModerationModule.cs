@@ -19,13 +19,13 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("migrate"), RequireOwner]
         public async Task Migrate()
         {
-            try
-            {
-                SdlPlayer[] players =
-                    JsonConvert.DeserializeObject<SdlPlayer[]>(
-                        File.ReadAllText(Path.Combine(Globals.AppPath, "players.json")));
+            SdlPlayer[] players =
+                JsonConvert.DeserializeObject<SdlPlayer[]>(
+                    File.ReadAllText(Path.Combine(Globals.AppPath, "players.json")));
 
-                foreach (SdlPlayer sdlPlayer in players)
+            foreach (SdlPlayer sdlPlayer in players)
+            {
+                try
                 {
                     if (sdlPlayer == null)
                         continue;
@@ -43,14 +43,14 @@ namespace SquidDraftLeague.Bot.Commands
 
                     Console.WriteLine($"{sdlPlayer.Nickname} completed.");
                 }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+            }
 
-                await this.ReplyAsync("Complete.");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            await this.ReplyAsync("Complete.");
         }
 
         /*[Command("limit"),
