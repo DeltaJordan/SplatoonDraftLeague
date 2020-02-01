@@ -16,6 +16,7 @@ namespace SquidDraftLeague.Bot.Commands
     [Name("Moderation")]
     public class ModerationModule : ModuleBase<SocketCommandContext>
     {
+        [Command("migrate")]
         public async Task Migrate()
         {
             SdlPlayer[] players =
@@ -26,6 +27,8 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 await MySqlClient.RegisterPlayer(sdlPlayer.DiscordId, (double) sdlPlayer.PowerLevel, sdlPlayer.Nickname);
             }
+
+            await this.ReplyAsync("Complete.");
         }
 
         /*[Command("limit"),
