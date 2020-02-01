@@ -13,7 +13,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
-using SquidDraftLeague.Api.Data;
 using SquidDraftLeague.Api.Models;
 using SquidDraftLeague.Api.Services;
 
