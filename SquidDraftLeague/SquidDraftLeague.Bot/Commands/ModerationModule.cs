@@ -16,7 +16,7 @@ namespace SquidDraftLeague.Bot.Commands
     [Name("Moderation")]
     public class ModerationModule : ModuleBase<SocketCommandContext>
     {
-        [Command("migrate")]
+        [Command("migrate"), RequireOwner]
         public async Task Migrate()
         {
             try
@@ -27,7 +27,16 @@ namespace SquidDraftLeague.Bot.Commands
 
                 foreach (SdlPlayer sdlPlayer in players)
                 {
-                    await MySqlClient.RegisterPlayer(sdlPlayer.DiscordId, (double) sdlPlayer.PowerLevel, sdlPlayer.Nickname);
+                    string nickname = sdlPlayer.Nickname;
+
+                    if (string.IsNullOrWhiteSpace(nickname))
+                    {
+                        nickname = this.Context.Guild.Users.Any(x => x.Id == sdlPlayer.DiscordId)
+                            ? this.Context.Guild.GetUser(sdlPlayer.DiscordId).Username
+                            : "!NONE!";
+                    }
+
+                    await MySqlClient.RegisterPlayer(sdlPlayer.DiscordId, (double) sdlPlayer.PowerLevel, nickname);
 
                     Console.WriteLine($"{sdlPlayer.Nickname} completed.");
                 }
