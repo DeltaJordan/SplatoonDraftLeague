@@ -8,10 +8,11 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using Discord;
-using Discord.Addons.Interactive;
-using Discord.Commands;
-using Discord.WebSocket;
+using DSharpPlus;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.Entities;
+using DSharpPlus.EventArgs;
+using DSharpPlus.Interactivity;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NLog;
@@ -19,20 +20,23 @@ using NLog.Conditions;
 using NLog.Config;
 using NLog.Targets;
 using SquidDraftLeague.Bot.Commands;
+using SquidDraftLeague.Bot.Extensions;
+using SquidDraftLeague.Bot.Extensions.Entities;
 using SquidDraftLeague.Bot.Scheduling;
 using SquidDraftLeague.Bot.Scheduling.Services;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
 using SquidDraftLeague.MySQL;
 using SquidDraftLeague.Settings;
+using LogLevel = NLog.LogLevel;
 
 namespace SquidDraftLeague.Bot
 {
     public static class Program
     {
-        public static DiscordSocketClient Client;
-        private static CommandService commands;
-        private static IServiceProvider services;
+        public static DiscordClient Client;
+        private static CommandsNextModule commands;
+        private static InteractivityModule interactivity;
 
         private static readonly Logger ClassLogger = LogManager.GetCurrentClassLogger();
         private static readonly Logger DiscordLogger = LogManager.GetLogger("Discord API");
@@ -93,40 +97,35 @@ namespace SquidDraftLeague.Bot
             // Load the settings from file, then store it in the globals
             Globals.BotSettings = JsonConvert.DeserializeObject<Settings.Settings>(jsonFile);
 
-            Client = new DiscordSocketClient(new DiscordSocketConfig
+            Client = new DiscordClient(new DiscordConfiguration
             {
-                LogLevel = LogSeverity.Verbose
-            });
-            
-            commands = new CommandService(new CommandServiceConfig
-            {
-                CaseSensitiveCommands = false,
-                SeparatorChar = ' ',
-                DefaultRunMode = RunMode.Async,
-                LogLevel = LogSeverity.Verbose
+                Token = Globals.BotSettings.BotToken,
+                TokenType = TokenType.Bot,
+                UseInternalLogHandler = true,
+                LogLevel = DSharpPlus.LogLevel.Debug
             });
 
-            services = new ServiceCollection()
-                .AddSingleton(Client)
-                .AddSingleton<InteractiveService>()
-                .BuildServiceProvider();
+            commands = Client.UseCommandsNext(new CommandsNextConfiguration
+            {
+                StringPrefix = Globals.BotSettings.Prefix,
+                CaseSensitive = false
+            });
 
-            Client.MessageReceived += Client_MessageReceived;
-            Client.ReactionAdded += Client_ReactionAdded;
-            Client.UserLeft += Client_UserLeft;
+            commands.RegisterCommands(Assembly.GetExecutingAssembly());
 
-            await commands.AddModulesAsync(Assembly.GetEntryAssembly(), services);
+            interactivity = Client.UseInteractivity(new InteractivityConfiguration{});
+
+            Client.MessageCreated += Client_MessageReceived;
+            Client.MessageReactionAdded += Client_ReactionAdded;
+            Client.GuildMemberRemoved += Client_UserLeft;
 
             Client.Ready += Client_Ready;
-            Client.Log += Client_Log;
+            // Client.Log += Client_Log;
 
-            await Client.LoginAsync(TokenType.Bot, Globals.BotSettings.BotToken);
-            await Client.StartAsync();
+            await Client.ConnectAsync();
 
             List<IScheduledTask> tasks = new List<IScheduledTask>
             {
-                new HalfNotificationTask(),
-                new HappyNotificationTask(),
 #if DEBUG_PREFIX
                 new TestTask()
 #endif
@@ -139,41 +138,45 @@ namespace SquidDraftLeague.Bot
             await Task.Delay(-1, token);
         }
 
-        private static async Task Client_UserLeft(SocketGuildUser arg)
+        private static async Task Client_UserLeft(GuildMemberRemoveEventArgs arg)
         {
             if (arg.Guild.Id == 570743985530863649)
             {
-                await arg.Guild.GetTextChannel(579790669007290370)
-                    .SendMessageAsync($"{arg.Username}#{arg.DiscriminatorValue} ({arg.Mention}) has left the server.");
+                await arg.Guild.GetChannel(579790669007290370)
+                    .SendMessageAsync($"{arg.Member.Username}#{arg.Member.Discriminator} ({arg.Member.Mention}) has left the server.");
 
-                if (Matchmaker.Lobbies.Any(e => e.Players.Any(f => f.DiscordId == arg.Id)))
+                if (Matchmaker.Lobbies.Any(e => e.Players.Any(f => f.DiscordId == arg.Member.Id)))
                 {
-                    Lobby lobby = Matchmaker.Lobbies.First(e => e.Players.Any(f => f.DiscordId == arg.Id));
-                    lobby.RemovePlayer(lobby.Players.First(e => e.DiscordId == arg.Id));
+                    Lobby lobby = Matchmaker.Lobbies.First(e => e.Players.Any(f => f.DiscordId == arg.Member.Id));
+                    lobby.RemovePlayer(lobby.Players.First(e => e.DiscordId == arg.Member.Id));
 
-                    await arg.Guild.GetTextChannel(572536965833162753).SendMessageAsync(
-                        $"{arg.Username} has left the server. They have been forcefully removed from lobby #{lobby.LobbyNumber}.");
+                    await arg.Guild.GetChannel(572536965833162753).SendMessageAsync(
+                        $"{arg.Member.Username} has left the server. They have been forcefully removed from lobby #{lobby.LobbyNumber}.");
                 }
-                else if (Matchmaker.Sets.Any(e => e.AllPlayers.Any(f => f.DiscordId == arg.Id)))
+                else if (Matchmaker.Sets.Any(e => e.AllPlayers.Any(f => f.DiscordId == arg.Member.Id)))
                 {
-                    Set set = Matchmaker.Sets.First(e => e.AllPlayers.Any(f => f.DiscordId == arg.Id));
+                    Set set = Matchmaker.Sets.First(e => e.AllPlayers.Any(f => f.DiscordId == arg.Member.Id));
 
-                    await CommandHelper.ChannelFromSet(set.SetNumber).SendMessageAsync($"<@&572539082039885839> {arg.Username} left the server. Force closing the set.");
+                    await (await CommandHelper.ChannelFromSet(set.SetNumber)).SendMessageAsync(
+                        $"<@&572539082039885839> {arg.Member.Username} left the server. Force closing the set.");
 
-                    if (set.AlphaTeam.Players.Any(e => e.DiscordId == arg.Id))
+                    if (set.AlphaTeam.Players.Any(e => e.DiscordId == arg.Member.Id))
                     {
-                        set.AlphaTeam.RemovePlayer(set.AllPlayers.First(e => e.DiscordId == arg.Id));
+                        set.AlphaTeam.RemovePlayer(set.AllPlayers.First(e => e.DiscordId == arg.Member.Id));
                     }
                     else
                     {
-                        set.BravoTeam.RemovePlayer(set.AllPlayers.First(e => e.DiscordId == arg.Id));
+                        set.BravoTeam.RemovePlayer(set.AllPlayers.First(e => e.DiscordId == arg.Member.Id));
                     }
 
-                    List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => arg.Guild.GetRole(e)).ToList();
+                    List<DiscordRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => arg.Guild.GetRole(e)).ToList();
 
                     foreach (SdlPlayer sdlPlayer in set.AllPlayers)
                     {
-                        await arg.Guild.GetUser(sdlPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
+                        foreach (DiscordRole discordRole in roleRemovalList)
+                        {
+                            await (await arg.Guild.GetMemberAsync(sdlPlayer.DiscordId)).RevokeRoleAsync(discordRole);
+                        }
                     }
 
                     set.Close();
@@ -181,14 +184,16 @@ namespace SquidDraftLeague.Bot
             }
         }
 
-        private static async Task Client_ReactionAdded(Cacheable<IUserMessage, ulong> messageCacheable, ISocketMessageChannel channel, SocketReaction reaction)
+        private static async Task Client_ReactionAdded(MessageReactionAddEventArgs messageReactionAddEventArgs)
         {
+            DiscordChannel channel = messageReactionAddEventArgs.Channel;
+
             try
             {
                 if (channel.Id == 595219144488648704)
                 {
-                    IUserMessage newUserMessage = (IUserMessage) await channel.GetMessageAsync(messageCacheable.Id);
-                    ITextChannel registeredChannel = (ITextChannel) Client.GetChannel(588806681303973931);
+                    DiscordMessage newUserMessage = await channel.GetMessageAsync(messageReactionAddEventArgs.Message.Id);
+                    DiscordChannel registeredChannel = await Client.GetChannelAsync(588806681303973931);
 
                     if (!File.Exists(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}")))
                     {
@@ -197,14 +202,14 @@ namespace SquidDraftLeague.Bot
 
                     if (newUserMessage.Content == "Approved.")
                     {
-                        (IEmote emote, ReactionMetadata reactionMetadata) = newUserMessage.Reactions
-                            .Where(e => e.Key.Name != "\u274E" && e.Key.Name != "\u2705")
-                            .OrderByDescending(e => e.Value.ReactionCount)
+                        DiscordReaction reactionMetadata = newUserMessage.Reactions
+                            .Where(e => e.Emoji.Name != "\u274E" && e.Emoji.Name != "\u2705")
+                            .OrderByDescending(e => e.Count)
                             .FirstOrDefault();
 
                         decimal powerLevel = 0;
 
-                        if (reactionMetadata.ReactionCount > 1)
+                        if (reactionMetadata.Count > 1)
                         {
                             string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath, "Registrations",
                                 $"{newUserMessage.Id}"));
@@ -213,7 +218,7 @@ namespace SquidDraftLeague.Bot
 
                             ulong userId = Convert.ToUInt64(allRegLines[0]);
 
-                            switch (emote.Name)
+                            switch (reactionMetadata.Emoji.Name)
                             {
                                 case "\u0031\u20E3":
                                     powerLevel = 2200;
@@ -237,19 +242,19 @@ namespace SquidDraftLeague.Bot
                                     break;
                             }
 
-                            SocketGuild guild = Client.GetGuild(570743985530863649);
-                            SocketGuildUser registeredUser = guild.GetUser(userId);
-                            IDMChannel dmChannel = await registeredUser.GetOrCreateDMChannelAsync();
-                            await dmChannel.SendMessageAsync($"You have been approved! You have been placed in class {classNum}. " +
-                                                             $"To jump into a set, head into #draft and use %join.");
+                            DiscordGuild guild = await Client.GetGuildAsync(570743985530863649);
+                            DiscordMember registeredUser = await guild.GetMemberAsync(userId);
+                            await registeredUser.SendMessageAsync(
+                                $"You have been approved! You have been placed in class {classNum}. " +
+                                $"To jump into a set, head into #draft and use %join.");
 
-                            await registeredUser.AddRoleAsync(guild.GetRole(572537013949956105));
+                            await registeredUser.GrantRoleAsync(guild.GetRole(572537013949956105));
 
 
-                            IRole classOneRole = guild.GetRole(600770643075661824);
-                            IRole classTwoRole = guild.GetRole(600770814521901076);
-                            IRole classThreeRole = guild.GetRole(600770862307606542);
-                            IRole classFourRole = guild.GetRole(600770905282576406);
+                            DiscordRole classOneRole = guild.GetRole(600770643075661824);
+                            DiscordRole classTwoRole = guild.GetRole(600770814521901076);
+                            DiscordRole classThreeRole = guild.GetRole(600770862307606542);
+                            DiscordRole classFourRole = guild.GetRole(600770905282576406);
 
                             try
                             {
@@ -260,28 +265,28 @@ namespace SquidDraftLeague.Bot
                                     case SdlClass.One:
                                         if (registeredUser.Roles.All(e => e.Id != classOneRole.Id))
                                         {
-                                            await registeredUser.AddRoleAsync(classOneRole);
+                                            await registeredUser.GrantRoleAsync(classOneRole);
                                         }
 
                                         break;
                                     case SdlClass.Two:
                                         if (registeredUser.Roles.All(e => e.Id != classTwoRole.Id))
                                         {
-                                            await registeredUser.AddRoleAsync(classTwoRole);
+                                            await registeredUser.GrantRoleAsync(classTwoRole);
                                         }
 
                                         break;
                                     case SdlClass.Three:
                                         if (registeredUser.Roles.All(e => e.Id != classThreeRole.Id))
                                         {
-                                            await registeredUser.AddRoleAsync(classThreeRole);
+                                            await registeredUser.GrantRoleAsync(classThreeRole);
                                         }
 
                                         break;
                                     case SdlClass.Four:
                                         if (registeredUser.Roles.All(e => e.Id != classFourRole.Id))
                                         {
-                                            await registeredUser.AddRoleAsync(classFourRole);
+                                            await registeredUser.GrantRoleAsync(classFourRole);
                                         }
 
                                         break;
@@ -296,12 +301,12 @@ namespace SquidDraftLeague.Bot
 
                             File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
 
-                            IEmbed registrationEmbed = newUserMessage.Embeds.First();
+                            DiscordEmbed registrationEmbed = newUserMessage.Embeds.First();
 
-                            EmbedBuilder builder = new EmbedBuilder
+                            DiscordEmbedBuilder builder = new DiscordEmbedBuilder
                             {
                                 Description =
-                                    $"**User {registeredUser.Mention} ({registeredUser.Username}#{registeredUser.DiscriminatorValue}) has been approved!**"
+                                    $"**User {registeredUser.Mention} ({registeredUser.Username}#{registeredUser.Discriminator}) has been approved!**"
                             };
 
                             builder.AddField(e =>
@@ -313,7 +318,7 @@ namespace SquidDraftLeague.Bot
 
                             builder.WithFields(registrationEmbed.Fields.Select(e =>
                             {
-                                EmbedFieldBuilder builderSelect = new EmbedFieldBuilder
+                                DiscordFieldBuilder builderSelect = new DiscordFieldBuilder
                                 {
                                     Name = e.Name,
                                     Value = e.Value,
@@ -323,9 +328,9 @@ namespace SquidDraftLeague.Bot
                                 return builderSelect;
                             }));
 
-                            if (registrationEmbed.Image.HasValue)
+                            if (registrationEmbed.Image?.Url != null)
                             {
-                                builder.ImageUrl = registrationEmbed.Image.Value.Url;
+                                builder.ImageUrl = registrationEmbed.Image.Url.AbsolutePath;
                             }
 
                             await registeredChannel.SendMessageAsync(embed: builder.Build());
@@ -334,32 +339,32 @@ namespace SquidDraftLeague.Bot
                         }
                     }
 
-                    else if (newUserMessage.Reactions.FirstOrDefault(e => e.Key.Name == "\u2705").Value.ReactionCount > 1)
+                    else if (newUserMessage.Reactions.FirstOrDefault(e => e.Emoji.Name == "\u2705")?.Count > 1)
                     {
-                        await newUserMessage.ModifyAsync(e => e.Content = "Approved.");
+                        await newUserMessage.ModifyAsync("Approved.");
 
                     }
-                    else if (newUserMessage.Reactions.FirstOrDefault(e => e.Key.Name == "\u274E").Value.ReactionCount > 1)
+                    else if (newUserMessage.Reactions.FirstOrDefault(e => e.Emoji.Name == "\u274E")?.Count > 1)
                     {
                         string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath, "Registrations",
                             $"{newUserMessage.Id}"));
 
                         ulong userId = Convert.ToUInt64(allRegLines[0]);
 
-                        SocketGuild guild = Client.GetGuild(570743985530863649);
-                        SocketGuildUser registeredUser = guild.GetUser(userId);
+                        DiscordGuild guild = await Client.GetGuildAsync(570743985530863649);
+                        DiscordMember registeredUser = await guild.GetMemberAsync(userId);
 
-                        IEmbed registrationEmbed = newUserMessage.Embeds.First();
+                        DiscordEmbed registrationEmbed = newUserMessage.Embeds.First();
 
-                        EmbedBuilder builder = new EmbedBuilder
+                        DiscordEmbedBuilder builder = new DiscordEmbedBuilder
                         {
                             Description =
-                                $"**User {registeredUser.Mention} ({registeredUser.Username}#{registeredUser.DiscriminatorValue}) has been denied.**"
+                                $"**User {registeredUser.Mention} ({registeredUser.Username}#{registeredUser.Discriminator}) has been denied.**"
                         };
 
                         builder.WithFields(registrationEmbed.Fields.Select(e =>
                         {
-                            EmbedFieldBuilder builderSelect = new EmbedFieldBuilder
+                            DiscordFieldBuilder builderSelect = new DiscordFieldBuilder
                             {
                                 Name = e.Name,
                                 Value = e.Value,
@@ -369,9 +374,9 @@ namespace SquidDraftLeague.Bot
                             return builderSelect;
                         }));
 
-                        if (registrationEmbed.Image.HasValue)
+                        if (registrationEmbed.Image?.Url != null)
                         {
-                            builder.ImageUrl = registrationEmbed.Image.Value.Url;
+                            builder.ImageUrl = registrationEmbed.Image.Url.AbsolutePath;
                         }
 
                         await registeredChannel.SendMessageAsync(embed: builder.Build());
@@ -388,7 +393,8 @@ namespace SquidDraftLeague.Bot
             }
         }
 
-        private static Task Client_Log(LogMessage message)
+        // TODO Don't know how DSharpPlus does logging.
+        /*private static Task Client_Log(LogMessage message)
         {
             LogLevel logLevel;
 
@@ -423,15 +429,17 @@ namespace SquidDraftLeague.Bot
             DiscordLogger.Log(logLevel, message.ToString(prependTimestamp: false));
 
             return Task.CompletedTask;
-        }
+        }*/
 
-        private static async Task Client_Ready()
+        private static async Task Client_Ready(ReadyEventArgs readyEventArgs)
         {
         }
 
-        private static async Task Client_MessageReceived(SocketMessage messageParam)
+        private static async Task Client_MessageReceived(MessageCreateEventArgs messageCreateEventArgs)
         {
-            SocketUserMessage message = messageParam as SocketUserMessage;
+            // TODO It seems DSharpPlus doesn't need this.
+
+            /*DiscordMessage message = messageParam as DiscordMessage;
             SocketCommandContext context = new SocketCommandContext(Client, message);
 
             if (context.Message == null || context.Message.Content == "" || context.User.IsBot)

@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord.Commands;
-using Discord.WebSocket;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands.Preconditions
 {
-    public class RequireChannelAttribute : PreconditionAttribute
+    public class RequireChannelAttribute : CheckBaseAttribute
     {
         // Create a field to store the specified name
         private readonly string name;
@@ -19,34 +20,31 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
         // Create a constructor so the id can be specified
         public RequireChannelAttribute(ulong id) => this.id = id;
 
-        // Override the CheckPermissions method
-        public override Task<PreconditionResult> CheckPermissionsAsync(ICommandContext context, CommandInfo command, IServiceProvider services)
+        public override Task<bool> CanExecute(CommandContext ctx, bool help)
         {
-            if (Globals.SuperUsers != null && Globals.SuperUsers.Contains(context.User.Id))
+            if (Globals.SuperUsers != null && Globals.SuperUsers.Contains(ctx.User.Id))
             {
-                return Task.FromResult(PreconditionResult.FromSuccess());
+                return Task.FromResult(true);
             }
 
-            if (context.Guild.Id == 593978296027316224)
+            if (ctx.Guild.Id == 593978296027316224)
             {
-                return Task.FromResult(PreconditionResult.FromSuccess());
+                return Task.FromResult(true);
             }
 
-            if (context.Guild == null || context.Guild.Id != 570743985530863649)
+            if (ctx.Guild == null || ctx.Guild.Id != 570743985530863649)
             {
-                return Task.FromResult(PreconditionResult.FromError("This bot can only be used in approved guilds."));
+                return Task.FromResult(false);
             }
 
             // Check if this user is a Guild User, which is the only context where roles exist
-            if (context.User is SocketGuildUser gUser)
+            if (ctx.User is DiscordMember gUser)
             {
                 // If this command was executed by a user with the appropriate role, return a success
-                return Task.FromResult(context.Channel.Name == this.name || context.Channel.Id == this.id ? 
-                    PreconditionResult.FromSuccess() : 
-                    PreconditionResult.FromError($"{gUser.Username} must be in channel {(this.name == null ? this.name : this.id.ToString())} to run this command."));
+                return Task.FromResult(ctx.Channel.Name == this.name || ctx.Channel.Id == this.id);
             }
 
-            return Task.FromResult(PreconditionResult.FromError("You must be in a guild to run this command."));
+            return Task.FromResult(false);
         }
     }
 }

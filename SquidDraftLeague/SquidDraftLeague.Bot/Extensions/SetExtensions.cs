@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Discord;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.Entities;
 using SquidDraftLeague.Draft;
 using Color = System.Drawing.Color;
 
@@ -10,9 +11,9 @@ namespace SquidDraftLeague.Bot.Extensions
 {
     public static class SetExtensions
     {
-        public static EmbedBuilder GetEmbedBuilder(this Set set)
+        public static DiscordEmbedBuilder GetEmbedBuilder(this Set set)
         {
-            EmbedBuilder builder = new EmbedBuilder();
+            DiscordEmbedBuilder builder = new DiscordEmbedBuilder();
             builder.WithTitle($"Set #({set.SetNumber})");
 
             List<string> alphaTeamInfo = new List<string>();
@@ -27,14 +28,7 @@ namespace SquidDraftLeague.Bot.Extensions
                 alphaTeamInfo.Add($"{alphaTeamPlayer.DiscordId.ToUserMention()} [{alphaTeamPlayer.PowerLevel:0.0}] {roleText} {captainText}");
             }
 
-            EmbedFieldBuilder alphaTeamBuilder = new EmbedFieldBuilder
-            {
-                Name = "Alpha Team",
-                Value = string.Join('\n', alphaTeamInfo),
-                IsInline = false
-            };
-
-            builder.Fields.Add(alphaTeamBuilder);
+            builder.AddField("Alpha Team", string.Join('\n', alphaTeamInfo));
 
             List<string> bravoTeamInfo = new List<string>();
             foreach (SdlPlayer bravoTeamPlayer in set.BravoTeam.Players)
@@ -48,32 +42,18 @@ namespace SquidDraftLeague.Bot.Extensions
                 bravoTeamInfo.Add($"{bravoTeamPlayer.DiscordId.ToUserMention()} [{bravoTeamPlayer.PowerLevel:0.0}] {roleText} {captainText}");
             }
 
-            EmbedFieldBuilder bravoTeamBuilder = new EmbedFieldBuilder
-            {
-                Name = "Bravo Team",
-                Value = string.Join('\n', bravoTeamInfo),
-                IsInline = false
-            };
-
-            builder.Fields.Add(bravoTeamBuilder);
+            builder.AddField("Bravo Team", string.Join('\n', bravoTeamInfo));
 
             if (set.DraftPlayers.Any())
             {
-                EmbedFieldBuilder draftTeamBuilder = new EmbedFieldBuilder
-                {
-                    Name = "Players Awaiting Team",
-                    Value = string.Join('\n',
-                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $"[{e.PowerLevel:0.0}] [{e.RoleOne}]")),
-                    IsInline = false
-                };
-
-                builder.Fields.Add(draftTeamBuilder);
+                builder.AddField("Players Awaiting Team", string.Join('\n',
+                        set.DraftPlayers.Select(e => e.DiscordId.ToUserMention() + $" [{e.PowerLevel:0.0}] [{e.RoleOne}]")));
             }
 
             return builder;
         }
 
-        public static EmbedBuilder GetScoreEmbedBuilder(this Set set, decimal pointsWinning, decimal pointsLosing)
+        public static DiscordEmbedBuilder GetScoreEmbedBuilder(this Set set, decimal pointsWinning, decimal pointsLosing)
         {
             return set.GetEmbedBuilder()
                 .AddField(e =>
@@ -95,7 +75,7 @@ namespace SquidDraftLeague.Bot.Extensions
                 });
         }
 
-        public static EmbedBuilder GetFeedEmbedBuilder(this Set set)
+        public static DiscordEmbedBuilder GetFeedEmbedBuilder(this Set set, DiscordChannel context)
         {
             string winningText = set.Winning switch
             {
@@ -105,7 +85,13 @@ namespace SquidDraftLeague.Bot.Extensions
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-            return new EmbedBuilder()
+            List<string> streams = (from player in set.AllPlayers.TakeWhile(player => context != null)
+                select context.Guild.GetMemberAsync(player.DiscordId).Result
+                into playerUser
+                where playerUser.Presence.Game.StreamType == GameStreamType.Twitch
+                select playerUser.Presence.Game.Url).ToList();
+
+            return new DiscordEmbedBuilder()
                 .WithTitle($"Set {set.SetNumber}")
                 .WithDescription($"Match {set.MatchNum} of 7: {set.GetCurrentStage().MapName} {set.GetCurrentStage().Mode}\n" +
                                  $"The score is **{set.AlphaTeam.Score}-{set.BravoTeam.Score}** {winningText}**{set.Winning}**!")
@@ -122,7 +108,7 @@ namespace SquidDraftLeague.Bot.Extensions
                     x.Value = string.Join("\n", set.BravoTeam.Players.Select(e => e.DiscordId.ToUserMention()));
                     x.IsInline = true;
                 })
-                .WithCurrentTimestamp();
+                .WithTimestamp(DateTime.Now);
         }
     }
 }

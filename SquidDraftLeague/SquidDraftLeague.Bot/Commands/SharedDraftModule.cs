@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Addons.Interactive;
-using Discord.Commands;
-using Discord.WebSocket;
+using DSharpPlus;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
+using DSharpPlus.Interactivity;
 using Newtonsoft.Json;
 using NLog;
 using SquidDraftLeague.Bot.Commands.Attributes;
@@ -21,16 +22,15 @@ using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Overlapping Draft")]
-    public class SharedDraftModule : InteractiveBase
+    public class SharedDraftModule
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         [Command("cleanup"),
-         RequireUserPermission(GuildPermission.ManageGuild)]
-        public async Task Cleanup()
+         RequirePermissions(Permissions.ManageGuild)]
+        public async Task Cleanup(CommandContext ctx)
         {
-            foreach (SocketGuildUser socketGuildUser in this.Context.Guild.Users)
+            foreach (DiscordMember socketGuildUser in await ctx.Guild.GetAllMembersAsync())
             {
                 if (socketGuildUser.IsBot)
                     continue;
@@ -40,34 +40,34 @@ namespace SquidDraftLeague.Bot.Commands
                     if (socketGuildUser.Roles.All(e => e.Id != cleanupRoleId))
                         continue;
 
-                    IRole role = this.Context.Guild.GetRole(cleanupRoleId);
-                    await socketGuildUser.RemoveRoleAsync(role);
+                    DiscordRole role = ctx.Guild.GetRole(cleanupRoleId);
+                    await socketGuildUser.RevokeRoleAsync(role);
                 }
             }
 
-            await this.ReplyAsync("🦑");
+            await ctx.RespondAsync("🦑");
         }
 
-        [Command("fixTimeouts"),
+        /*[Command("fixTimeouts"),
          RequireOwner]
-        public async Task FixTimeouts()
-        {
+        public async Task FixTimeouts(CommandContext ctx)
+        {   
             try
             {
                 DateTime initiationTime = new DateTime(2019, 8, 14, 16, 0, 0, DateTimeKind.Utc);
 
-                List<IMessage> messages = null;
-                IMessage lastMessage = this.Context.Message;
+                List<DiscordMessage> messages = null;
+                DiscordMessage lastMessage = ctx.Message;
                 string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
 
                 while (messages == null || messages.All(x => x.Timestamp.UtcDateTime > initiationTime))
                 {
                     Logger.Info($"Retriveing messages before message with timestamp {lastMessage.Timestamp}");
-                    messages = (await this.Context.Channel.GetMessagesAsync(lastMessage, Direction.Before).FlattenAsync()).ToList();
+                    messages = (await ctx.Channel.GetMessagesAsync(lastMessage, Direction.Before).FlattenAsync()).ToList();
 
-                    foreach (IMessage message in messages.Where(x =>
+                    foreach (DiscordMessage message in messages.Where(x =>
                         x.Content.Contains("Please try again by using") &&
-                        x.Author.Id == this.Context.Client.CurrentUser.Id &&
+                        x.Author.Id == ctx.Client.CurrentUser.Id &&
                         x.Timestamp.UtcDateTime > initiationTime))
                     {
                         foreach (ulong messageMentionedUserId in message.MentionedUserIds)
@@ -110,44 +110,45 @@ namespace SquidDraftLeague.Bot.Commands
                     lastMessage = messages.OrderByDescending(x => x.Timestamp).First();
                 }
 
-                await this.ReplyAsync("🦑");
+                await ctx.RespondAsync("🦑");
             }
             catch (Exception e)
             {
                 Logger.Error(e);
             }
-        }
+        }*/
 
         [Command("statusall"),
-         Summary("Gets the status of all lobbies.")]
-        public async Task StatusAll()
+         Description("Gets the status of all lobbies.")]
+        public async Task StatusAll(CommandContext ctx)
         {
             if (Matchmaker.Lobbies.All(e => !e.Players.Any()))
             {
-                await this.ReplyAsync("There are currently no lobbies with players.");
+                await ctx.RespondAsync("There are currently no lobbies with players.");
                 return;
             }
 
             foreach (Lobby lobby in Matchmaker.Lobbies.Where(e => e.Players.Any()))
             {
-                await this.ReplyAsync(embed: lobby.GetEmbedBuilder().Build());
+                await ctx.RespondAsync(embed: lobby.GetEmbedBuilder().Build());
             }
         }
 
         [Command("status"),
-         Summary("Gets the status of a lobby or set.")]
-        public async Task Status([Summary(
+         Description("Gets the status of a lobby or set.")]
+        public async Task Status(CommandContext ctx,
+            [Description(
                 "Optional parameter to specify a lobby number. Not required for sets or if you are checking a lobby you are in.")]
             int lobbyNum = 0)
         {
-            if (!(this.Context.User is IGuildUser user))
+            if (!(ctx.User is DiscordMember user))
                 return;
 
-            Set setInChannel = CommandHelper.SetFromChannel(this.Context.Channel.Id);
+            Set setInChannel = CommandHelper.SetFromChannel(ctx.Channel.Id);
 
             if (setInChannel != null && setInChannel.AllPlayers.Any())
             {
-                await this.ReplyAsync(embed: setInChannel.GetEmbedBuilder().Build());
+                await ctx.RespondAsync(embed: setInChannel.GetEmbedBuilder().Build());
             }
             else if (Matchmaker.Lobbies.All(e => e.LobbyNumber != lobbyNum))
             {
@@ -155,69 +156,69 @@ namespace SquidDraftLeague.Bot.Commands
 
                 if (joinedLobby == null)
                 {
-                    await this.ReplyAsync(Resources.NotInLobby);
+                    await ctx.RespondAsync(Resources.NotInLobby);
                     return;
                 }
 
-                EmbedBuilder builder = joinedLobby.GetEmbedBuilder();
+                DiscordEmbedBuilder builder = joinedLobby.GetEmbedBuilder();
 
-                await this.ReplyAsync(embed: builder.Build());
+                await ctx.RespondAsync(embed: builder.Build());
             }
             else
             {
                 Lobby selectedLobby = Matchmaker.Lobbies.First(e => e.LobbyNumber == lobbyNum);
-                await this.ReplyAsync(embed: selectedLobby.GetEmbedBuilder().Build());
+                await ctx.RespondAsync(embed: selectedLobby.GetEmbedBuilder().Build());
             }
         }
 
         [Command("close"),
-         RequireUserPermission(GuildPermission.ManageGuild)]
-        public async Task Close(string type, int number)
+         RequirePermissions(Permissions.ManageGuild)]
+        public async Task Close(CommandContext ctx, string type, int number)
         {
             type = type.ToLower();
 
             if (type == "set")
             {
-                await this.ReplyAsync("Closing set and removing roles please wait...");
+                await ctx.RespondAsync("Closing set and removing roles please wait...");
 
                 Set set = Matchmaker.Sets[number - 1];
 
-                List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
+                List<DiscordRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => ctx.Guild.GetRole(e)).ToList();
 
                 foreach (SdlPlayer sdlPlayer in set.AllPlayers)
                 {
-                    await this.Context.Guild.GetUser(sdlPlayer.DiscordId).RemoveRolesAsync(roleRemovalList);
+                    await (await ctx.Guild.GetMemberAsync(sdlPlayer.DiscordId)).RemoveRolesAsync(roleRemovalList);
                 }
 
                 decimal points = await MatchModule.ReportScores(set, true);
 
-                Embed setEmbed = set.GetScoreEmbedBuilder(points, 0).Build();
+                DiscordEmbed setEmbed = set.GetScoreEmbedBuilder(points, 0).Build();
 
-                await this.ReplyAsync($"An admin has closed set number {number}.", embed: setEmbed);
+                await ctx.RespondAsync($"An admin has closed set number {number}.", embed: setEmbed);
 
                 set.Close();
             }
             else if (type == "lobby")
             {
                 Matchmaker.Lobbies[number - 1].Close();
-                await this.ReplyAsync($"An admin has closed lobby number {number}.");
+                await ctx.RespondAsync($"An admin has closed lobby number {number}.");
             }
             else
             {
-                await this.ReplyAsync("Please specify \"set\" or \"lobby\".");
+                await ctx.RespondAsync("Please specify \"set\" or \"lobby\".");
             }
         }
 
         [Command("report"),
-         Summary("Reports a user for any reason. Only to be used in DMs with this bot."),
+         Description("Reports a user for any reason. Only to be used in DMs with this bot."),
          ExampleCommand("%report \"DeltaJordan#5497\" Called me a crayon eater.")]
-        public async Task Report(
-            [Summary("Name formatted like so `\"DeltaJordan#5497\"`. The quotes are required if the name has spaces.")]
+        public async Task Report(CommandContext ctx,
+            [Description("Name formatted like so `\"DeltaJordan#5497\"`. The quotes are required if the name has spaces.")]
             string username, 
-            [Summary("The reason this person is being reported. Explain as much as possible."),
-             Remainder] string reason)
+            [Description("The reason this person is being reported. Explain as much as possible."),
+             RemainingText] string reason)
         {
-            if (!(this.Context.Channel is IDMChannel))
+            if (!ctx.Channel.IsPrivate)
             {
                 return;
             }
@@ -226,19 +227,20 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (splitName.Length < 2)
             {
-                await this.ReplyAsync(Resources.InvalidReportNameSplit);
+                await ctx.RespondAsync(Resources.InvalidReportNameSplit);
             }
 
             if (string.IsNullOrWhiteSpace(reason))
             {
-                await this.ReplyAsync(Resources.InvalidReportNoReason);
+                await ctx.RespondAsync(Resources.InvalidReportNoReason);
             }
 
-            SocketUser reportedUser = null;
+            DiscordUser reportedUser = null;
 
             try
             {
-                reportedUser = Program.Client.GetUser(splitName[0], splitName[1]);
+                reportedUser = Program.Client.GetGuildAsync(570743985530863649).Result.Members
+                    .First(x => x.Username == splitName[0] && x.Discriminator == splitName[1]);
             }
             catch (Exception e)
             {
@@ -247,15 +249,15 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (reportedUser == null)
             {
-                await this.ReplyAsync(Resources.InvalidReportNameResolve);
+                await ctx.RespondAsync(Resources.InvalidReportNameResolve);
             }
             else
             {
-                SocketTextChannel modChannel = (SocketTextChannel)Program.Client.GetChannel(572608285904207875);
+                DiscordChannel modChannel = await Program.Client.GetChannelAsync(572608285904207875);
 
-                EmbedBuilder builder = new EmbedBuilder
+                DiscordEmbedBuilder builder = new DiscordEmbedBuilder
                 {
-                    Description = $"**{reportedUser.Mention} reported by {this.Context.User.Mention}.**",
+                    Description = $"**{reportedUser.Mention} reported by {ctx.User.Mention}.**",
                     Timestamp = DateTimeOffset.Now
                 };
 
@@ -266,19 +268,19 @@ namespace SquidDraftLeague.Bot.Commands
                 });
 
                 await modChannel.SendMessageAsync($"<@&572539082039885839>", embed: builder.Build());
-                await this.ReplyAsync(Resources.ReportResponse);
+                await ctx.RespondAsync(Resources.ReportResponse);
             }
         }
 
         [Command("penalty"),
-        RequireUserPermission(GuildPermission.ManageGuild)]
-        public async Task Penalty(IUser user, int amount, [Remainder] string notes)
+        RequirePermissions(Permissions.ManageGuild)]
+        public async Task Penalty(CommandContext ctx, DiscordMember user, int amount, [RemainingText] string notes)
         {
             try
             {
                 if (amount <= 0)
                 {
-                    await this.ReplyAsync("Amount should be greater than zero.");
+                    await ctx.RespondAsync("Amount should be greater than zero.");
                     return;
                 }
 
@@ -290,12 +292,12 @@ namespace SquidDraftLeague.Bot.Commands
                 throw;
             }
 
-            await this.ReplyAsync($"Penalized {user.Mention} {amount} points.");
+            await ctx.RespondAsync($"Penalized {user.Mention} {amount} points.");
         }
 
         [Command("kick"),
          RequireRole("Moderator")]
-        public async Task Kick(IGuildUser user, bool noPenalty = false)
+        public async Task Kick(CommandContext ctx, DiscordMember user, bool noPenalty = false)
         {
             Lobby joinedLobby = Matchmaker.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId == user.Id));
 
@@ -303,13 +305,13 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 joinedLobby.RemovePlayer(joinedLobby.Players.FirstOrDefault(e => e.DiscordId == user.Id));
 
-                await this.ReplyAsync($"{user.Mention} has been kicked from lobby #{joinedLobby.LobbyNumber}.");
+                await ctx.RespondAsync($"{user.Mention} has been kicked from lobby #{joinedLobby.LobbyNumber}.");
 
                 if (joinedLobby.Players.Count == 0)
                 {
                     joinedLobby.Close();
 
-                    await this.ReplyAsync($"Lobby #{joinedLobby.LobbyNumber} has been disbanded.");
+                    await ctx.RespondAsync($"Lobby #{joinedLobby.LobbyNumber} has been disbanded.");
                 }
             }
             else
@@ -369,7 +371,7 @@ namespace SquidDraftLeague.Bot.Commands
                         joinedSet.DraftPlayers.First(e => e.DiscordId == user.Id));
                 }
 
-                await this.ReplyAsync(
+                await ctx.RespondAsync(
                     $"{user.Mention} was kicked from the set. " +
                     $"Temporarily, players will not be requeued due to a bug that David is too stoopid to fix, please %join in draft to requeue " +
                     $"Beginning removal of access to this channel in 30 seconds. " +
@@ -378,18 +380,18 @@ namespace SquidDraftLeague.Bot.Commands
 
                 #region RemovedForBug
 
-                //Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
+                /*Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
 
-                //if (movedLobby == null)
-                //{
-                //    // TODO Not sure what to do if all lobbies are filled.
-                //    return;
-                //}
+                if (movedLobby == null)
+                {
+                    // TODO Not sure what to do if all lobbies are filled.
+                    return;
+                }
 
-                //foreach (SdlPlayer joinedSetPlayer in joinedSet.AllPlayers)
-                //{
-                //    movedLobby.AddPlayer(joinedSetPlayer, true);
-                //}
+                foreach (SdlPlayer joinedSetPlayer in joinedSet.AllPlayers)
+                {
+                    movedLobby.AddPlayer(joinedSetPlayer, true);
+                }*/
 
                 #endregion
 
@@ -397,31 +399,31 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await Task.Delay(TimeSpan.FromSeconds(30));
 
-                List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
+                List<DiscordRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => ctx.Guild.GetRole(e)).ToList();
 
-                await user.RemoveRolesAsync(roleRemovalList.Where(x => user.RoleIds.Contains(x.Id)));
+                await user.RemoveRolesAsync(roleRemovalList.Where(x => user.Roles.Select(xr => xr.Id).Contains(x.Id)));
 
                 #region AlsoRemoved
-                //foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
-                //{
-                //    SocketGuildUser movedGuildUser = this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId);
-                //    await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
-                //}
+                /*foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
+                {
+                    SocketGuildUser movedGuildUser = ctx.Guild.GetUser(movedLobbyPlayer.DiscordId);
+                    await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
+                }
 
-                //await ((ITextChannel)this.Context.Client.GetChannel(572536965833162753))
-                //    .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.",
-                //        embed: movedLobby.GetEmbedBuilder().Build());
+                await ((ITextChannel)ctx.Client.GetChannel(572536965833162753))
+                    .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.",
+                        embed: movedLobby.GetEmbedBuilder().Build());*/
                 #endregion
             }
         }
 
         [Command("leave"),
-         Summary("Leaves a currently joined lobby.")]
-        public async Task Leave()
+         Description("Leaves a currently joined lobby.")]
+        public async Task Leave(CommandContext ctx)
         {
             try
             {
-                if (!(this.Context.User is IGuildUser user))
+                if (!(ctx.User is DiscordMember user))
                     return;
 
                 Lobby joinedLobby = Matchmaker.Lobbies.FirstOrDefault(e => e.Players.Any(f => f.DiscordId == user.Id));
@@ -430,13 +432,13 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     joinedLobby.RemovePlayer(joinedLobby.Players.FirstOrDefault(e => e.DiscordId == user.Id));
 
-                    await this.ReplyAsync($"You have left lobby #{joinedLobby.LobbyNumber}.");
+                    await ctx.RespondAsync($"You have left lobby #{joinedLobby.LobbyNumber}.");
 
                     if (joinedLobby.Players.Count == 0)
                     {
                         joinedLobby.Close();
 
-                        await this.ReplyAsync($"Lobby #{joinedLobby.LobbyNumber} has been disbanded.");
+                        await ctx.RespondAsync($"Lobby #{joinedLobby.LobbyNumber} has been disbanded.");
                     }
                 }
                 else
@@ -448,7 +450,7 @@ namespace SquidDraftLeague.Bot.Commands
                         return;
                     }
 
-                    if (this.Context.Channel.Id != CommandHelper.ChannelFromSet(joinedSet.SetNumber).Id)
+                    if (ctx.Channel.Id != (await CommandHelper.ChannelFromSet(joinedSet.SetNumber)).Id)
                     {
                         return;
                     }
@@ -494,15 +496,18 @@ namespace SquidDraftLeague.Bot.Commands
                         };
                     }
 
-                    await this.ReplyAsync(penaltyMessage + "\nAre you sure you wish to leave the set? (Y/N)");
+                    await ctx.RespondAsync(penaltyMessage + "\nAre you sure you wish to leave the set? (Y/N)");
 
-                    SocketMessage response = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(1));
+                    InteractivityModule interactivity = ctx.Client.GetInteractivityModule();
+
+                    MessageContext response =
+                        await interactivity.WaitForMessageAsync(x => user.Id == x.Author.Id, TimeSpan.FromMinutes(1));
 
                     if (response == null)
                     {
-                        await this.ReplyAsync($"{user.Mention} took too long to respond. Assuming you changed your mind, please continue with the set.");
+                        await ctx.RespondAsync($"{user.Mention} took too long to respond. Assuming you changed your mind, please continue with the set.");
                     }
-                    else if (response.Content.ToLower() == "y")
+                    else if (response.Message.Content.ToLower() == "y")
                     {
                         decimal points = await MatchModule.ReportScores(joinedSet, true);
                         
@@ -533,14 +538,14 @@ namespace SquidDraftLeague.Bot.Commands
 
                         File.WriteAllText(penaltyFile, JsonConvert.SerializeObject(record, Formatting.Indented));
 
-                        await this.ReplyAsync(
+                        await ctx.RespondAsync(
                             $"{user.Mention} Aforementioned penalty applied. Don't make a habit of this! " +
                             $"As for the rest of the set, you will return to <#572536965833162753> to requeue. " +
                             $"Beginning removal of access to this channel in 30 seconds. " +
                             $"Rate limiting may cause the full process to take up to two minutes.",
                             embed: joinedSet.GetScoreEmbedBuilder(points, points / 2).Build());
 
-                        Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
+                        /*Lobby movedLobby = Matchmaker.Lobbies.First(e => !e.Players.Any());
 
                         if (movedLobby == null)
                         {
@@ -551,29 +556,29 @@ namespace SquidDraftLeague.Bot.Commands
                         foreach (SdlPlayer joinedSetPlayer in joinedSet.AllPlayers)
                         {
                             movedLobby.AddPlayer(joinedSetPlayer, true);
-                        }
+                        }*/
 
                         joinedSet.Close();
 
                         await Task.Delay(TimeSpan.FromSeconds(30));
 
-                        List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
+                        List<DiscordRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => ctx.Guild.GetRole(e)).ToList();
 
-                        await user.RemoveRolesAsync(roleRemovalList.Where(x => user.RoleIds.Contains(x.Id)));
+                        await user.RemoveRolesAsync(roleRemovalList.Where(x => user.Roles.Select(xr => xr.Id).Contains(x.Id)));
 
-                        foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
+                        /*foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
                         {
-                            SocketGuildUser movedGuildUser = this.Context.Guild.GetUser(movedLobbyPlayer.DiscordId);
+                            DiscordMember movedGuildUser = await ctx.Guild.GetMemberAsync(movedLobbyPlayer.DiscordId);
                             await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
                         }
 
-                        await ((ITextChannel) this.Context.Client.GetChannel(572536965833162753))
+                        await (await ctx.Client.GetChannelAsync(572536965833162753))
                             .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.", 
-                                embed: movedLobby.GetEmbedBuilder().Build());
+                                embed: movedLobby.GetEmbedBuilder().Build());*/
                     }
                     else
                     {
-                        await this.ReplyAsync("Assuming you declined leaving since you did not reply with \"Y\". Please continue with the set.");
+                        await ctx.RespondAsync("Assuming you declined leaving since you did not reply with \"Y\". Please continue with the set.");
                     }
                 }
             }

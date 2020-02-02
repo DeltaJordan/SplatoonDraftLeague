@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Addons.Interactive;
-using Discord.Commands;
-using Discord.WebSocket;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
+using DSharpPlus.Interactivity;
+using Google.Protobuf;
 using NLog;
 using SquidDraftLeague.Bot.Commands.Attributes;
 using SquidDraftLeague.Bot.Commands.Preconditions;
@@ -21,8 +24,7 @@ using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Match")]
-    public class MatchModule : InteractiveBase<SocketCommandContext>
+    public class MatchModule
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
@@ -33,25 +35,25 @@ namespace SquidDraftLeague.Bot.Commands
         // NOTE This is where we'll have to implement the different match amounts for cups.
         private const int SET_MATCH_NUMBER = 7;
 
-        public static async Task MoveToMatch(SocketTextChannel context, Set set)
+        public static async Task MoveToMatch(DiscordChannel context, Set set)
         {
             await context.SendMessageAsync("Both teams are drafted! Please wait while roles are being distributed...");
 
-            IRole alphaRole = context.Guild.Roles.First(e => e.Name == $"Alpha ({set.SetNumber})");
-            IRole bravoRole = context.Guild.Roles.First(e => e.Name == $"Bravo ({set.SetNumber})");
+            DiscordRole alphaRole = context.Guild.Roles.First(e => e.Name == $"Alpha ({set.SetNumber})");
+            DiscordRole bravoRole = context.Guild.Roles.First(e => e.Name == $"Bravo ({set.SetNumber})");
 
             foreach (SdlPlayer alphaTeamPlayer in set.AlphaTeam.Players)
             {
-                await context.Guild.GetUser(alphaTeamPlayer.DiscordId).AddRoleAsync(alphaRole);
+                await (await context.Guild.GetMemberAsync(alphaTeamPlayer.DiscordId)).GrantRoleAsync(alphaRole);
             }
 
             foreach (SdlPlayer bravoTeamPlayer in set.BravoTeam.Players)
             {
-                await context.Guild.GetUser(bravoTeamPlayer.DiscordId).AddRoleAsync(bravoRole);
+                await (await context.Guild.GetMemberAsync(bravoTeamPlayer.DiscordId)).GrantRoleAsync(bravoRole);
             }
 
-            await alphaRole.ModifyAsync(e => e.Mentionable = true);
-            await bravoRole.ModifyAsync(e => e.Mentionable = true);
+            await context.Guild.UpdateRoleAsync(alphaRole, mentionable: true);
+            await context.Guild.UpdateRoleAsync(bravoRole, mentionable: true);
             await context.SendMessageAsync($"{alphaRole.Mention} {bravoRole.Mention} To begin, please join your respective voice channels.\n" +
                                                    $"After everyone is situated, please create and join a Private Battle and have the host select the map and mode chosen after this message. " +
                                                    $"Once the match is over, the captain of the **losing team** will use %score to report the score like so:\n" +
@@ -72,7 +74,7 @@ namespace SquidDraftLeague.Bot.Commands
                 return;
             }
 
-            IUser hostUser = context.GetUser(selectHostResponse.DiscordId.Value);
+            DiscordMember hostUser = await context.Guild.GetMemberAsync(selectHostResponse.DiscordId.Value);
 
             set.Host = set.AllPlayers.First(e => e.DiscordId == hostUser.Id);
 
@@ -80,14 +82,14 @@ namespace SquidDraftLeague.Bot.Commands
             set.PickStages(mapList);
             Stage selectedStage = set.GetCurrentStage();
 
-            EmbedBuilder embed = new EmbedBuilder
+            DiscordEmbedBuilder embed = new DiscordEmbedBuilder
             {
                 Title = $"Stages for Set #{set.SetNumber}",
                 Description = 
                     string.Join("\n", set.Stages.Select(x => $"<:{x.GetModeEmote().Name}:{x.GetModeEmote().Id}> {x.MapName}"))
             };
 
-            await context.Guild.GetTextChannel(601123765237186560).SendMessageAsync(embed: embed.Build());
+            await context.Guild.GetChannel(601123765237186560).SendMessageAsync(embed: embed.Build());
 
             await context.SendMessageAsync(embed: selectedStage
                 .GetEmbedBuilder($"Match 1 of 7: {selectedStage.MapName}")
@@ -105,55 +107,55 @@ namespace SquidDraftLeague.Bot.Commands
                 })
                 .Build());
 
-            await context.SendMessageAsync($"{hostUser.Mention} has been selected as host! The password will be **{hostUser.DiscriminatorValue}**. " +
+            await context.SendMessageAsync($"{hostUser.Mention} has been selected as host! The password will be **{hostUser.Discriminator}**. " +
                                            $"Note that if this person is not capable of hosting (due to internet connection etc.) " +
                                            $"it is fine for another person to do so, however keep in mind that situation permitting this person is **first choice** as host.");
 
             await context.SendMessageAsync("🦑Now then. let the games commence!🐙");
 
             OrderedFeedMessages[set.SetNumber - 1] = 
-                (await context.Guild.GetTextChannel(666563839646760960)
-                    .SendMessageAsync(embed: set.GetFeedEmbedBuilder().Build()))
+                (await context.Guild.GetChannel(666563839646760960)
+                    .SendMessageAsync(embed: set.GetFeedEmbedBuilder(context).Build()))
                     .Id;
 
-            IRole setRole = context.Guild.Roles.First(e => e.Name == $"In Set ({set.SetNumber})");
+            DiscordRole setRole = context.Guild.Roles.First(e => e.Name == $"In Set ({set.SetNumber})");
 
             foreach (SdlPlayer allPlayer in set.AllPlayers)
             {
-                await context.Guild.GetUser(allPlayer.DiscordId).RemoveRoleAsync(setRole);
+                await (await context.Guild.GetMemberAsync(allPlayer.DiscordId)).RevokeRoleAsync(setRole);
             }
         }
 
         [Command("canhost"),
-         Summary("Toggles whether you wish to be a prioritized candidate to host sets.")]
-        public async Task CanHost()
+         Description("Toggles whether you wish to be a prioritized candidate to host sets.")]
+        public async Task CanHost(CommandContext ctx)
         {
-            if (Matchmaker.ToggleCanHost(this.Context.User.Id))
+            if (Matchmaker.ToggleCanHost(ctx.User.Id))
             {
-                await this.ReplyAsync("You are now a priority candidate to host during sets.");
+                await ctx.RespondAsync("You are now a priority candidate to host during sets.");
             }
             else
             {
-                await this.ReplyAsync("You are no longer a priority candidate to host during sets.");
+                await ctx.RespondAsync("You are no longer a priority candidate to host during sets.");
             }
         }
 
         [Command("host"),
-         Summary("Shows information about the host of this set.")]
-        public async Task Host()
+         Description("Shows information about the host of this set.")]
+        public async Task Host(CommandContext ctx)
         {
             Set playerSet =
-                Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == this.Context.User.Id));
+                Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == ctx.User.Id));
 
             if (playerSet == null ||
-                CommandHelper.ChannelFromSet(playerSet.SetNumber).Id != this.Context.Channel.Id)
+                (await CommandHelper.ChannelFromSet(playerSet.SetNumber)).Id != ctx.Channel.Id)
             {
                 return;
             }
 
-            SocketGuildUser hostUser = this.Context.Guild.GetUser(playerSet.Host.DiscordId);
+            DiscordMember hostUser = await ctx.Guild.GetMemberAsync(playerSet.Host.DiscordId);
 
-            EmbedBuilder builder = new EmbedBuilder();
+            DiscordEmbedBuilder builder = new DiscordEmbedBuilder();
             builder.AddField(e =>
             {
                 e.Name = "Host";
@@ -164,29 +166,29 @@ namespace SquidDraftLeague.Bot.Commands
             builder.AddField(e =>
             {
                 e.Name = "Generated Password";
-                e.Value = hostUser.DiscriminatorValue;
+                e.Value = hostUser.Discriminator;
                 e.IsInline = true;
             });
 
-            await this.ReplyAsync(embed: builder.Build());
+            await ctx.RespondAsync(embed: builder.Build());
         }
 
         [Command("dispute"),
-         Summary("Reports a discrepancy in a set to moderators.")]
-        public async Task Dispute()
+         Description("Reports a discrepancy in a set to moderators.")]
+        public async Task Dispute(CommandContext ctx)
         {
             Set playerSet =
-                Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == this.Context.User.Id));
+                Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == ctx.User.Id));
 
-            IRole modRole = this.Context.Guild.Roles.First(e => e.Name == "Moderator");
+            DiscordRole modRole = ctx.Guild.Roles.First(e => e.Name == "Moderator");
 
             if (playerSet == null)
             {
-                await this.ReplyAsync(Resources.ReportErrorResponse);
+                await ctx.RespondAsync(Resources.ReportErrorResponse);
                 return;
             }
 
-            await this.ReplyAsync($"{modRole.Mention} A dispute has been opened by {this.Context.User.Mention}!"+
+            await ctx.RespondAsync($"{modRole.Mention} A dispute has been opened by {ctx.User.Mention}!"+
                                   $"To resolve the error, use `%resolve` and follow the resulting instructions. " +
                                   $"Otherwise, use `%resolve deny` to continue reporting the current score.");
 
@@ -195,17 +197,17 @@ namespace SquidDraftLeague.Bot.Commands
 
         [Command("resolve"),
          RequireRole("Moderator")]
-        public async Task Resolve(string deny = null, int setNumber = 0)
+        public async Task Resolve(CommandContext ctx, string deny = null, int setNumber = 0)
         {
             Set playerSet;
 
             if (setNumber == 0)
             {
-                playerSet = CommandHelper.SetFromChannel(this.Context.Channel.Id);
+                playerSet = CommandHelper.SetFromChannel(ctx.Channel.Id);
 
                 if (playerSet == null)
                 {
-                    await this.ReplyAsync("Please specify set number or use the correct channel as context.");
+                    await ctx.RespondAsync("Please specify set number or use the correct channel as context.");
                     return;
                 }
             }
@@ -222,16 +224,16 @@ namespace SquidDraftLeague.Bot.Commands
                     playerSet.BravoTeam.Score > SET_MATCH_NUMBER / 2 ||
                     playerSet.MatchNum == SET_MATCH_NUMBER)
                 {
-                    await this.EndMatchAsync(playerSet);
+                    await this.EndMatchAsync(playerSet, ctx);
 
                     return;
                 }
 
-                await this.ReplyAsync("The report has been resolved by a moderator. This is a final decision. Please continue with the set.");
+                await ctx.RespondAsync("The report has been resolved by a moderator. This is a final decision. Please continue with the set.");
 
                 Stage selectedRandomStage = playerSet.GetCurrentStage();
 
-                await this.ReplyAsync(embed: selectedRandomStage
+                await ctx.RespondAsync(embed: selectedRandomStage
                     .GetEmbedBuilder($"Match {playerSet.MatchNum} of 7: {selectedRandomStage.MapName}")
                     .AddField(e =>
                     {
@@ -259,7 +261,7 @@ namespace SquidDraftLeague.Bot.Commands
             playerSet.BravoTeam.OrderedMatchResults.Clear();
 
             Stage selectedStage = playerSet.Stages[0];
-            await this.ReplyAsync("Moderator, use `%overwrite [Team]` to select the winner for this map.", 
+            await ctx.RespondAsync("Moderator, use `%overwrite [Team]` to select the winner for this map.", 
                 embed: selectedStage.GetEmbedBuilder($"Match 1 of 7: {selectedStage.MapName}")
                 .AddField(e =>
                 {
@@ -278,17 +280,17 @@ namespace SquidDraftLeague.Bot.Commands
 
         [Command("overwrite"),
          RequireRole("Moderator")]
-        public async Task Overwrite(string team, int set = 0)
+        public async Task Overwrite(CommandContext ctx, string team, int set = 0)
         {
             Set selectedSet;
 
             if (set == 0)
             {
-                selectedSet = CommandHelper.SetFromChannel(this.Context.Channel.Id);
+                selectedSet = CommandHelper.SetFromChannel(ctx.Channel.Id);
 
                 if (selectedSet == null)
                 {
-                    await this.ReplyAsync("Please specify set number or use the correct channel as context.");
+                    await ctx.RespondAsync("Please specify set number or use the correct channel as context.");
                     return;
                 }
             }
@@ -310,19 +312,19 @@ namespace SquidDraftLeague.Bot.Commands
                     selectedSet.BravoTeam.Score > SET_MATCH_NUMBER / 2 ||
                     selectedSet.MatchNum == SET_MATCH_NUMBER)
                 {
-                    await this.ReplyAsync("Resolved all issues! All scores will be reported to Airtable.");
+                    await ctx.RespondAsync("Resolved all issues! All scores will be reported to Airtable.");
 
-                    await this.EndMatchAsync(selectedSet);
+                    await this.EndMatchAsync(selectedSet, ctx);
                 }
                 else
                 {
-                    await this.ReplyAsync("Resolved all issues! Teams, continue with your matches.");
+                    await ctx.RespondAsync("Resolved all issues! Teams, continue with your matches.");
 
                     selectedSet.MatchNum++;
 
                     Stage selectedStage = selectedSet.Stages[selectedSet.MatchNum - 1];
 
-                    await this.ReplyAsync(embed: selectedStage
+                    await ctx.RespondAsync(embed: selectedStage
                         .GetEmbedBuilder($"Match {selectedSet.MatchNum} of 7: {selectedStage.MapName}")
                         .AddField(e =>
                         {
@@ -338,14 +340,14 @@ namespace SquidDraftLeague.Bot.Commands
                         })
                         .Build());
 
-                    IUserMessage feedMessage = (IUserMessage) await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[selectedSet.SetNumber - 1]);
-                    await feedMessage.ModifyAsync(x => { x.Embed = selectedSet.GetFeedEmbedBuilder().Build(); });
+                    DiscordMessage feedMessage = await ctx.Guild.GetChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[selectedSet.SetNumber - 1]);
+                    await feedMessage.ModifyAsync(embed: selectedSet.GetFeedEmbedBuilder(ctx.Channel).Build());
                 }
             }
             else
             {
                 Stage selectedStage = selectedSet.Stages[selectedSet.MatchNum];
-                await this.ReplyAsync("Moderator, use `%overwrite [Team]` to select the winner for this map.",
+                await ctx.RespondAsync("Moderator, use `%overwrite [Team]` to select the winner for this map.",
                     embed: selectedStage.GetEmbedBuilder($"Match {selectedSet.MatchNum + 1} of 7: {selectedStage.MapName}")
                         .AddField(e =>
                         {
@@ -364,12 +366,12 @@ namespace SquidDraftLeague.Bot.Commands
         }
 
         [Command("score")]
-        public async Task Score()
+        public async Task Score(CommandContext ctx)
         {
             Set playerSet =
-                Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == this.Context.User.Id));
+                Matchmaker.Sets.FirstOrDefault(e => e.AllPlayers.Any(f => f.DiscordId == ctx.User.Id));
 
-            IRole modRole = this.Context.Guild.Roles.First(e => e.Name == "Moderator");
+            DiscordRole modRole = ctx.Guild.Roles.First(e => e.Name == "Moderator");
 
             if (playerSet == null)
             {
@@ -389,7 +391,7 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (playerSet.Locked)
             {
-                await this.ReplyAsync("This set will be locked until a moderator addresses the report. Please wait.");
+                await ctx.RespondAsync("This set will be locked until a moderator addresses the report. Please wait.");
                 return;
             }
 
@@ -398,19 +400,19 @@ namespace SquidDraftLeague.Bot.Commands
                 return;
             }
 
-            if (this.Context.Channel.Id != CommandHelper.ChannelFromSet(playerSet.SetNumber).Id)
+            if (ctx.Channel.Id != (await CommandHelper.ChannelFromSet(playerSet.SetNumber)).Id)
             {
                 return;
             }
 
-            if (!playerSet.AlphaTeam.IsCaptain(this.Context.User.Id) && 
-                !playerSet.BravoTeam.IsCaptain(this.Context.User.Id))
+            if (!playerSet.AlphaTeam.IsCaptain(ctx.User.Id) && 
+                !playerSet.BravoTeam.IsCaptain(ctx.User.Id))
             {
-                await this.ReplyAsync("Only the captain of the losing team can report the score.");
+                await ctx.RespondAsync("Only the captain of the losing team can report the score.");
                 return;
             }
 
-            string team = playerSet.AlphaTeam.IsCaptain(this.Context.User.Id) ? "bravo" : "alpha";
+            string team = playerSet.AlphaTeam.IsCaptain(ctx.User.Id) ? "bravo" : "alpha";
 
             playerSet.ReportScore(team);
 
@@ -421,7 +423,7 @@ namespace SquidDraftLeague.Bot.Commands
                 string winner = playerSet.AlphaTeam.Score > playerSet.BravoTeam.Score ? "Alpha" : "Bravo";
                 string loser = playerSet.AlphaTeam.Score < playerSet.BravoTeam.Score ? "Alpha" : "Bravo";
 
-                EmbedBuilder builder = new EmbedBuilder();
+                DiscordEmbedBuilder builder = new DiscordEmbedBuilder();
                 builder.WithTitle("__Results__");
                 builder.AddField(e =>
                 {
@@ -430,20 +432,25 @@ namespace SquidDraftLeague.Bot.Commands
                     e.Value = $"{winner} Wins {playerSet.AlphaTeam.Score} - {playerSet.BravoTeam.Score}";
                 });
 
-                await this.ReplyAsync($"The winner of this set is Team {winner}!", embed: builder.Build());
+                await ctx.RespondAsync($"The winner of this set is Team {winner}!", embed: builder.Build());
 
-                IRole loserRole = loser == "Alpha" ? 
-                    this.Context.Guild.Roles.First(e => e.Name == $"Alpha ({playerSet.SetNumber})") : 
-                    this.Context.Guild.Roles.First(e => e.Name == $"Bravo ({playerSet.SetNumber})");
+                DiscordRole loserRole = loser == "Alpha" ? 
+                    ctx.Guild.Roles.First(e => e.Name == $"Alpha ({playerSet.SetNumber})") : 
+                    ctx.Guild.Roles.First(e => e.Name == $"Bravo ({playerSet.SetNumber})");
 
-                await this.ReplyAsync(
+                await ctx.RespondAsync(
                     $"{loserRole.Mention}, please acknowledge these results by either sending \"confirm\" or \"deny\".");
 
+                InteractivityModule interactivity = ctx.Client.GetInteractivityModule();
+
                 DateTime timeoutDateTime = DateTime.Now + TimeSpan.FromMinutes(2);
-                SocketMessage replyMessage;
+                MessageContext replyMessage;
                 try
                 {
-                    replyMessage = await this.NextMessageAsync(false, true, TimeSpan.FromMinutes(1));
+                    replyMessage = await interactivity.WaitForMessageAsync(x =>
+                        {
+                            return ((DiscordMember) x.Author).Roles.Select(e => e.Id).Contains(loserRole.Id);
+                        }, TimeSpan.FromMinutes(1));
                 }
                 catch (Exception e)
                 {
@@ -454,46 +461,33 @@ namespace SquidDraftLeague.Bot.Commands
 
                 while (true)
                 {
-                    if (replyMessage == null)
+                    if (replyMessage.Message == null)
                     {
-                        await this.ReplyAsync("Time's up! Assuming the losing team has accepted their loss.");
+                        await ctx.RespondAsync("Time's up! Assuming the losing team has accepted their loss.");
 
-                        await this.EndMatchAsync(playerSet);
+                        await this.EndMatchAsync(playerSet, ctx);
 
                         return;
                     }
 
-                    SocketGuildUser authorGuildUser = (SocketGuildUser) replyMessage.Author;
-
-                    if (!authorGuildUser.Roles.Select(e => e.Id).Contains(loserRole.Id))
+                    if (replyMessage.Message.Content.ToLower() == "confirm")
                     {
-                        if (DateTime.Now > timeoutDateTime)
-                        {
-                            await this.EndMatchAsync(playerSet);
-
-                            return;
-                        }
-
-                        replyMessage = await this.NextMessageAsync(false, true, timeoutDateTime - DateTime.Now);
-                        continue;
-                    }
-
-                    if (replyMessage.Content.ToLower() == "confirm")
-                    {
-                        await this.EndMatchAsync(playerSet);
+                        await this.EndMatchAsync(playerSet, ctx);
 
                         return;
                     }
 
-                    if (replyMessage.Content.ToLower() == "deny")
+                    if (replyMessage.Message.Content.ToLower() == "deny")
                     {
-                        await this.ReplyAsync($"{modRole.Mention} issue reported by {replyMessage.Author.Mention}. " +
+                        await ctx.RespondAsync($"{modRole.Mention} issue reported by {replyMessage.Message.Author.Mention}. " +
                                               $"To resolve the error, use `%resolve` and follow the resulting instructions." +
                                               $" Otherwise, use `%resolve deny` to continue reporting the current score.");
                         return;
                     }
 
-                    replyMessage = await this.NextMessageAsync(false, true, timeoutDateTime - DateTime.Now);
+                    replyMessage = await interactivity.WaitForMessageAsync(x => {
+                        return ((DiscordMember)x.Author).Roles.Select(e => e.Id).Contains(loserRole.Id);
+                    }, timeoutDateTime - DateTime.Now);
                 }
             }
             else
@@ -504,7 +498,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                     Stage selectedStage = playerSet.GetCurrentStage();
 
-                    await this.ReplyAsync(embed: selectedStage
+                    await ctx.RespondAsync(embed: selectedStage
                         .GetEmbedBuilder($"Match {playerSet.MatchNum} of 7: {selectedStage.MapName}")
                         .AddField(e =>
                         {
@@ -520,8 +514,8 @@ namespace SquidDraftLeague.Bot.Commands
                         })
                         .Build());
 
-                    IUserMessage feedMessage = (IUserMessage)await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
-                    await feedMessage.ModifyAsync(x => { x.Embed = playerSet.GetFeedEmbedBuilder().Build(); });
+                    DiscordMessage feedMessage = (DiscordMessage)await ctx.Guild.GetChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
+                    await feedMessage.ModifyAsync(embed: playerSet.GetFeedEmbedBuilder(ctx.Channel).Build());
                 }
                 catch (Exception e)
                 {
@@ -531,54 +525,54 @@ namespace SquidDraftLeague.Bot.Commands
             }
         }
 
-        private async Task EndMatchAsync(Set playerSet)
+        private async Task EndMatchAsync(Set playerSet, CommandContext ctx)
         {
             decimal points = await ReportScores(playerSet);
 
             //TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));
             //TimePeriod halfPeriod = new TimePeriod(TimeSpan.Parse("1:00"), TimeSpan.Parse("2:00"));
 
-            Embed setEmbed = playerSet.GetScoreEmbedBuilder(points,
+            DiscordEmbed setEmbed = playerSet.GetScoreEmbedBuilder(points,
                 /*happyPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault()) ||
                 halfPeriod.IsWithinPeriod(playerSet.StartTime.GetValueOrDefault())
                     ? points / 2
                     :*/ points).Build();
 
-            await this.ReplyAsync($"Congratulations Team {playerSet.Winning} on their victory! " +
+            await ctx.RespondAsync($"Congratulations Team {playerSet.Winning} on their victory! " +
                                   $"Everyone's power levels have been updated to reflect this match. " +
                                   $"Beginning removal of access to this channel in 30 seconds. " +
                                   $"Rate limiting may cause the full process to take up to two minutes.",
                 embed: setEmbed);
 
-            IUserMessage feedMessage = (IUserMessage)await this.Context.Guild.GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
-            await feedMessage.ModifyAsync(x =>
-            {
-                EmbedBuilder feedEmbedBuilder = playerSet.GetFeedEmbedBuilder().WithColor(Color.Green);
-                feedEmbedBuilder.Description = $"**{playerSet.Winning}** has won with a score of {playerSet.AlphaTeam.Score}-{playerSet.BravoTeam.Score}!";
-                x.Embed = feedEmbedBuilder.Build();
-            });
+            DiscordMessage feedMessage = (DiscordMessage)await ctx.Guild.GetChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
+            DiscordEmbedBuilder feedEmbedBuilder = playerSet.GetFeedEmbedBuilder(ctx.Channel).WithColor(Color.Green);
+            feedEmbedBuilder.Description = $"**{playerSet.Winning}** has won with a score of {playerSet.AlphaTeam.Score}-{playerSet.BravoTeam.Score}!";
+            await feedMessage.ModifyAsync(embed: feedEmbedBuilder.Build());
 
             await Task.Delay(30000);
 
-            List<SocketRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => this.Context.Guild.GetRole(e)).ToList();
+            List<DiscordRole> roleRemovalList = CommandHelper.DraftRoleIds.Select(e => ctx.Guild.GetRole(e)).ToList();
 
             foreach (SdlPlayer playerSetAllPlayer in playerSet.AllPlayers)
             {
-                SocketGuildUser guildUser = this.Context.Guild.GetUser(playerSetAllPlayer.DiscordId);
+                DiscordMember guildUser = await ctx.Guild.GetMemberAsync(playerSetAllPlayer.DiscordId);
 
-                await guildUser.RemoveRolesAsync(roleRemovalList.Where(e =>
-                    this.Context.Guild.GetUser(guildUser.Id).Roles
-                        .Any(f => e.Id == f.Id)));
+                foreach (DiscordRole discordRole in roleRemovalList.Where(e =>
+                    ctx.Guild.GetMemberAsync(guildUser.Id).Result.Roles
+                        .Any(f => e.Id == f.Id)))
+                {
+                    await guildUser.RevokeRoleAsync(discordRole);
+                }
             }
 
             playerSet.Close();
 
-            IRole classOneRole = this.Context.Guild.GetRole(600770643075661824);
-            IRole classTwoRole = this.Context.Guild.GetRole(600770814521901076);
-            IRole classThreeRole = this.Context.Guild.GetRole(600770862307606542);
-            IRole classFourRole = this.Context.Guild.GetRole(600770905282576406);
+            DiscordRole classOneRole = ctx.Guild.GetRole(600770643075661824);
+            DiscordRole classTwoRole = ctx.Guild.GetRole(600770814521901076);
+            DiscordRole classThreeRole = ctx.Guild.GetRole(600770862307606542);
+            DiscordRole classFourRole = ctx.Guild.GetRole(600770905282576406);
 
-            IRole[] allClassRoles = { classOneRole, classTwoRole, classThreeRole, classFourRole };
+            DiscordRole[] allClassRoles = { classOneRole, classTwoRole, classThreeRole, classFourRole };
 
             string optOutDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Opt Out")).FullName;
 
@@ -586,7 +580,7 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 try
                 {
-                    SocketGuildUser sdlGuildUser = this.Context.Guild.GetUser(sdlPlayer.DiscordId);
+                    DiscordMember sdlGuildUser = await ctx.Guild.GetMemberAsync(sdlPlayer.DiscordId);
 
                     if (File.Exists(Path.Combine(optOutDirectory, $"{sdlGuildUser.Id}.dat")))
                     {
@@ -603,7 +597,7 @@ namespace SquidDraftLeague.Bot.Commands
                                 await sdlGuildUser.RemoveRolesAsync(allClassRoles.Where(e =>
                                     sdlGuildUser.Roles.Any(f => f.Id == e.Id)));
 
-                                await sdlGuildUser.AddRoleAsync(classOneRole);
+                                await sdlGuildUser.GrantRoleAsync(classOneRole);
                             }
                             break;
                         case SdlClass.Two:
@@ -612,7 +606,7 @@ namespace SquidDraftLeague.Bot.Commands
                                 await sdlGuildUser.RemoveRolesAsync(allClassRoles.Where(e =>
                                     sdlGuildUser.Roles.Any(f => f.Id == e.Id)));
 
-                                await sdlGuildUser.AddRoleAsync(classTwoRole);
+                                await sdlGuildUser.GrantRoleAsync(classTwoRole);
                             }
                             break;
                         case SdlClass.Three:
@@ -621,7 +615,7 @@ namespace SquidDraftLeague.Bot.Commands
                                 await sdlGuildUser.RemoveRolesAsync(allClassRoles.Where(e =>
                                     sdlGuildUser.Roles.Any(f => f.Id == e.Id)));
 
-                                await sdlGuildUser.AddRoleAsync(classThreeRole);
+                                await sdlGuildUser.GrantRoleAsync(classThreeRole);
                             }
                             break;
                         case SdlClass.Four:
@@ -630,7 +624,7 @@ namespace SquidDraftLeague.Bot.Commands
                                 await sdlGuildUser.RemoveRolesAsync(allClassRoles.Where(e =>
                                     sdlGuildUser.Roles.Any(f => f.Id == e.Id)));
 
-                                await sdlGuildUser.AddRoleAsync(classFourRole);
+                                await sdlGuildUser.GrantRoleAsync(classFourRole);
                             }
                             break;
                         default:
@@ -644,19 +638,19 @@ namespace SquidDraftLeague.Bot.Commands
             }
 
             // TODO Removed message clearing for the time being.
-            if (this.Context.Channel.Id == 0 /*CommandHelper.ChannelFromSet(playerSet.SetNumber).Id*/)
+            if (ctx.Channel.Id == 0 /*CommandHelper.ChannelFromSet(playerSet.SetNumber).Id*/)
             {
-                IEnumerable<IMessage> messages = await this.Context.Channel.GetMessagesAsync(1000 + 1).FlattenAsync();
+                /*IEnumerable<IMessage> messages = await ctx.Channel.GetMessagesAsync(1000 + 1).FlattenAsync();
 
-                await ((ITextChannel) this.Context.Channel).DeleteMessagesAsync(messages);
+                await ((ITextChannel) ctx.Channel).DeleteMessagesAsync(messages);
 
-                IUserMessage reply =
-                    await this.ReplyAsync(
+                DiscordMessage reply =
+                    await ctx.RespondAsync(
                         "Cleared the channel of 1000 messages. This message will be deleted in 10 seconds as well.");
 
                 await Task.Delay(10000);
 
-                await reply.DeleteAsync();
+                await reply.DeleteAsync();*/
             }
         }
 
@@ -710,12 +704,10 @@ namespace SquidDraftLeague.Bot.Commands
             
             if (forgiveLosing)
             {
-                IUserMessage feedMessage = (IUserMessage) await Program.Client.GetGuild(570743985530863649)
-                    .GetTextChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
-                await feedMessage.ModifyAsync(x =>
-                {
-                    x.Embed = playerSet.GetFeedEmbedBuilder().WithDescription("The set ended unnaturally.").Build();
-                });
+                DiscordMessage feedMessage = (DiscordMessage) await (await Program.Client.GetGuildAsync(570743985530863649))
+                    .GetChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
+                await feedMessage.ModifyAsync(embed: playerSet.GetFeedEmbedBuilder(null)
+                    .WithDescription("The set ended unnaturally.").Build());
             }
 
             //TimePeriod happyPeriod = new TimePeriod(TimeSpan.Parse("20:00"), TimeSpan.Parse("21:00"));

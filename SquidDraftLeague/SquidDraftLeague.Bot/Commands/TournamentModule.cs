@@ -4,10 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Addons.Interactive;
-using Discord.Commands;
-using Discord.WebSocket;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using Newtonsoft.Json;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Bot.Extensions;
@@ -17,10 +16,11 @@ using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Draft Cup")]
-    public class TournamentModule : InteractiveBase
+    public class TournamentModule
     {
-        private static readonly List<ulong> AllAvailablePlayers = new List<ulong>();
+        // TODO Can do this way later, especially since this will change.
+
+        /*private static readonly List<ulong> AllAvailablePlayers = new List<ulong>();
         private static readonly List<ulong> CurrentCaptains = new List<ulong>();
         private static readonly Dictionary<ulong, List<ulong>> Teams = new Dictionary<ulong, List<ulong>>();
         private static readonly List<int> RequiredCaptains = new List<int>();
@@ -28,14 +28,14 @@ namespace SquidDraftLeague.Bot.Commands
         private static bool isReverse = true;
 
         [Command("signUp")]
-        public async Task SignUp()
+        public async Task SignUp(CommandContext ctx)
         {
-            if (!(this.Context.User is SocketGuildUser user))
+            if (!(ctx.User is DiscordMember user))
             {
                 return;
             }
 
-            IDMChannel dmChannel = await this.Context.User.GetOrCreateDMChannelAsync();
+            IDMChannel dmChannel = await ctx.User.GetOrCreateDMChannelAsync();
 
             if (user.Roles.All(e => !string.Equals(e.Name, "Player", StringComparison.InvariantCultureIgnoreCase)))
             {
@@ -73,7 +73,7 @@ namespace SquidDraftLeague.Bot.Commands
                     signUpIds = JsonConvert.DeserializeObject<List<ulong>>(await File.ReadAllTextAsync(signUpFile));
                 }
 
-                if (signUpIds.Contains(this.Context.User.Id))
+                if (signUpIds.Contains(ctx.User.Id))
                 {
                     await this.ReplyAsync("You are already signed up!");
                     return;
@@ -90,7 +90,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await File.WriteAllTextAsync(codesFile, JsonConvert.SerializeObject(codes));
 
-                signUpIds.Add(this.Context.User.Id);
+                signUpIds.Add(ctx.User.Id);
 
                 await File.WriteAllTextAsync(signUpFile, JsonConvert.SerializeObject(signUpIds));
             }
@@ -103,7 +103,7 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("checkIn")]
         public async Task CheckIn()
         {
-            IDMChannel userDmChannel = await this.Context.User.GetOrCreateDMChannelAsync();
+            IDMChannel userDmChannel = await ctx.User.GetOrCreateDMChannelAsync();
             bool enabled = false;
 
             string tournamentDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Tournament")).FullName;
@@ -126,7 +126,7 @@ namespace SquidDraftLeague.Bot.Commands
                 checkedInPlayerIds =
                     JsonConvert.DeserializeObject<List<ulong>>(await File.ReadAllTextAsync(checkedInPlayersFile));
 
-                if (checkedInPlayerIds.Contains(this.Context.User.Id))
+                if (checkedInPlayerIds.Contains(ctx.User.Id))
                 {
                     await userDmChannel.SendMessageAsync("You have already checked in.");
                     return;
@@ -135,16 +135,16 @@ namespace SquidDraftLeague.Bot.Commands
 
             List<ulong> signUpIds = JsonConvert.DeserializeObject<List<ulong>>(await File.ReadAllTextAsync(signUpFile));
 
-            if (!signUpIds.Contains(this.Context.User.Id))
+            if (!signUpIds.Contains(ctx.User.Id))
             {
                 await userDmChannel.SendMessageAsync("You have not signed up for the draft cup.");
                 return;
             }
 
-            IRole checkInRole = this.Context.Guild.GetRole(604731261033906225);
-            await ((IGuildUser) this.Context.User).AddRoleAsync(checkInRole);
+            IRole checkInRole = ctx.Guild.GetRole(604731261033906225);
+            await ((IGuildUser) ctx.User).AddRoleAsync(checkInRole);
 
-            checkedInPlayerIds.Add(this.Context.User.Id);
+            checkedInPlayerIds.Add(ctx.User.Id);
 
             await File.WriteAllTextAsync(checkedInPlayersFile, JsonConvert.SerializeObject(checkedInPlayerIds));
 
@@ -176,7 +176,7 @@ namespace SquidDraftLeague.Bot.Commands
             try
             {
                 await this.DraftPick(
-                    this.Context.Guild.GetUser(AllAvailablePlayers[Globals.Random.Next(0, AllAvailablePlayers.Count - 1)]));
+                    ctx.Guild.GetUser(AllAvailablePlayers[Globals.Random.Next(0, AllAvailablePlayers.Count - 1)]));
             }
             catch (Exception e)
             {
@@ -188,7 +188,7 @@ namespace SquidDraftLeague.Bot.Commands
         [Command("draft"), RequireChannel(603361858522578954)]
         public async Task Draft(IGuildUser pickedUser)
         {
-            if (!(this.Context.User is IGuildUser user))
+            if (!(ctx.User is IGuildUser user))
                 return;
 
             if (user.Id != CurrentCaptains[currentCaptainIndex])
@@ -216,7 +216,7 @@ namespace SquidDraftLeague.Bot.Commands
 
         private async Task DraftPick(IGuildUser pickedUser)
         {
-            IGuildUser user = this.Context.Guild.GetUser(CurrentCaptains[currentCaptainIndex]);
+            IGuildUser user = ctx.Guild.GetUser(CurrentCaptains[currentCaptainIndex]);
 
             AllAvailablePlayers.Remove(pickedUser.Id);
             Teams[user.Id].Add(pickedUser.Id);
@@ -278,7 +278,7 @@ namespace SquidDraftLeague.Bot.Commands
                     }
 
                     string captainMentions =
-                        string.Join(" ", CurrentCaptains.Select(x => this.Context.Guild.GetUser(x).Mention));
+                        string.Join(" ", CurrentCaptains.Select(x => ctx.Guild.GetUser(x).Mention));
 
                     AllAvailablePlayers.RemoveAll(x => CurrentCaptains.Contains(x));
 
@@ -291,7 +291,7 @@ namespace SquidDraftLeague.Bot.Commands
                     await this.ReplyAsync($"The next captains will be {captainMentions}.");
 
                     await this.ReplyAsync(
-                        $"{this.Context.Guild.GetUser(CurrentCaptains[currentCaptainIndex]).Mention} will pick first by using `%draft [player]`.");
+                        $"{ctx.Guild.GetUser(CurrentCaptains[currentCaptainIndex]).Mention} will pick first by using `%draft [player]`.");
 
                     foreach (EmbedBuilder groupEmbedBuilder in this.GetGroupEmbedBuilders("Available Players",
                         allSdlPlayers.Where(x => AllAvailablePlayers.Contains(x.DiscordId))))
@@ -341,7 +341,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                     builder.AddField(x =>
                     {
-                        x.Name = $"{this.Context.Guild.GetUser(captain).Username}'s Team:";
+                        x.Name = $"{ctx.Guild.GetUser(captain).Username}'s Team:";
                         x.Value = string.Join("\n", team.Select(y => y.ToUserMention()));
                         x.IsInline = false;
                     });
@@ -411,7 +411,7 @@ namespace SquidDraftLeague.Bot.Commands
                 }
 
                 string captainMentions =
-                    string.Join(" ", CurrentCaptains.Select(x => this.Context.Guild.GetUser(x).Mention));
+                    string.Join(" ", CurrentCaptains.Select(x => ctx.Guild.GetUser(x).Mention));
 
                 AllAvailablePlayers.RemoveAll(x => CurrentCaptains.Contains(x));
 
@@ -425,7 +425,7 @@ namespace SquidDraftLeague.Bot.Commands
                 currentCaptainIndex = RequiredCaptains[0] - 1;
 
                 await this.ReplyAsync(
-                    $"{this.Context.Guild.GetUser(CurrentCaptains.Last()).Mention} will pick first by using `%draft [@player]`.");
+                    $"{ctx.Guild.GetUser(CurrentCaptains.Last()).Mention} will pick first by using `%draft [@player]`.");
 
                 IUserMessage messageToDelete = await this.ReplyAsync("Retrieving available players please wait...");
 
@@ -520,7 +520,7 @@ namespace SquidDraftLeague.Bot.Commands
 
             foreach (SdlPlayer sdlPlayer in group)
             {
-                string displayText = this.Context.Guild.GetUser(sdlPlayer.DiscordId).Mention;
+                string displayText = ctx.Guild.GetUser(sdlPlayer.DiscordId).Mention;
 
                 displayText += $" [{sdlPlayer.PowerLevel:0.0}]";
 
@@ -568,6 +568,6 @@ namespace SquidDraftLeague.Bot.Commands
             }
 
             return pagedBuilders.ToArray();
-        }
+        }*/
     }
 }

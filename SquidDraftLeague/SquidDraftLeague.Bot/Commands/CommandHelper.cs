@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
-using Discord;
-using Discord.WebSocket;
+using System.Threading.Tasks;
+using DSharpPlus.Entities;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Matchmaking;
 
@@ -57,12 +57,12 @@ namespace SquidDraftLeague.Bot.Commands
             return SetChannelIds.Contains(channel) ? Matchmaker.Sets[Array.IndexOf(SetChannelIds, channel)] : null;
         }
 
-        public static SocketTextChannel ChannelFromSet(int setNumber)
+        public static async Task<DiscordChannel> ChannelFromSet(int setNumber)
         {
             if (setNumber > SetChannelIds.Length)
                 return null;
 
-            return (SocketTextChannel) Program.Client.GetChannel(SetChannelIds[setNumber - 1]);
+            return await Program.Client.GetChannelAsync(SetChannelIds[setNumber - 1]);
         }
     }
 }

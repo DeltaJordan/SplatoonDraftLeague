@@ -1,15 +1,13 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Addons.Interactive;
-using Discord.Commands;
-using Discord.WebSocket;
 
 namespace SquidDraftLeague.Bot.Commands.Criterions
 {
-    public class HasRoleCriterion : ICriterion<SocketMessage>
+    public class HasRoleCriterion
     {
-        private readonly ulong id;
+        // TODO D#+ doesn't use this?
+
+        /*private readonly ulong id;
 
         public HasRoleCriterion(IRole role)
         {
@@ -29,6 +27,6 @@ namespace SquidDraftLeague.Bot.Commands.Criterions
             }
 
             return Task.FromResult(false);
-        }
+        }*/
     }
 }

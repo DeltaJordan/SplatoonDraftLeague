@@ -1,18 +1,19 @@
 ﻿using System;
+using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Commands;
+using DSharpPlus.CommandsNext.Attributes;
 using SquidDraftLeague.Bot.Commands.Attributes;
 using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Help")]
-    public class HelpModule : ModuleBase<SocketCommandContext>
+    public class HelpModule
     {
+        // TODO it seems D#+ has a built in help module.
 
-        private readonly CommandService service;
+        /*private readonly CommandService service;
 
         public HelpModule(CommandService service)
         {
@@ -159,6 +160,6 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (limit)
                 await this.ReplyAsync(arguments);
-        }
+        }*/
     }
 }

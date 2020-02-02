@@ -4,7 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Discord.Commands;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
 using Newtonsoft.Json;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Draft;
@@ -13,11 +14,10 @@ using SquidDraftLeague.Settings;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Moderation")]
-    public class ModerationModule : ModuleBase<SocketCommandContext>
+    public class ModerationModule
     {
         [Command("migrate"), RequireOwner]
-        public async Task Migrate()
+        public async Task Migrate(CommandContext ctx)
         {
             SdlPlayer[] players =
                 JsonConvert.DeserializeObject<SdlPlayer[]>(
@@ -34,8 +34,8 @@ namespace SquidDraftLeague.Bot.Commands
 
                     if (string.IsNullOrWhiteSpace(nickname))
                     {
-                        nickname = this.Context.Guild.Users.Any(x => x.Id == sdlPlayer.DiscordId)
-                            ? this.Context.Guild.GetUser(sdlPlayer.DiscordId).Username
+                        nickname = (await ctx.Guild.GetAllMembersAsync()).Any(x => x.Id == sdlPlayer.DiscordId)
+                            ? (await ctx.Guild.GetMemberAsync(sdlPlayer.DiscordId)).Username
                             : "!NONE!";
                     }
 
@@ -49,7 +49,7 @@ namespace SquidDraftLeague.Bot.Commands
                 }
             }
 
-            await this.ReplyAsync("Complete.");
+            await ctx.RespondAsync("Complete.");
         }
 
         /*[Command("limit"),
@@ -144,7 +144,7 @@ namespace SquidDraftLeague.Bot.Commands
                         case "channel":
                             if (!arguments.Any())
                             {
-                                limitations.Add(new ChannelLimitation(this.Context.Channel.Id));
+                                limitations.Add(new ChannelLimitation(ctx.Channel.Id));
                             }
                             else
                             {

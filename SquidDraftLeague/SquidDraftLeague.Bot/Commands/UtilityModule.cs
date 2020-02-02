@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -7,9 +8,9 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using MarkovSharp.TokenisationStrategies;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -33,15 +34,14 @@ using Path = System.IO.Path;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Misc.")]
-    public class UtilityModule : ModuleBase<SocketCommandContext>
+    public class UtilityModule
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
         [Command("notif")]
-        public async Task Notif()
+        public async Task Notif(CommandContext ctx)
         {
-            if (!(this.Context.User is SocketGuildUser user))
+            if (!(ctx.User is DiscordMember user))
                 return;
 
             if (user.Roles.All(e => e.Name != "Player"))
@@ -49,12 +49,12 @@ namespace SquidDraftLeague.Bot.Commands
 
             SdlPlayer player = await MySqlClient.RetrieveSdlPlayer(user.Id);
 
-            IRole classOneRole = this.Context.Guild.GetRole(600770643075661824);
-            IRole classTwoRole = this.Context.Guild.GetRole(600770814521901076);
-            IRole classThreeRole = this.Context.Guild.GetRole(600770862307606542);
-            IRole classFourRole = this.Context.Guild.GetRole(600770905282576406);
+            DiscordRole classOneRole = ctx.Guild.GetRole(600770643075661824);
+            DiscordRole classTwoRole = ctx.Guild.GetRole(600770814521901076);
+            DiscordRole classThreeRole = ctx.Guild.GetRole(600770862307606542);
+            DiscordRole classFourRole = ctx.Guild.GetRole(600770905282576406);
 
-            IRole selectedRole = null;
+            DiscordRole selectedRole = null;
 
             switch (Matchmaker.GetClass(player.PowerLevel))
             {
@@ -80,34 +80,34 @@ namespace SquidDraftLeague.Bot.Commands
 
             if (user.Roles.Any(e => e.Id == selectedRole?.Id))
             {
-                await File.WriteAllTextAsync(Path.Combine(optOutDirectory, $"{this.Context.User.Id}.dat"), "bruh");
+                await File.WriteAllTextAsync(Path.Combine(optOutDirectory, $"{ctx.User.Id}.dat"), "bruh");
 
-                await user.RemoveRoleAsync(selectedRole);
-                await this.ReplyAsync("Disabled lobby notifications.");
+                await user.RevokeRoleAsync(selectedRole);
+                await ctx.RespondAsync("Disabled lobby notifications.");
             }
             else
             {
-                if (File.Exists(Path.Combine(optOutDirectory, $"{this.Context.User.Id}.dat")))
-                    File.Delete(Path.Combine(optOutDirectory, $"{this.Context.User.Id}.dat"));
+                if (File.Exists(Path.Combine(optOutDirectory, $"{ctx.User.Id}.dat")))
+                    File.Delete(Path.Combine(optOutDirectory, $"{ctx.User.Id}.dat"));
 
-                await user.AddRoleAsync(selectedRole);
-                await this.ReplyAsync("Enabled lobby notifications.");
+                await user.RevokeRoleAsync(selectedRole);
+                await ctx.RespondAsync("Enabled lobby notifications.");
             }
         }
 
         [Command("distributeRoles")]
-        public async Task DistributeRoles()
+        public async Task DistributeRoles(CommandContext ctx)
         {
-            IRole classOneRole = this.Context.Guild.GetRole(600770643075661824);
-            IRole classTwoRole = this.Context.Guild.GetRole(600770814521901076);
-            IRole classThreeRole = this.Context.Guild.GetRole(600770862307606542);
-            IRole classFourRole = this.Context.Guild.GetRole(600770905282576406);
+            DiscordRole classOneRole = ctx.Guild.GetRole(600770643075661824);
+            DiscordRole classTwoRole = ctx.Guild.GetRole(600770814521901076);
+            DiscordRole classThreeRole = ctx.Guild.GetRole(600770862307606542);
+            DiscordRole classFourRole = ctx.Guild.GetRole(600770905282576406);
 
             foreach (SdlPlayer sdlPlayer in await MySqlClient.RetrieveAllSdlPlayers())
             {
                 try
                 {
-                    SocketGuildUser sdlGuildUser = this.Context.Guild.GetUser(sdlPlayer.DiscordId);
+                    DiscordMember sdlGuildUser = await ctx.Guild.GetMemberAsync(sdlPlayer.DiscordId);
 
                     switch (Matchmaker.GetClass(sdlPlayer.PowerLevel))
                     {
@@ -116,25 +116,25 @@ namespace SquidDraftLeague.Bot.Commands
                         case SdlClass.One:
                             if (sdlGuildUser.Roles.All(e => e.Id != classOneRole.Id))
                             {
-                                await sdlGuildUser.AddRoleAsync(classOneRole);
+                                await sdlGuildUser.GrantRoleAsync(classOneRole);
                             }
                             break;
                         case SdlClass.Two:
                             if (sdlGuildUser.Roles.All(e => e.Id != classTwoRole.Id))
                             {
-                                await sdlGuildUser.AddRoleAsync(classTwoRole);
+                                await sdlGuildUser.GrantRoleAsync(classTwoRole);
                             }
                             break;
                         case SdlClass.Three:
                             if (sdlGuildUser.Roles.All(e => e.Id != classThreeRole.Id))
                             {
-                                await sdlGuildUser.AddRoleAsync(classThreeRole);
+                                await sdlGuildUser.GrantRoleAsync(classThreeRole);
                             }
                             break;
                         case SdlClass.Four:
                             if (sdlGuildUser.Roles.All(e => e.Id != classFourRole.Id))
                             {
-                                await sdlGuildUser.AddRoleAsync(classFourRole);
+                                await sdlGuildUser.GrantRoleAsync(classFourRole);
                             }
                             break;
                         default:
@@ -147,11 +147,11 @@ namespace SquidDraftLeague.Bot.Commands
                 }
             }
 
-            await this.ReplyAsync("I'm Sam, the dancing Matzo man. Making Matzos fast I can. I'm Sam the dancing Matzo man.");
+            await ctx.RespondAsync("I'm Sam, the dancing Matzo man. Making Matzos fast I can. I'm Sam the dancing Matzo man.");
         }
 
         [Command("sendhelp")]
-        public async Task SendHelp()
+        public async Task SendHelp(CommandContext ctx)
         {
             try
             {
@@ -161,7 +161,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 model.Learn(lines);
 
-                await this.ReplyAsync(model.Walk().First());
+                await ctx.RespondAsync(model.Walk().First());
             }
             catch (Exception e)
             {
@@ -171,8 +171,8 @@ namespace SquidDraftLeague.Bot.Commands
         }
 
         [Command("stage"),
-         Summary("Gets a random stage and mode.")]
-        public async Task Stage()
+         Description("Gets a random stage and mode.")]
+        public async Task Stage(CommandContext ctx)
         {
             try
             {
@@ -180,7 +180,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 Stage selectedStage = stages[Globals.Random.Next(0, stages.Length - 1)];
 
-                await this.ReplyAsync(embed: selectedStage.GetEmbedBuilder().Build());
+                await ctx.RespondAsync(embed: selectedStage.GetEmbedBuilder().Build());
             }
             catch (Exception e)
             {
@@ -189,55 +189,53 @@ namespace SquidDraftLeague.Bot.Commands
             }
         }
 
-        [Command("ping"), 
-         Summary("Measures latency, probably inaccurate and is mainly to check the bot's status")]
-        public async Task Ping()
+        [Command("ping"),
+         Description("Measures latency, probably inaccurate and is mainly to check the bot's status")]
+        public async Task Ping(CommandContext ctx)
         {
-            IUserMessage message = await this.ReplyAsync("Ping?");
-            await message.ModifyAsync(e =>
-                e.Content =
-                    $"Pong! API latency is {Program.Client.Latency}ms.");
+            DiscordMessage message = await ctx.RespondAsync("Ping?");
+            await message.ModifyAsync($"Pong! API latency is {Program.Client.Ping}ms.");
         }
 
         [Command("id"),
-         Summary("Gets your discord id.")]
-        public async Task Id()
+         Description("Gets your discord id.")]
+        public async Task Id(CommandContext ctx)
         {
-            await this.ReplyAsync($"Your Discord ID is `{this.Context.User.Id}`.");
+            await ctx.RespondAsync($"Your Discord ID is `{ctx.User.Id}`.");
         }
 
         [Command("suadd"),
-         Summary("Adds a user to the superusers group."),
+         Description("Adds a user to the superusers group."),
          RequireRole(null)]
-        public async Task SuAdd(IUser user)
+        public async Task SuAdd(CommandContext ctx, DiscordMember user)
         {
             if (Globals.SuperUsers.Contains(user.Id))
             {
-                await this.ReplyAsync("This user is already a su!");
+                await ctx.RespondAsync("This user is already a su!");
                 return;
             }
 
             File.WriteAllText(Path.Combine(Globals.AppPath, "Data", "superusers.json"), 
                 JsonConvert.SerializeObject(Globals.SuperUsers.Append(user.Id).ToList(), Formatting.Indented));
 
-            await this.ReplyAsync($"Added {user.Mention} to the superuser group.");
+            await ctx.RespondAsync($"Added {user.Mention} to the superuser group.");
         }
 
         [Command("surm"),
-         Summary("Removes a user from the superusers group."),
+         Description("Removes a user from the superusers group."),
          RequireRole(null)]
-        public async Task SuRm(IUser user)
+        public async Task SuRm(CommandContext ctx, DiscordMember user)
         {
             File.WriteAllText(Path.Combine(Globals.AppPath, "Data", "superusers.json"), 
                 JsonConvert.SerializeObject(Globals.SuperUsers.Select(e => e != user.Id).ToList(), Formatting.Indented));
 
-            await this.ReplyAsync($"Removed {user.Mention} from the superuser group.");
+            await ctx.RespondAsync($"Removed {user.Mention} from the superuser group.");
         }
 
         [Command("addmod")]
-        public async Task AddModule(string name, [Remainder] string command)
+        public async Task AddModule(CommandContext ctx, string name, [RemainingText] string command)
         {
-            if (this.Context.User.Id != 228019100008316948)
+            if (ctx.User.Id != 228019100008316948)
             {
                 return;
             }
@@ -250,10 +248,10 @@ namespace SquidDraftLeague.Bot.Commands
         }
 
         [Command("eval"),
-        Summary("Warning! Dangerous command, do not use unless you know what you're doing.")]
-        public async Task Eval([Remainder] string command)
+        Description("Warning! Dangerous command, do not use unless you know what you're doing.")]
+        public async Task Eval(CommandContext ctx, [RemainingText] string command)
         {
-            if (this.Context.User.Id != 228019100008316948)
+            if (ctx.User.Id != 228019100008316948)
             {
                 return;
             }
@@ -268,23 +266,23 @@ namespace SquidDraftLeague.Bot.Commands
                     .WithReferences(typeof(object).GetTypeInfo().Assembly, typeof(Enumerable).GetTypeInfo().Assembly,
                                     typeof(PropertyInfo).GetTypeInfo().Assembly, typeof(Decoder).GetTypeInfo().Assembly,
                                     typeof(Regex).GetTypeInfo().Assembly, typeof(Task).GetTypeInfo().Assembly, typeof(CommandContext).GetTypeInfo().Assembly,
-                                    typeof(MessageActivity).GetTypeInfo().Assembly, typeof(Settings.Settings).GetTypeInfo().Assembly,
+                                    typeof(DiscordMessage).GetTypeInfo().Assembly, typeof(Settings.Settings).GetTypeInfo().Assembly,
                                     typeof(Program).Assembly, typeof(MySqlClient).Assembly, typeof(Lobby).Assembly)
                     .WithImports("System", "System.Collections.Generic", "System.Linq", "System.Reflection", "System.Text",
-                                 "System.Text.RegularExpressions", "System.Threading.Tasks", "Discord.Commands", "Discord", "SquidDraftLeague.Bot",
-                                 "SquidDraftLeague.Bot.Commands", "SquidDraftLeague.Settings", "SquidDraftLeague.Draft", "SquidDraftLeague.AirTable",
+                                 "System.Text.RegularExpressions", "System.Threading.Tasks", "DSharpPlus.CommandsNext", "DSharpPlus", "SquidDraftLeague.Bot",
+                                 "SquidDraftLeague.Bot.Commands", "SquidDraftLeague.Settings", "SquidDraftLeague.Draft", "SquidDraftLeague.MySQL",
                                  "SquidDraftLeague.Bot.Commands.Preconditions"), typeof(GlobalEvalContext))
                     .CreateDelegate();
             }
             catch (Exception e)
             {
-                EmbedBuilder errorBuilder = new EmbedBuilder();
+                DiscordEmbedBuilder errorBuilder = new DiscordEmbedBuilder();
                 errorBuilder.WithTitle("Exception occurred.");
                 errorBuilder.AddField("Input", $"```cs\n{command}\n```");
                 errorBuilder.AddField("Output", $"```\n[Exception ({(e.InnerException ?? e).GetType().Name})] {e.InnerException?.Message ?? e.Message}\n```");
                 errorBuilder.WithColor(Color.Red);
 
-                await this.Context.Channel.SendMessageAsync(null, false, errorBuilder.Build());
+                await ctx.Channel.SendMessageAsync(null, false, errorBuilder.Build());
 
                 return;
             }
@@ -295,37 +293,39 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 result = await script(new GlobalEvalContext
                 {
-                    Ctx = this.Context
+                    Ctx = ctx
                 });
             }
             catch (Exception e)
             {
-                EmbedBuilder errorBuilder = new EmbedBuilder();
+                DiscordEmbedBuilder errorBuilder = new DiscordEmbedBuilder();
                 errorBuilder.WithTitle("Exception occurred.");
                 errorBuilder.AddField("Input", $"```cs\n{command}\n```");
                 errorBuilder.AddField("Output", $"```\n[Exception ({(e.InnerException ?? e).GetType().Name})] {e.InnerException?.Message ?? e.Message}\n```");
                 errorBuilder.WithColor(Color.Red);
 
-                await this.Context.Channel.SendMessageAsync(null, false, errorBuilder.Build());
+                await ctx.Channel.SendMessageAsync(null, false, errorBuilder.Build());
 
                 return;
             }
 
-            EmbedBuilder builder = new EmbedBuilder();
+            DiscordEmbedBuilder builder = new DiscordEmbedBuilder();
             builder.AddField("Input", $"```cs\n{command}\n```");
             builder.AddField("Output", $"```\n{result}\n```");
             builder.WithColor(Color.Green);
 
-            await this.Context.Channel.SendMessageAsync(null, false, builder.Build());
+            await ctx.Channel.SendMessageAsync(null, false, builder.Build());
         }
     }
 
     public class GlobalEvalContext
     {
-        public SocketCommandContext Ctx { get; set; }
+        public CommandContext Ctx { get; set; }
 
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once UnusedMember.Global
-        public SocketCommandContext ctx => this.Ctx;
+#pragma warning disable IDE1006 // Naming Styles
+        public CommandContext ctx => this.Ctx;
+#pragma warning restore IDE1006 // Naming Styles
     }
 }

@@ -4,13 +4,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Mail;
 using System.Text;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Addons.Interactive;
-using Discord.Commands;
-using Discord.Rest;
-using Discord.WebSocket;
+using DSharpPlus;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
+using DSharpPlus.Interactivity;
 using NLog;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
@@ -18,6 +19,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.Primitives;
 using SixLabors.Shapes;
+using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Draft;
 using SquidDraftLeague.Draft.Map;
 using SquidDraftLeague.Language.Resources;
@@ -28,8 +30,7 @@ using Path = System.IO.Path;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Profile")]
-    public class ProfileModule : InteractiveBase
+    public class ProfileModule
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
@@ -39,23 +40,26 @@ namespace SquidDraftLeague.Bot.Commands
         public static readonly FontFamily KarlaBoldItalicFontFamily = Fonts.Install(Path.Combine(Globals.AppPath, "Data", "font", "Karla-BoldItalic.ttf"));
         public static readonly FontFamily KarlaItalicFontFamily = Fonts.Install(Path.Combine(Globals.AppPath, "Data", "font", "Karla-Italic.ttf"));
 
-        [Command("register"),
-         RequireContext(ContextType.DM)]
-        public async Task ApplyForRegistration()
+        [Command("register")]
+        public async Task ApplyForRegistration(CommandContext ctx)
         {
+            if (!ctx.Channel.IsPrivate)
+                return;
+
             try
             {
-                IUser user = this.Context.User;
+                DiscordUser user = ctx.User;
 
                 if ((await MySqlClient.RetrieveAllSdlPlayers()).Any(e => e.DiscordId == user.Id))
                 {
-                    await this.ReplyAsync("You are already are registered or are awaiting registration for SDL!");
+                    await ctx.RespondAsync("You are already are registered or are awaiting registration for SDL!");
                     return;
                 }
 
                 List<ulong> awaitingIds = new List<ulong>();
 
-                string regDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Registrations")).FullName;
+                string regDirectory =
+                    Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Registrations")).FullName;
 
                 foreach (string file in Directory.EnumerateFiles(regDirectory))
                 {
@@ -64,153 +68,167 @@ namespace SquidDraftLeague.Bot.Commands
 
                 if (awaitingIds.Contains(user.Id))
                 {
-                    await this.ReplyAsync("You are already are registered or are awaiting registration for SDL!");
+                    await ctx.RespondAsync("You are already are registered or are awaiting registration for SDL!");
                     return;
                 }
 
-                await this.ReplyAsync(Resources.RegistrationBegin);
-                SocketMessage timeZoneResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                await ctx.RespondAsync(Resources.RegistrationBegin);
+
+                InteractivityModule interactivity = ctx.Client.GetInteractivityModule();
+
+                MessageContext timeZoneResponse =
+                    await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
 
                 if (timeZoneResponse == null)
                 {
-                    await this.ReplyAsync(Resources.RegistrationTimeout);
+                    await ctx.RespondAsync(Resources.RegistrationTimeout);
                     return;
                 }
 
-                await this.ReplyAsync($"Your timezone has been set to {timeZoneResponse.Content}. " +
+                await ctx.RespondAsync($"Your timezone has been set to {timeZoneResponse.Message.Content}. " +
                                       $"By the way, at any time you may reply \"retry\" to reenter the last response. " +
                                       $"Please note that you only get one chance to retry a response!");
 
-                await this.ReplyAsync(Resources.RegistrationNickname);
-                SocketMessage nicknameResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                await ctx.RespondAsync(Resources.RegistrationNickname);
+                MessageContext nicknameResponse =
+                    await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
 
                 if (nicknameResponse == null)
                 {
-                    await this.ReplyAsync(Resources.RegistrationTimeout);
+                    await ctx.RespondAsync(Resources.RegistrationTimeout);
                     return;
                 }
 
-                if (nicknameResponse.Content.ToLower() == "retry")
+                if (nicknameResponse.Message.Content.ToLower() == "retry")
                 {
-                    await this.ReplyAsync("Please restate your timezone.");
-                    timeZoneResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                    await ctx.RespondAsync("Please restate your timezone.");
+                    timeZoneResponse =
+                        await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
 
                     if (timeZoneResponse == null)
                     {
-                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        await ctx.RespondAsync(Resources.RegistrationTimeout);
                         return;
                     }
 
-                    await this.ReplyAsync($"Your timezone has been set to {timeZoneResponse.Content}.");
+                    await ctx.RespondAsync($"Your timezone has been set to {timeZoneResponse.Message.Content}.");
 
-                    await this.ReplyAsync(Resources.RegistrationNickname);
+                    await ctx.RespondAsync(Resources.RegistrationNickname);
 
-                    nicknameResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                    nicknameResponse =
+                        await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
                     if (nicknameResponse == null)
                     {
-                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        await ctx.RespondAsync(Resources.RegistrationTimeout);
                         return;
                     }
                 }
 
-                string timezone = timeZoneResponse.Content;
+                string timezone = timeZoneResponse.Message.Content;
 
-                await this.ReplyAsync(Resources.RegistrationTeams);
-                SocketMessage teamsResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                await ctx.RespondAsync(Resources.RegistrationTeams);
+                MessageContext teamsResponse =
+                    await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
 
                 if (teamsResponse == null)
                 {
-                    await this.ReplyAsync(Resources.RegistrationTimeout);
+                    await ctx.RespondAsync(Resources.RegistrationTimeout);
                     return;
                 }
 
-                if (teamsResponse.Content.ToLower() == "retry")
+                if (teamsResponse.Message.Content.ToLower() == "retry")
                 {
-                    await this.ReplyAsync("Please restate your nickname.");
-                    nicknameResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                    await ctx.RespondAsync("Please restate your nickname.");
+                    nicknameResponse =
+                        await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
 
                     if (nicknameResponse == null)
                     {
-                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        await ctx.RespondAsync(Resources.RegistrationTimeout);
                         return;
                     }
 
-                    await this.ReplyAsync($"Your nickname has been set to {nicknameResponse.Content}.");
+                    await ctx.RespondAsync($"Your nickname has been set to {nicknameResponse.Message.Content}.");
 
-                    await this.ReplyAsync(Resources.RegistrationTeams);
+                    await ctx.RespondAsync(Resources.RegistrationTeams);
 
-                    teamsResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                    teamsResponse =
+                        await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
                     if (teamsResponse == null)
                     {
-                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        await ctx.RespondAsync(Resources.RegistrationTimeout);
                         return;
                     }
                 }
 
-                string nickname = nicknameResponse.Content;
+                string nickname = nicknameResponse.Message.Content;
 
-                await this.ReplyAsync(Resources.RegistrationScreenshot);
-                SocketMessage screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                await ctx.RespondAsync(Resources.RegistrationScreenshot);
+                MessageContext screenshotResponse =
+                    await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
                 bool hasScreenshot = true;
 
                 if (screenshotResponse == null)
                 {
-                    await this.ReplyAsync(Resources.RegistrationTimeout);
+                    await ctx.RespondAsync(Resources.RegistrationTimeout);
                     return;
                 }
 
-                if (screenshotResponse.Content.ToLower() == "retry")
+                if (screenshotResponse.Message.Content.ToLower() == "retry")
                 {
-                    await this.ReplyAsync("Please restate your teams.");
-                    teamsResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                    await ctx.RespondAsync("Please restate your teams.");
+                    teamsResponse =
+                        await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
 
                     if (teamsResponse == null)
                     {
-                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        await ctx.RespondAsync(Resources.RegistrationTimeout);
                         return;
                     }
 
-                    await this.ReplyAsync($"Your team(s) have been set to {teamsResponse.Content}.");
+                    await ctx.RespondAsync($"Your team(s) have been set to {teamsResponse.Message.Content}.");
 
-                    await this.ReplyAsync(Resources.RegistrationTeams);
+                    await ctx.RespondAsync(Resources.RegistrationTeams);
 
-                    screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                    screenshotResponse =
+                        await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
                     if (screenshotResponse == null)
                     {
-                        await this.ReplyAsync(Resources.RegistrationTimeout);
+                        await ctx.RespondAsync(Resources.RegistrationTimeout);
                         return;
                     }
                 }
-                else if (screenshotResponse.Content.ToLower() == "no")
+                else if (screenshotResponse.Message.Content.ToLower() == "no")
                 {
                     hasScreenshot = false;
                 }
 
-                string teams = teamsResponse.Content;
+                string teams = teamsResponse.Message.Content;
                 string screenshotUrl = null;
 
                 if (hasScreenshot)
                 {
-                    while (!screenshotResponse.Attachments.Any() || screenshotResponse.Attachments.Count > 1)
+                    while (!screenshotResponse.Message.Attachments.Any() || screenshotResponse.Message.Attachments.Count > 1)
                     {
-                        await this.ReplyAsync(
+                        await ctx.RespondAsync(
                             "Please only upload **one (1)** image of your solo queue powers from the last month.");
-                        screenshotResponse = await this.NextMessageAsync(timeout: TimeSpan.FromMinutes(10));
+                        screenshotResponse =
+                            await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
 
                         if (screenshotResponse == null)
                         {
-                            await this.ReplyAsync(Resources.RegistrationTimeout);
+                            await ctx.RespondAsync(Resources.RegistrationTimeout);
                             return;
                         }
                     }
 
-                    Attachment screenshotAttachment = screenshotResponse.Attachments.First();
+                    DiscordAttachment screenshotAttachment = screenshotResponse.Message.Attachments.First();
                     screenshotUrl = screenshotAttachment.Url;
                 }
 
-                EmbedBuilder builder = new EmbedBuilder
+                DiscordEmbedBuilder builder = new DiscordEmbedBuilder
                 {
-                    Description = $"**{this.Context.User.Mention} ({this.Context.User.Username}#{this.Context.User.Discriminator}) has applied for registration.**"
+                    Description = $"**{ctx.User.Mention} ({ctx.User.Username}#{ctx.User.Discriminator}) has applied for registration.**"
                 };
 
                 if (hasScreenshot)
@@ -239,22 +257,22 @@ namespace SquidDraftLeague.Bot.Commands
                     e.IsInline = true;
                 });
 
-                await this.ReplyAsync(Resources.RegistrationProcessing);
+                await ctx.RespondAsync(Resources.RegistrationProcessing);
 
-                SocketTextChannel regChannel = (SocketTextChannel) Program.Client.GetChannel(595219144488648704);
+                DiscordChannel regChannel = await Program.Client.GetChannelAsync(595219144488648704);
 
-                RestUserMessage userMessage = await regChannel.SendMessageAsync("Needs Approval.", embed: builder.Build());
+                DiscordMessage userMessage = await regChannel.SendMessageAsync("Needs Approval.", embed: builder.Build());
 
-                await userMessage.AddReactionAsync(new Emoji("\u2705")); // Check mark
-                await userMessage.AddReactionAsync(new Emoji("\u274E")); // X
-                await userMessage.AddReactionAsync(new Emoji("\u0031\u20E3")); // One
-                await userMessage.AddReactionAsync(new Emoji("\u0032\u20E3")); // Two
-                await userMessage.AddReactionAsync(new Emoji("\u0033\u20E3")); // Three
-                await userMessage.AddReactionAsync(new Emoji("\u0034\u20E3")); // Four
+                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u2705")); // Check mark
+                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u274E")); // X
+                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u0031\u20E3")); // One
+                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u0032\u20E3")); // Two
+                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u0033\u20E3")); // Three
+                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u0034\u20E3")); // Four
 
-                await File.WriteAllTextAsync(Path.Combine(regDirectory, $"{userMessage.Id}"), $"{this.Context.User.Id}\n{nickname}");
+                await File.WriteAllTextAsync(Path.Combine(regDirectory, $"{userMessage.Id}"), $"{ctx.User.Id}\n{nickname}");
 
-                await this.ReplyAsync(Resources.RegistrationComplete);
+                await ctx.RespondAsync(Resources.RegistrationComplete);
             }
             catch (Exception e)
             {
@@ -264,13 +282,13 @@ namespace SquidDraftLeague.Bot.Commands
         }
 
         [Command("profile")]
-        public async Task Profile([Remainder] IUser user = null)
+        public async Task Profile(CommandContext ctx, [RemainingText] DiscordMember user = null)
         {
             try
             {
                 if (user == null)
                 {
-                    user = this.Context.User;
+                    user = ctx.Member;
                 }
 
                 SdlPlayer player;
@@ -288,7 +306,7 @@ namespace SquidDraftLeague.Bot.Commands
                     throw;
                 }
 
-                IUserMessage message = await this.ReplyAsync("Please wait, profiles take a little bit to put together.");
+                DiscordMessage message = await ctx.RespondAsync("Please wait, profiles take a little bit to put together.");
 
                 Font powerFont = KarlaFontFamily.CreateFont(160, FontStyle.Bold);
                 Font nameFont = KarlaFontFamily.CreateFont(80, FontStyle.Bold);
@@ -302,7 +320,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                 WebClient webClient = new WebClient();
 
-                string avatarUrl = string.IsNullOrWhiteSpace(user.GetAvatarUrl()) ? user.GetDefaultAvatarUrl() : user.GetAvatarUrl();
+                string avatarUrl = string.IsNullOrWhiteSpace(user.GetAvatarUrl(ImageFormat.Png)) ? user.DefaultAvatarUrl : user.GetAvatarUrl(ImageFormat.Png);
 
                 byte[] avatarBytes = await webClient.DownloadDataTaskAsync(avatarUrl);
 
@@ -532,7 +550,7 @@ namespace SquidDraftLeague.Bot.Commands
                     using (MemoryStream memory = new MemoryStream(ms.GetBuffer()))
                     {
                         await message.DeleteAsync();
-                        await this.Context.Channel.SendFileAsync(memory, "profile.png");
+                        await ctx.Channel.SendFileAsync(memory, "profile.png");
                     }
                 }
 
@@ -546,9 +564,9 @@ namespace SquidDraftLeague.Bot.Commands
         }
 
         [Command("setrole"),
-         Summary("Sets the type of playstyle you prefer.")]
-        public async Task SetRole(
-            [Summary("One of four options: front, mid, back, flex.")]
+         Description("Sets the type of playstyle you prefer.")]
+        public async Task SetRole(CommandContext ctx,
+            [Description("One of four options: front, mid, back, flex.")]
             string role)
         {
             role = role[0].ToString().ToUpper() + string.Join(string.Empty, role.Skip(1));
@@ -556,11 +574,11 @@ namespace SquidDraftLeague.Bot.Commands
             SdlPlayer player;
             try
             {
-                player = await MySqlClient.RetrieveSdlPlayer(this.Context.User.Id);
+                player = await MySqlClient.RetrieveSdlPlayer(ctx.User.Id);
             }
             catch (SdlMySqlException e)
             {
-                /*await e.OutputToDiscordUser(this.Context);*/
+                /*await e.OutputToDiscordUser(ctx);*/
                 throw;
             }
 
@@ -571,41 +589,41 @@ namespace SquidDraftLeague.Bot.Commands
             }
             else
             {
-                await this.ReplyAsync("You must specify Front, Flex, Mid, or Back!");
+                await ctx.RespondAsync("You must specify Front, Flex, Mid, or Back!");
                 return;
             }
 
-            await this.ReplyAsync($"Your role has been set to {role}.");
+            await ctx.RespondAsync($"Your role has been set to {role}.");
         }
 
         [Command("fc"),
-         Summary("Adds your friend code to your profile.")]
-        public async Task FriendCode(
-            [Summary("Friend code in the format 0000-0000-0000 or SW-0000-0000-0000")]
+         Description("Adds your friend code to your profile.")]
+        public async Task FriendCode(CommandContext ctx,
+            [Description("Friend code in the format 0000-0000-0000 or SW-0000-0000-0000")]
             string code)
         {
             code = code.Replace("SW-", string.Empty);
 
             if (code.Split('-').Length != 3 || code.Split('-').Any(e => !int.TryParse(e, out int _) || e.Length != 4))
             {
-                await this.ReplyAsync("Please use the format 0000-0000-0000!");
+                await ctx.RespondAsync("Please use the format 0000-0000-0000!");
                 return;
             }
 
             SdlPlayer player;
             try
             {
-                player = await MySqlClient.RetrieveSdlPlayer(this.Context.User.Id);
+                player = await MySqlClient.RetrieveSdlPlayer(ctx.User.Id);
             }
             catch (SdlMySqlException e)
             {
-                /*await e.OutputToDiscordUser(this.Context);*/
+                /*await e.OutputToDiscordUser(ctx);*/
                 throw;
             }
 
             await MySqlClient.SetFriendCodeAsync(player, code);
 
-            await this.ReplyAsync($"Set your friend code to {code}!");
+            await ctx.RespondAsync($"Set your friend code to {code}!");
         }
 
         // This method can be seen as an inline implementation of an `IImageProcessor`:

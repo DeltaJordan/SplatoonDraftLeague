@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using Discord.Commands;
 
 namespace SquidDraftLeague.Bot.Commands.Preconditions
 {
-    public class TimeLimitPreconditionAttribute : PreconditionAttribute
+    public class TimeLimitPreconditionAttribute
     {
-        private readonly TimePeriod[] timePeriods;
+        // TODO No need for this, but I'm pretty proud of it so I won't delete it yet.
+
+        /*private readonly TimePeriod[] timePeriods;
 
         /// <summary>
         /// Limits command(s) to certain time period(s).
@@ -38,6 +39,6 @@ namespace SquidDraftLeague.Bot.Commands.Preconditions
 
             await context.Channel.SendMessageAsync("Draft is currently closed.");
             return PreconditionResult.FromError("Draft is currently closed.");
-        }
+        }*/
     }
 }

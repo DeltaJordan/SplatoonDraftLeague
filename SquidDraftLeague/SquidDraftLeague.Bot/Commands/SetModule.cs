@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord;
-using Discord.Commands;
-using Discord.WebSocket;
+using DSharpPlus;
+using DSharpPlus.CommandsNext;
+using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using NLog;
 using SquidDraftLeague.Bot.Extensions;
 using SquidDraftLeague.Draft;
@@ -14,25 +15,24 @@ using SquidDraftLeague.MySQL;
 
 namespace SquidDraftLeague.Bot.Commands
 {
-    [Name("Set")]
-    public class SetModule : ModuleBase<SocketCommandContext>
+    public class SetModule
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        [Command("pickfor"),
-         RequireUserPermission(GuildPermission.ManageGuild)]
-        public async Task PickFor(int setNumber, IUser pick)
+        [Command("pickfor")]
+        [RequirePermissions(Permissions.ManageGuild)]
+        public async Task PickFor(CommandContext ctx, int setNumber, DiscordMember pick)
         {
             Set playerMatch = Matchmaker.Sets[setNumber - 1];
 
             SdlPlayer sdlPlayer = await MySqlClient.RetrieveSdlPlayer(pick.Id);
 
-            await PickPlayer(playerMatch, sdlPlayer, (SocketTextChannel) this.Context.Channel);
+            await PickPlayer(playerMatch, sdlPlayer, ctx.Channel);
         }
 
-        [Command("pickall"),
-         RequireUserPermission(GuildPermission.ManageGuild)]
-        public async Task PickAll(int setNumber)
+        [Command("pickall")]
+        [RequirePermissions(Permissions.ManageGuild)]
+        public async Task PickAll(CommandContext ctx, int setNumber)
         {
             Set playerMatch = Matchmaker.Sets[setNumber - 1];
 
@@ -40,39 +40,35 @@ namespace SquidDraftLeague.Bot.Commands
 
             foreach (SdlPlayer allDraftPlayer in allDraftPlayers)
             {
-                await PickPlayer(playerMatch, allDraftPlayer, (SocketTextChannel) this.Context.Channel);
+                await PickPlayer(playerMatch, allDraftPlayer, ctx.Channel);
             }
         }
 
-        [Command("pick"),
-         Summary("Picks a person to join the team of the set you are in.")]
-        public async Task Pick(
-            [Remainder,
-             Summary("Person you want to pick.")]
-             IUser pick)
+        [Command("pick")]
+        [Description("Picks a person to join the team of the set you are in.")]
+        public async Task Pick(CommandContext ctx,
+            [RemainingText, Description("Person you want to pick.")]
+            DiscordMember pick)
         {
             try
             {
-                if (!(this.Context.User is IGuildUser user))
-                    return;
+                Set playerMatch = Matchmaker.Sets.FirstOrDefault(e => e.GetPickingTeam().IsCaptain(pick.Id));
 
-                Set playerMatch = Matchmaker.Sets.FirstOrDefault(e => e.GetPickingTeam().IsCaptain(user.Id));
-
-                if (playerMatch == null || !CommandHelper.SetChannelIds.Contains(this.Context.Channel.Id))
+                if (playerMatch == null || !CommandHelper.SetChannelIds.Contains(ctx.Channel.Id))
                     return;
 
                 SdlPlayer sdlPlayer = await MySqlClient.RetrieveSdlPlayer(pick.Id);
 
-                await PickPlayer(playerMatch, sdlPlayer, (SocketTextChannel) this.Context.Channel);
+                await PickPlayer(playerMatch, sdlPlayer, ctx.Channel);
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Logger.Error(e);
                 throw;
             }
         }
 
-        public static async Task PickPlayer(Set playerMatch, SdlPlayer pick, SocketTextChannel context)
+        public static async Task PickPlayer(Set playerMatch, SdlPlayer pick, DiscordChannel context)
         {
             PickPlayerResponse pickPlayerResponse = Matchmaker.PickSetPlayer(pick, playerMatch);
 
