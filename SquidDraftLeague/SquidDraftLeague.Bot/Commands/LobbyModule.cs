@@ -253,7 +253,7 @@ namespace SquidDraftLeague.Bot.Commands
                 try
                 {
                     await (await Program.Client.GetChannelAsync(572536965833162753)).SendMessageAsync(
-                        $"{string.Join(" ", players.Select(async f => (await Program.Client.GetUserAsync(f.DiscordId)).Mention))}\n" +
+                        $"{string.Join(" ", players.Select(f => f.DiscordId.ToUserMention()))}\n" +
                         $"Closing the lobby because not enough players have joined the battle. Please try again by using %join.");
 
                     string activityDirectory = Directory.CreateDirectory(Path.Combine(Globals.AppPath, "Player Activity")).FullName;
