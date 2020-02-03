@@ -52,7 +52,9 @@ namespace SquidDraftLeague.Bot.Commands
         {
             try
             {
-                Set playerMatch = Matchmaker.Sets.FirstOrDefault(e => e.GetPickingTeam().IsCaptain(pick.Id));
+                Set playerMatch = Matchmaker.Sets.FirstOrDefault(e => e.GetPickingTeam().IsCaptain(ctx.Message.Author.Id));
+
+                Logger.Warn(string.Join(",", Matchmaker.Sets[0].BravoTeam.Players.Select(x => x.Nickname)));
 
                 if (playerMatch == null || !CommandHelper.SetChannelIds.Contains(ctx.Channel.Id))
                     return;

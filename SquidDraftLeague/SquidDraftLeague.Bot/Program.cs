@@ -107,7 +107,11 @@ namespace SquidDraftLeague.Bot
 
             commands = Client.UseCommandsNext(new CommandsNextConfiguration
             {
+#if DEBUG_PREFIX
+                StringPrefix = Globals.BotSettings.Prefix + Globals.BotSettings.Prefix,
+#else
                 StringPrefix = Globals.BotSettings.Prefix,
+#endif
                 CaseSensitive = false
             });
 

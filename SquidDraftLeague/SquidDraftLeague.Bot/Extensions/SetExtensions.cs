@@ -88,7 +88,7 @@ namespace SquidDraftLeague.Bot.Extensions
             List<string> streams = (from player in set.AllPlayers.TakeWhile(player => context != null)
                 select context.Guild.GetMemberAsync(player.DiscordId).Result
                 into playerUser
-                where playerUser.Presence.Game.StreamType == GameStreamType.Twitch
+                where playerUser.Presence?.Game != null && playerUser.Presence.Game.StreamType == GameStreamType.Twitch
                 select playerUser.Presence.Game.Url).ToList();
 
             return new DiscordEmbedBuilder()
