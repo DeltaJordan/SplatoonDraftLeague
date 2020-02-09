@@ -122,6 +122,8 @@ namespace SquidDraftLeague.Bot
             Client.MessageCreated += Client_MessageReceived;
             Client.MessageReactionAdded += Client_ReactionAdded;
             Client.GuildMemberRemoved += Client_UserLeft;
+            commands.CommandExecuted += Commands_CommandExecuted;
+            commands.CommandErrored += Commands_CommandErrored;
 
             Client.Ready += Client_Ready;
             // Client.Log += Client_Log;
@@ -140,6 +142,37 @@ namespace SquidDraftLeague.Bot
             await scheduler.StartAsync(token);
 
             await Task.Delay(-1, token);
+        }
+
+        private static async Task Commands_CommandErrored(CommandErrorEventArgs e)
+        {
+            try
+            {
+                if (!MySqlClient.IsConnectionOpen())
+                    await MySqlClient.RefreshConnectionAsync();
+
+                await e.Context.RespondAsync("The MySQL connection is being refreshed. " +
+                                             "Please wait around a minute before attempting the command again.");
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine(exception);
+                await e.Context.RespondAsync("<@&572539082039885839> Unable to refresh MySQL connection!");
+            }
+        }
+
+        private static async Task Commands_CommandExecuted(CommandExecutionEventArgs e)
+        {
+            try
+            {
+                if (!MySqlClient.IsConnectionOpen())
+                    await MySqlClient.RefreshConnectionAsync();
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine(exception);
+                await e.Context.RespondAsync("<@&572539082039885839> Unable to refresh MySQL connection!");
+            }
         }
 
         private static async Task Client_UserLeft(GuildMemberRemoveEventArgs arg)

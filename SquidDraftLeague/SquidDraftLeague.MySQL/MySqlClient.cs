@@ -23,20 +23,43 @@ namespace SquidDraftLeague.MySQL
     public static class MySqlClient
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
-        private static readonly MySqlConnection MySqlConnection;
+        private static MySqlConnection mySqlConnection;
 
         static MySqlClient()
         {
             string connectionString =
                 $"server={Globals.BotSettings.MySqlIp};user={Globals.BotSettings.MySqlUsername};database=sdl;port=3306;password={Globals.BotSettings.MySqlPassword}";
 
-            MySqlConnection = new MySqlConnection(connectionString);
-            MySqlConnection.Open();
+            mySqlConnection = new MySqlConnection(connectionString);
+            mySqlConnection.Open();
+        }
+
+        public static bool IsConnectionOpen()
+        {
+            return mySqlConnection?.State == ConnectionState.Open;
+        }
+
+        public static async Task RefreshConnectionAsync()
+        {
+            try
+            {
+                mySqlConnection?.Dispose();
+            }
+            catch (Exception e)
+            {
+                Logger.Warn(e);
+            }
+
+            string connectionString =
+                $"server={Globals.BotSettings.MySqlIp};user={Globals.BotSettings.MySqlUsername};database=sdl;port=3306;password={Globals.BotSettings.MySqlPassword}";
+
+            mySqlConnection = new MySqlConnection(connectionString);
+            await mySqlConnection.OpenAsync();
         }
 
         public static async Task<ApiUser[]> GetApiUsers()
         {
-            MySqlCommand selectCommand = new MySqlCommand("SELECT * FROM `Api Users`", MySqlConnection);
+            MySqlCommand selectCommand = new MySqlCommand("SELECT * FROM `Api Users`", mySqlConnection);
 
             List<ApiUser> users = new List<ApiUser>();
 
@@ -65,7 +88,7 @@ namespace SquidDraftLeague.MySQL
                     $"FROM `Draft Log` " +
                     $"WHERE `Alpha Players` LIKE '%{player.DiscordId}%' " +
                     $"OR `Bravo Players` LIKE '%{player.DiscordId}%'",
-                    MySqlConnection);
+                    mySqlConnection);
 
             return Convert.ToInt32(await selectCommand.ExecuteScalarAsync()) > 0;
         }
@@ -80,7 +103,7 @@ namespace SquidDraftLeague.MySQL
                     $"FROM `Draft Log` " +
                     $"WHERE `Alpha Players` LIKE '%{player.DiscordId}%' " +
                     $"OR `Bravo Players` LIKE '%{player.DiscordId}%'",
-                    MySqlConnection);
+                    mySqlConnection);
 
             using (MySqlDataReader reader = selectCommand.ExecuteReader())
             {
@@ -95,7 +118,7 @@ namespace SquidDraftLeague.MySQL
 
         public static async Task SetRoleAsync(SdlPlayer player, string role, int roleNum)
         {
-            MySqlCommand updateRoleCommand = new MySqlCommand($"UPDATE Players SET `Role {roleNum}`=@Role WHERE `Discord ID`=@PlayerID", MySqlConnection);
+            MySqlCommand updateRoleCommand = new MySqlCommand($"UPDATE Players SET `Role {roleNum}`=@Role WHERE `Discord ID`=@PlayerID", mySqlConnection);
             updateRoleCommand.Parameters.AddWithValue("@Role", role);
             updateRoleCommand.Parameters.AddWithValue("@PlayerID", player.DiscordId);
             await updateRoleCommand.ExecuteNonQueryAsync();
@@ -103,7 +126,7 @@ namespace SquidDraftLeague.MySQL
 
         public static async Task SetFriendCodeAsync(SdlPlayer player, string code)
         {
-            MySqlCommand updateRoleCommand = new MySqlCommand($"UPDATE Players SET `Friend Code`=@Code WHERE `Discord ID`=@PlayerID", MySqlConnection);
+            MySqlCommand updateRoleCommand = new MySqlCommand($"UPDATE Players SET `Friend Code`=@Code WHERE `Discord ID`=@PlayerID", mySqlConnection);
             updateRoleCommand.Parameters.AddWithValue("@Code", code);
             updateRoleCommand.Parameters.AddWithValue("@PlayerID", player.DiscordId);
             await updateRoleCommand.ExecuteNonQueryAsync();
@@ -160,7 +183,7 @@ namespace SquidDraftLeague.MySQL
                      "INSERT INTO " +
                      "Teams (`Team ID`,Name,`Logo URL`,Color,`Captain Discord ID`) " +
                     $"VALUES({teamId},@Name,@LogoUrl,#{teamColor.R:X2}{teamColor.G:X2}{teamColor.B:X2},{captainId})",
-                    MySqlConnection);
+                    mySqlConnection);
             insertCommand.Parameters.AddWithValue("@Name", name);
             insertCommand.Parameters.AddWithValue("@LogoUrl", logoUrl);
 
@@ -180,7 +203,7 @@ namespace SquidDraftLeague.MySQL
             }
 
             MySqlCommand updateCommand =
-                new MySqlCommand($"UPDATE Players SET `Active Team`={teamId}", MySqlConnection);
+                new MySqlCommand($"UPDATE Players SET `Active Team`={teamId}", mySqlConnection);
 
             if (await updateCommand.ExecuteNonQueryAsync() > 0)
                 return;
@@ -201,7 +224,7 @@ namespace SquidDraftLeague.MySQL
                 new MySqlCommand(
                     $"INSERT INTO Players (`Discord ID`,Name,Power,`Starting Power`) " +
                     $"VALUES({discordId},@Nickname,{startingPowerLevel},{startingPowerLevel})",
-                    MySqlConnection);
+                    mySqlConnection);
             insertCommand.Parameters.AddWithValue("@Nickname", nickname);
 
             if (await insertCommand.ExecuteNonQueryAsync() > 0)
@@ -221,7 +244,7 @@ namespace SquidDraftLeague.MySQL
                                  $"'{string.Join(",", set.AlphaTeam.Players.Select(x => x.DiscordId.ToString()))}'," +
                                  $"'{string.Join(",", set.BravoTeam.Players.Select(x => x.DiscordId.ToString()))}'," +
                                  $"@ASZ,@BSZ,@ATC,@BTC,@ARM,@BRM,@ACB,@BCB)",
-                    MySqlConnection);
+                    mySqlConnection);
 
             insertCommand.Parameters.AddWithValue("@Date", DateTime.UtcNow);
 
@@ -289,7 +312,7 @@ namespace SquidDraftLeague.MySQL
 
         private static async Task ReportPlayerScores(SdlPlayer player, decimal score)
         {
-            MySqlCommand updateCommand = new MySqlCommand($"UPDATE Players SET `Power`={player.PowerLevel + score} WHERE `Discord ID`=@PlayerID", MySqlConnection);
+            MySqlCommand updateCommand = new MySqlCommand($"UPDATE Players SET `Power`={player.PowerLevel + score} WHERE `Discord ID`=@PlayerID", mySqlConnection);
             updateCommand.Parameters.AddWithValue("@PlayerID", player.DiscordId);
 
             if (await updateCommand.ExecuteNonQueryAsync() > 0)
@@ -303,7 +326,7 @@ namespace SquidDraftLeague.MySQL
         {
             List<Stage> resultStages = new List<Stage>();
 
-            MySqlCommand selectCommand = new MySqlCommand($"SELECT * FROM `Map List`", MySqlConnection);
+            MySqlCommand selectCommand = new MySqlCommand($"SELECT * FROM `Map List`", mySqlConnection);
 
             using (MySqlDataReader dataReader = (MySqlDataReader) await selectCommand.ExecuteReaderAsync())
             {
@@ -336,7 +359,7 @@ namespace SquidDraftLeague.MySQL
 
             ulong reportId = generator.NextLong();
 
-            MySqlCommand updateCommand = new MySqlCommand($"UPDATE Players SET `Power`={player.PowerLevel - points} WHERE `Discord ID`=@PlayerID", MySqlConnection);
+            MySqlCommand updateCommand = new MySqlCommand($"UPDATE Players SET `Power`={player.PowerLevel - points} WHERE `Discord ID`=@PlayerID", mySqlConnection);
             updateCommand.Parameters.AddWithValue("@PlayerID", player.DiscordId);
 
             if (await updateCommand.ExecuteNonQueryAsync() > 0)
@@ -352,7 +375,7 @@ namespace SquidDraftLeague.MySQL
             {
                 List<SdlPlayer> allPlayers = new List<SdlPlayer>();
 
-                MySqlCommand retrievePlayerCommand = new MySqlCommand("SELECT * FROM Players", MySqlConnection);
+                MySqlCommand retrievePlayerCommand = new MySqlCommand("SELECT * FROM Players", mySqlConnection);
                 using (MySqlDataReader retrievePlayerReader = (MySqlDataReader) await retrievePlayerCommand.ExecuteReaderAsync())
                 {
                     while (await retrievePlayerReader.ReadAsync())
@@ -409,7 +432,7 @@ namespace SquidDraftLeague.MySQL
         {
             try
             {
-                MySqlCommand retrievePlayerCommand = new MySqlCommand("SELECT * FROM Players WHERE `Discord ID`=@PlayerID", MySqlConnection);
+                MySqlCommand retrievePlayerCommand = new MySqlCommand("SELECT * FROM Players WHERE `Discord ID`=@PlayerID", mySqlConnection);
                 retrievePlayerCommand.Parameters.AddWithValue("@PlayerID", discordId);
                 using (MySqlDataReader retrievePlayerReader = (MySqlDataReader) await retrievePlayerCommand.ExecuteReaderAsync())
                 {
