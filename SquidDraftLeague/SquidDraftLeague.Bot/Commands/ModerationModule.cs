@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
+using DSharpPlus.Entities;
 using Newtonsoft.Json;
 using SquidDraftLeague.Bot.Commands.Preconditions;
 using SquidDraftLeague.Draft;
@@ -50,6 +51,25 @@ namespace SquidDraftLeague.Bot.Commands
             }
 
             await ctx.RespondAsync("Complete.");
+        }
+
+        [Command("forceregister"), Aliases("forcereg", "manreg"), RequireRole(572539082039885839)]
+        public async Task ForceRegister(CommandContext ctx, DiscordMember player, int startingPower, [RemainingText] string nickname)
+        {
+            try
+            {
+                if ((await MySqlClient.RetrieveAllSdlPlayers()).Any(x => x.DiscordId == player.Id))
+                {
+                    await ctx.RespondAsync("This player is already in the database and cannot be force registered.");
+                    return;
+                }
+
+                await MySqlClient.RegisterPlayer(player.Id, startingPower, nickname);
+            }
+            catch (Exception e)
+            {
+                await ctx.RespondAsync($"Failed to force register user.\nException: {e}");
+            }
         }
 
         /*[Command("limit"),

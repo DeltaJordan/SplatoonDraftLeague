@@ -149,10 +149,12 @@ namespace SquidDraftLeague.Bot
             try
             {
                 if (!MySqlClient.IsConnectionOpen())
+                {
                     await MySqlClient.RefreshConnectionAsync();
 
-                await e.Context.RespondAsync("The MySQL connection is being refreshed. " +
-                                             "Please wait around a minute before attempting the command again.");
+                    await e.Context.RespondAsync("The MySQL connection is being refreshed. " +
+                                                 "Please wait around a minute before attempting the command again.");
+                }
             }
             catch (Exception exception)
             {
