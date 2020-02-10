@@ -70,6 +70,12 @@ namespace SquidDraftLeague.Bot.Commands
             {
                 await ctx.RespondAsync($"Failed to force register user.\nException: {e}");
             }
+
+            DiscordChannel registeredChannel = await ctx.Client.GetChannelAsync(588806681303973931);
+            await registeredChannel.SendMessageAsync($"Manually registered {player.Mention} " +
+                                                     $"with a starting power of {startingPower} " +
+                                                     $"and the nickname `{nickname}`.");
+            await ctx.RespondAsync("Successfully force registered user.");
         }
 
         /*[Command("limit"),
