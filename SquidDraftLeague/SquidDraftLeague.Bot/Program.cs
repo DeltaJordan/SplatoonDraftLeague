@@ -241,141 +241,110 @@ namespace SquidDraftLeague.Bot
 
                     if (newUserMessage.Content == "Approved.")
                     {
-                        DiscordReaction reactionMetadata = newUserMessage.Reactions
-                            .Where(e => e.Emoji.Name != "\u274E" && e.Emoji.Name != "\u2705")
-                            .OrderByDescending(e => e.Count)
-                            .FirstOrDefault();
+                        string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath,
+                            "Registrations",
+                            $"{newUserMessage.Id}"));
 
-                        decimal powerLevel = 0;
+                        ulong userId = Convert.ToUInt64(allRegLines[0]);
 
-                        if (reactionMetadata.Count > 1)
+                        const decimal powerLevel = 2000;
+                        await MySqlClient.RegisterPlayer(userId, 2000, allRegLines[1]);
+                        const int classNum = 2;
+
+                        DiscordGuild guild = await Client.GetGuildAsync(570743985530863649);
+                        DiscordMember registeredUser = await guild.GetMemberAsync(userId);
+                        await registeredUser.SendMessageAsync(
+                            $"You have been approved! You have been placed in class {classNum}. " +
+                            $"To jump into a set, head into #draft and use %join.");
+
+                        await registeredUser.GrantRoleAsync(guild.GetRole(572537013949956105));
+
+
+                        DiscordRole classOneRole = guild.GetRole(600770643075661824);
+                        DiscordRole classTwoRole = guild.GetRole(600770814521901076);
+                        DiscordRole classThreeRole = guild.GetRole(600770862307606542);
+                        DiscordRole classFourRole = guild.GetRole(600770905282576406);
+
+                        try
                         {
-                            string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath, "Registrations",
-                                $"{newUserMessage.Id}"));
-
-                            int classNum = 0;
-
-                            ulong userId = Convert.ToUInt64(allRegLines[0]);
-
-                            switch (reactionMetadata.Emoji.Name)
+                            switch (Matchmaker.GetClass(powerLevel))
                             {
-                                case "\u0031\u20E3":
-                                    powerLevel = 2200;
-                                    await MySqlClient.RegisterPlayer(userId, 2200, allRegLines[1]);
-                                    classNum = 1;
+                                case SdlClass.Zero:
                                     break;
-                                case "\u0032\u20E3":
-                                    powerLevel = 2000;
-                                    await MySqlClient.RegisterPlayer(userId, 2000, allRegLines[1]);
-                                    classNum = 2;
+                                case SdlClass.One:
+                                    if (registeredUser.Roles.All(e => e.Id != classOneRole.Id))
+                                    {
+                                        await registeredUser.GrantRoleAsync(classOneRole);
+                                    }
+
                                     break;
-                                case "\u0033\u20E3":
-                                    powerLevel = 1800;
-                                    await MySqlClient.RegisterPlayer(userId, 1800, allRegLines[1]);
-                                    classNum = 3;
+                                case SdlClass.Two:
+                                    if (registeredUser.Roles.All(e => e.Id != classTwoRole.Id))
+                                    {
+                                        await registeredUser.GrantRoleAsync(classTwoRole);
+                                    }
+
                                     break;
-                                case "\u0034\u20E3":
-                                    powerLevel = 1700;
-                                    await MySqlClient.RegisterPlayer(userId, 1700, allRegLines[1]);
-                                    classNum = 4;
+                                case SdlClass.Three:
+                                    if (registeredUser.Roles.All(e => e.Id != classThreeRole.Id))
+                                    {
+                                        await registeredUser.GrantRoleAsync(classThreeRole);
+                                    }
+
+                                    break;
+                                case SdlClass.Four:
+                                    if (registeredUser.Roles.All(e => e.Id != classFourRole.Id))
+                                    {
+                                        await registeredUser.GrantRoleAsync(classFourRole);
+                                    }
+
+                                    break;
+                                default:
                                     break;
                             }
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                        }
 
-                            DiscordGuild guild = await Client.GetGuildAsync(570743985530863649);
-                            DiscordMember registeredUser = await guild.GetMemberAsync(userId);
-                            await registeredUser.SendMessageAsync(
-                                $"You have been approved! You have been placed in class {classNum}. " +
-                                $"To jump into a set, head into #draft and use %join.");
+                        File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
 
-                            await registeredUser.GrantRoleAsync(guild.GetRole(572537013949956105));
+                        DiscordEmbed registrationEmbed = newUserMessage.Embeds.First();
 
+                        DiscordEmbedBuilder builder = new DiscordEmbedBuilder
+                        {
+                            Description =
+                                $"**User {registeredUser.Mention} ({registeredUser.Username}#{registeredUser.Discriminator}) has been approved!**"
+                        };
 
-                            DiscordRole classOneRole = guild.GetRole(600770643075661824);
-                            DiscordRole classTwoRole = guild.GetRole(600770814521901076);
-                            DiscordRole classThreeRole = guild.GetRole(600770862307606542);
-                            DiscordRole classFourRole = guild.GetRole(600770905282576406);
+                        builder.AddField(e =>
+                        {
+                            e.Name = "Class";
+                            e.Value = $"{classNum}";
+                            e.IsInline = false;
+                        });
 
-                            try
+                        builder.WithFields(registrationEmbed.Fields.Select(e =>
+                        {
+                            DiscordFieldBuilder builderSelect = new DiscordFieldBuilder
                             {
-                                switch (Matchmaker.GetClass(powerLevel))
-                                {
-                                    case SdlClass.Zero:
-                                        break;
-                                    case SdlClass.One:
-                                        if (registeredUser.Roles.All(e => e.Id != classOneRole.Id))
-                                        {
-                                            await registeredUser.GrantRoleAsync(classOneRole);
-                                        }
-
-                                        break;
-                                    case SdlClass.Two:
-                                        if (registeredUser.Roles.All(e => e.Id != classTwoRole.Id))
-                                        {
-                                            await registeredUser.GrantRoleAsync(classTwoRole);
-                                        }
-
-                                        break;
-                                    case SdlClass.Three:
-                                        if (registeredUser.Roles.All(e => e.Id != classThreeRole.Id))
-                                        {
-                                            await registeredUser.GrantRoleAsync(classThreeRole);
-                                        }
-
-                                        break;
-                                    case SdlClass.Four:
-                                        if (registeredUser.Roles.All(e => e.Id != classFourRole.Id))
-                                        {
-                                            await registeredUser.GrantRoleAsync(classFourRole);
-                                        }
-
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                Console.WriteLine(e);
-                            }
-
-                            File.Delete(Path.Combine(Globals.AppPath, "Registrations", $"{newUserMessage.Id}"));
-
-                            DiscordEmbed registrationEmbed = newUserMessage.Embeds.First();
-
-                            DiscordEmbedBuilder builder = new DiscordEmbedBuilder
-                            {
-                                Description =
-                                    $"**User {registeredUser.Mention} ({registeredUser.Username}#{registeredUser.Discriminator}) has been approved!**"
+                                Name = e.Name,
+                                Value = e.Value,
+                                IsInline = e.Inline
                             };
 
-                            builder.AddField(e =>
-                            {
-                                e.Name = "Class";
-                                e.Value = $"{classNum}";
-                                e.IsInline = false;
-                            });
+                            return builderSelect;
+                        }));
 
-                            builder.WithFields(registrationEmbed.Fields.Select(e =>
-                            {
-                                DiscordFieldBuilder builderSelect = new DiscordFieldBuilder
-                                {
-                                    Name = e.Name,
-                                    Value = e.Value,
-                                    IsInline = e.Inline
-                                };
-
-                                return builderSelect;
-                            }));
-
-                            if (registrationEmbed.Image?.Url != null)
-                            {
-                                builder.ImageUrl = registrationEmbed.Image.Url.AbsolutePath;
-                            }
-
-                            await registeredChannel.SendMessageAsync(embed: builder.Build());
-
-                            await newUserMessage.DeleteAsync();
+                        if (registrationEmbed.Image?.Url != null)
+                        {
+                            builder.ImageUrl = registrationEmbed.Image.Url.AbsolutePath;
                         }
+
+                        await registeredChannel.SendMessageAsync(embed: builder.Build());
+
+                        await newUserMessage.DeleteAsync();
                     }
 
                     else if (newUserMessage.Reactions.FirstOrDefault(e => e.Emoji.Name == "\u2705")?.Count > 1)
