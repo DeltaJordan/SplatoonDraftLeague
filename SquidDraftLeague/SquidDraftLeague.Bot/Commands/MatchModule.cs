@@ -284,6 +284,8 @@ namespace SquidDraftLeague.Bot.Commands
         {
             Set selectedSet;
 
+            DiscordRole modRole = ctx.Guild.Roles.First(e => e.Name == "Moderator");
+
             if (set == 0)
             {
                 selectedSet = CommandHelper.SetFromChannel(ctx.Channel.Id);
@@ -292,6 +294,125 @@ namespace SquidDraftLeague.Bot.Commands
                 {
                     await ctx.RespondAsync("Please specify set number or use the correct channel as context.");
                     return;
+                }
+
+                if (selectedSet.ResolveMode <= 0)
+                {
+                    // Force report score by moderator.
+
+                    selectedSet.ReportScore(team);
+
+                    if (selectedSet.AlphaTeam.Score > SET_MATCH_NUMBER / 2 ||
+                        selectedSet.BravoTeam.Score > SET_MATCH_NUMBER / 2 ||
+                        selectedSet.MatchNum == SET_MATCH_NUMBER)
+                    {
+                        string winner = selectedSet.AlphaTeam.Score > selectedSet.BravoTeam.Score ? "Alpha" : "Bravo";
+                        string loser = selectedSet.AlphaTeam.Score < selectedSet.BravoTeam.Score ? "Alpha" : "Bravo";
+
+                        DiscordEmbedBuilder builder = new DiscordEmbedBuilder();
+                        builder.WithTitle("__Results__");
+                        builder.AddField(e =>
+                        {
+                            e.Name = "Score";
+                            e.IsInline = true;
+                            e.Value = $"{winner} Wins {selectedSet.AlphaTeam.Score} - {selectedSet.BravoTeam.Score}";
+                        });
+
+                        await ctx.RespondAsync($"The winner of this set is Team {winner}!", embed: builder.Build());
+
+                        DiscordRole loserRole = loser == "Alpha" ?
+                            ctx.Guild.Roles.First(e => e.Name == $"Alpha ({selectedSet.SetNumber})") :
+                            ctx.Guild.Roles.First(e => e.Name == $"Bravo ({selectedSet.SetNumber})");
+
+                        await ctx.RespondAsync(
+                            $"{loserRole.Mention}, please acknowledge these results by either sending \"confirm\" or \"deny\".");
+
+                        InteractivityModule interactivity = ctx.Client.GetInteractivityModule();
+
+                        DateTime timeoutDateTime = DateTime.Now + TimeSpan.FromMinutes(2);
+                        MessageContext replyMessage;
+                        try
+                        {
+                            replyMessage = await interactivity.WaitForMessageAsync(x =>
+                            {
+                                return ((DiscordMember)x.Author).Roles.Select(e => e.Id).Contains(loserRole.Id);
+                            }, TimeSpan.FromMinutes(1));
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            Logger.Error(e);
+                            throw;
+                        }
+
+                        while (true)
+                        {
+                            if (replyMessage.Message == null)
+                            {
+                                await ctx.RespondAsync("Time's up! Assuming the losing team has accepted their loss.");
+
+                                await this.EndMatchAsync(selectedSet, ctx);
+
+                                return;
+                            }
+
+                            if (replyMessage.Message.Content.ToLower() == "confirm")
+                            {
+                                await this.EndMatchAsync(selectedSet, ctx);
+
+                                return;
+                            }
+
+                            if (replyMessage.Message.Content.ToLower() == "deny")
+                            {
+                                await ctx.RespondAsync($"{modRole.Mention} issue reported by {replyMessage.Message.Author.Mention}. " +
+                                                      $"To resolve the error, use `%resolve` and follow the resulting instructions." +
+                                                      $" Otherwise, use `%resolve deny` to continue reporting the current score.");
+                                return;
+                            }
+
+                            replyMessage = await interactivity.WaitForMessageAsync(x => {
+                                return ((DiscordMember)x.Author).Roles.Select(e => e.Id).Contains(loserRole.Id);
+                            }, timeoutDateTime - DateTime.Now);
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            selectedSet.MatchNum++;
+
+                            Stage selectedStage = selectedSet.GetCurrentStage();
+
+                            await ctx.RespondAsync(embed: selectedStage
+                                .GetEmbedBuilder($"Match {selectedSet.MatchNum} of 7: {selectedStage.MapName}")
+                                .AddField(e =>
+                                {
+                                    e.Name = "Alpha Team's Score";
+                                    e.Value = selectedSet.AlphaTeam.Score;
+                                    e.IsInline = true;
+                                })
+                                .AddField(e =>
+                                {
+                                    e.Name = "Bravo Team's Score";
+                                    e.Value = selectedSet.BravoTeam.Score;
+                                    e.IsInline = true;
+                                })
+                                .Build());
+
+                            DiscordMessage feedMessage = (DiscordMessage)await ctx.Guild.GetChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[selectedSet.SetNumber - 1]);
+                            await feedMessage.ModifyAsync(embed: selectedSet.GetFeedEmbedBuilder(ctx.Channel).Build());
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            throw;
+                        }
+                    }
+
+                    return;
+
+                    // End force report logic.
                 }
             }
             else
