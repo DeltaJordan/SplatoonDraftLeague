@@ -172,8 +172,8 @@ namespace SquidDraftLeague.MySQL
             Color teamColor = color ?? Color.Gray;
 
             // Snowflake generator.
-            // Generator ID = May 5, 2015 the release date of Splatoon 1.
-            Generator generator = new Generator(15285,
+            // Generator ID = 500.
+            Generator generator = new Generator(500,
                 new DateTime(2019, 6, 22, new GregorianCalendar(GregorianCalendarTypes.USEnglish)));
 
             ulong teamId = generator.NextLong();
@@ -353,8 +353,7 @@ namespace SquidDraftLeague.MySQL
         public static async Task PenalizePlayer(SdlPlayer player, decimal points, string notes)
         {
             // Snowflake generator.
-            // Generator ID = May 5, 2015 the release date of Splatoon 1.
-            Generator generator = new Generator(8008,
+            Generator generator = new Generator(8,
                 new DateTime(2019, 6, 22, new GregorianCalendar(GregorianCalendarTypes.USEnglish)));
 
             ulong reportId = generator.NextLong();
