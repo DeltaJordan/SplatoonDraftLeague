@@ -239,11 +239,11 @@ namespace SquidDraftLeague.Bot
                         return;
                     }
 
-                    if (newUserMessage.Content == "Approved.")
+                    if (newUserMessage.Reactions.FirstOrDefault(e => e.Emoji.Name == "\u2705")?.Count > 1)
                     {
                         string[] allRegLines = await File.ReadAllLinesAsync(Path.Combine(Globals.AppPath,
-                            "Registrations",
-                            $"{newUserMessage.Id}"));
+                               "Registrations",
+                               $"{newUserMessage.Id}"));
 
                         ulong userId = Convert.ToUInt64(allRegLines[0]);
 
@@ -300,7 +300,7 @@ namespace SquidDraftLeague.Bot
 
                                     break;
                                 default:
-                                    break;
+                                    throw new ArgumentOutOfRangeException();
                             }
                         }
                         catch (Exception e)
@@ -337,19 +337,10 @@ namespace SquidDraftLeague.Bot
                             return builderSelect;
                         }));
 
-                        if (registrationEmbed.Image?.Url != null)
-                        {
-                            builder.ImageUrl = registrationEmbed.Image.Url.AbsolutePath;
-                        }
-
                         await registeredChannel.SendMessageAsync(embed: builder.Build());
 
                         await newUserMessage.DeleteAsync();
-                    }
-
-                    else if (newUserMessage.Reactions.FirstOrDefault(e => e.Emoji.Name == "\u2705")?.Count > 1)
-                    {
-                        await newUserMessage.ModifyAsync("Approved.");
+                        // await newUserMessage.ModifyAsync("Approved.");
 
                     }
                     else if (newUserMessage.Reactions.FirstOrDefault(e => e.Emoji.Name == "\u274E")?.Count > 1)

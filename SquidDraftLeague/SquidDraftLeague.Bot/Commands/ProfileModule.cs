@@ -204,37 +204,11 @@ namespace SquidDraftLeague.Bot.Commands
                 }
 
                 string teams = teamsResponse.Message.Content;
-                string screenshotUrl = null;
-
-                if (hasScreenshot)
-                {
-                    while (!screenshotResponse.Message.Attachments.Any() || screenshotResponse.Message.Attachments.Count > 1)
-                    {
-                        await ctx.RespondAsync(
-                            "Please only upload **one (1)** image of your solo queue powers from the last month.");
-                        screenshotResponse =
-                            await interactivity.WaitForMessageAsync(x => x.Author.Id == user.Id, TimeSpan.FromMinutes(10));
-
-                        if (screenshotResponse == null)
-                        {
-                            await ctx.RespondAsync(Resources.RegistrationTimeout);
-                            return;
-                        }
-                    }
-
-                    DiscordAttachment screenshotAttachment = screenshotResponse.Message.Attachments.First();
-                    screenshotUrl = screenshotAttachment.Url;
-                }
 
                 DiscordEmbedBuilder builder = new DiscordEmbedBuilder
                 {
                     Description = $"**{ctx.User.Mention} ({ctx.User.Username}#{ctx.User.Discriminator}) has applied for registration.**"
                 };
-
-                if (hasScreenshot)
-                {
-                    builder.ImageUrl = screenshotUrl;
-                }
 
                 builder.AddField(e =>
                 {
@@ -265,10 +239,6 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u2705")); // Check mark
                 await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u274E")); // X
-                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u0031\u20E3")); // One
-                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u0032\u20E3")); // Two
-                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u0033\u20E3")); // Three
-                await userMessage.CreateReactionAsync(DiscordEmoji.FromUnicode("\u0034\u20E3")); // Four
 
                 await File.WriteAllTextAsync(Path.Combine(regDirectory, $"{userMessage.Id}"), $"{ctx.User.Id}\n{nickname}");
 
