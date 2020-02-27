@@ -276,7 +276,7 @@ namespace SquidDraftLeague.Bot.Commands
                     throw;
                 }
 
-                DiscordMessage message = await ctx.RespondAsync("Please wait, profiles take a little bit to put together.");
+                await ctx.TriggerTypingAsync();
 
                 Font powerFont = KarlaFontFamily.CreateFont(160, FontStyle.Bold);
                 Font nameFont = KarlaFontFamily.CreateFont(80, FontStyle.Bold);
@@ -295,11 +295,12 @@ namespace SquidDraftLeague.Bot.Commands
                 byte[] avatarBytes = await webClient.DownloadDataTaskAsync(avatarUrl);
 
                 using (Image<Rgba32> image = Image.Load(Path.Combine(Globals.AppPath, "Data", "img", "profile-template.png")))
-                using (Image<Rgba32> rankImage = new Image<Rgba32>(225, 225))
-                using (Image<Rgba32> avatarImage = Image.Load(avatarBytes))
-                using (Image<Rgba32> roleImage = new Image<Rgba32>(455, 115))
-                using (MemoryStream ms = new MemoryStream())
                 {
+                    using Image<Rgba32> rankImage = new Image<Rgba32>(225, 225);
+                    using Image<Rgba32> avatarImage = Image.Load(avatarBytes);
+                    using Image<Rgba32> roleImage = new Image<Rgba32>(455, 115);
+                    using MemoryStream ms = new MemoryStream();
+
                     string name = player.Nickname.ToUpper();
                     string powerLevel = Math.Round(player.PowerLevel, 1).ToString(CultureInfo.InvariantCulture);
 
@@ -458,10 +459,33 @@ namespace SquidDraftLeague.Bot.Commands
                     IPathCollection roleGlyphs = TextBuilder.GenerateGlyphs(role, new PointF(roleNameX, roleNameY),
                         new RendererOptions(roleFont));
 
-                    (int placement, string ordinal) = await MySqlClient.GetPlayerStandings(player);
+                    SdlPlayer[] players = await MySqlClient.RetrieveAllSdlPlayers();
+
+                    List<SdlPlayer> orderedPlayers = players
+                        .Where(x => ctx.Guild.Members.Any(y =>
+                            y.Id == x.DiscordId &&
+                            MySqlClient.CheckHasPlayedSet(x).Result && 
+                            y.Roles.Any(z =>
+                                z.Name.Equals("player", StringComparison.InvariantCultureIgnoreCase))))
+                        .OrderByDescending(x => x.PowerLevel).ToList();
+
+                    var playerStandings = orderedPlayers.Select(x => new { Player = x, Rank = orderedPlayers.FindLastIndex(y => y.PowerLevel == x.PowerLevel) + 1 }).ToList();
+
+                    string ordinal = "";
+                    int placement = 0;
+
+                    if (playerStandings.All(x => x.Player != player))
+                    {
+                        await ctx.RespondAsync("Note that you will not have a standing until you play a set.");
+                    }
+                    else
+                    {
+                        placement = playerStandings.First(x => x.Player == player).Rank;
+                        ordinal = placement.GetOrdinal();
+                    }
 
                     SizeF placementSize =
-                        TextMeasurer.Measure(placement.ToString(), new RendererOptions(placementFont));
+                        TextMeasurer.Measure(placement == 0 ? "N/A" : placement.ToString(), new RendererOptions(placementFont));
                     SizeF ordinalSize =
                         TextMeasurer.Measure(ordinal, new RendererOptions(ordinalFont));
 
@@ -470,7 +494,7 @@ namespace SquidDraftLeague.Bot.Commands
 
                     float placementX = 949 + (347 / 2F - standingsWidth / 2F);
 
-                    IPathCollection placementGlyphs = TextBuilder.GenerateGlyphs(placement.ToString(),
+                    IPathCollection placementGlyphs = TextBuilder.GenerateGlyphs(placement == 0 ? "N/A" : placement.ToString(),
                         new PointF(placementX, 140), new RendererOptions(placementFont));
 
                     float ordinalX = placementX + placementSize.Width;
@@ -517,11 +541,8 @@ namespace SquidDraftLeague.Bot.Commands
 
                     image.SaveAsPng(ms);
 
-                    using (MemoryStream memory = new MemoryStream(ms.GetBuffer()))
-                    {
-                        await message.DeleteAsync();
-                        await ctx.Channel.SendFileAsync(memory, "profile.png");
-                    }
+                    using MemoryStream memory = new MemoryStream(ms.GetBuffer());
+                    await ctx.Channel.SendFileAsync(memory, "profile.png");
                 }
 
                 Configuration.Default.MemoryAllocator.ReleaseRetainedResources();

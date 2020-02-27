@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -130,6 +131,8 @@ namespace SquidDraftLeague.Bot
 
             await Client.ConnectAsync();
 
+            await UpdateStandingsAsync();
+
             List<IScheduledTask> tasks = new List<IScheduledTask>
             {
 #if DEBUG_PREFIX
@@ -142,6 +145,62 @@ namespace SquidDraftLeague.Bot
             await scheduler.StartAsync(token);
 
             await Task.Delay(-1, token);
+        }
+
+        public static async Task UpdateStandingsAsync()
+        {
+            DiscordChannel standingChannel = await Client.GetChannelAsync(592230066654674945);
+
+            foreach (DiscordMessage discordMessage in await standingChannel.GetMessagesAsync())
+            {
+                await standingChannel.DeleteMessageAsync(discordMessage, "Standings update.");
+            }
+
+            SdlPlayer[] players = await MySqlClient.RetrieveAllSdlPlayers();
+
+            List<SdlPlayer> orderedPlayers = players
+                .Where(x => standingChannel.Guild.Members.Any(y =>
+                    y.Id == x.DiscordId && 
+                    MySqlClient.CheckHasPlayedSet(x).Result &&
+                    y.Roles.Any(z =>
+                        z.Name.Equals("player", StringComparison.InvariantCultureIgnoreCase))))
+                .OrderByDescending(x => x.PowerLevel).ToList();
+
+            var playerStandings = orderedPlayers.Select(x => new { Player = x, Rank = orderedPlayers.FindLastIndex(y => y.PowerLevel == x.PowerLevel) + 1 });
+
+            List<DiscordEmbedBuilder> standingEmbeds = new List<DiscordEmbedBuilder>
+            {
+                new DiscordEmbedBuilder().WithDescription("").WithColor(Color.Gold)
+            };
+
+            int startStanding = 1;
+            int endStanding = 0;
+
+            foreach (var playerStanding in playerStandings)
+            {
+                string standingLine = $"\n{playerStanding.Rank}: {playerStanding.Player.DiscordId.ToUserMention()} [{playerStanding.Player.PowerLevel}]";
+
+                if (standingEmbeds.Last().Description.Length + standingLine.Length > 2048)
+                {
+                    standingEmbeds.Last().Title = $"Standings ({startStanding} - {endStanding})";
+
+                    standingEmbeds.Add(new DiscordEmbedBuilder().WithDescription("").WithColor(Color.Silver));
+
+                    startStanding = endStanding + 1;
+                    endStanding = startStanding;
+                }
+
+                standingEmbeds.Last().Description += standingLine;
+
+                endStanding++;
+            }
+
+            standingEmbeds.Last().Title = $"Standings ({startStanding} - {endStanding})";
+
+            foreach (DiscordEmbedBuilder standingEmbed in standingEmbeds)
+            {
+                await standingChannel.SendMessageAsync(embed: standingEmbed.Build());
+            }
         }
 
         private static async Task Commands_CommandErrored(CommandErrorEventArgs e)
