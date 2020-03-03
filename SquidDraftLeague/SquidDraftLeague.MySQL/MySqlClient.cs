@@ -485,7 +485,7 @@ namespace SquidDraftLeague.MySQL
             }
         }
 
-        public static async Task RetrieveWinRate(SdlPlayer player)
+        public static async Task<int> RetrieveWinRate(SdlPlayer player)
         {
             MySqlCommand RetrieveNumGamesPlayed = new MySqlCommand(
                     $"SELECT COUNT(*) " +
@@ -496,12 +496,26 @@ namespace SquidDraftLeague.MySQL
 
             int numGamesPlayed =  Convert.ToInt32(RetrieveNumGamesPlayed.ExecuteScalar());
 
-            //now find the num of wins
-                //so i have to see how many of the games they were on alpha && alpha won
-                //then how many times they were on bravo && bravo won
-                //ask jordan how to get that i guess.
+            MySqlCommand RetrieveNumAlphaWins = new MySqlCommand(
+                   $"SELECT COUNT(*) " +
+                   $"FROM `Draft Log` " +
+                   $"WHERE `Alpha Players` LIKE '%{player.DiscordId}%' " +
+                   $"AND `Alpha Wins` IS GREATER THAN 3");
 
-            //big percent
+            int numAlphaWins = Convert.ToInt32(RetrieveNumAlphaWins.ExecuteScalar());
+
+
+            MySqlCommand RetrieveNumBravoWins = new MySqlCommand(
+                   $"SELECT COUNT(*) " +
+                   $"FROM `Draft Log` " +
+                   $"WHERE `Bravo Players` LIKE '%{player.DiscordId}%' " +
+                   $"AND `Bravo Wins` IS GREATER THAN 3");
+
+            int numBravoWins = Convert.ToInt32(RetrieveNumBravoWins.ExecuteScalar());
+
+            int numWins = numBravoWins + numAlphaWins;
+
+            return (numWins / numGamesPlayed);
         }
     }
 }
