@@ -484,5 +484,24 @@ namespace SquidDraftLeague.MySQL
                 throw;
             }
         }
+
+        public static async Task RetrieveWinRate(SdlPlayer player)
+        {
+            MySqlCommand RetrieveNumGamesPlayed = new MySqlCommand(
+                    $"SELECT COUNT(*) " +
+                    $"FROM `Draft Log` " +
+                    $"WHERE `Alpha Players` LIKE '%{player.DiscordId}%' " +
+                    $"OR `Bravo Players` LIKE '%{player.DiscordId}%'",
+                    mySqlConnection);
+
+            int numGamesPlayed =  Convert.ToInt32(RetrieveNumGamesPlayed.ExecuteScalar());
+
+            //now find the num of wins
+                //so i have to see how many of the games they were on alpha && alpha won
+                //then how many times they were on bravo && bravo won
+                //ask jordan how to get that i guess.
+
+            //big percent
+        }
     }
 }
