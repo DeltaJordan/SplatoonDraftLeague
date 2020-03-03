@@ -132,41 +132,6 @@ namespace SquidDraftLeague.MySQL
             await updateRoleCommand.ExecuteNonQueryAsync();
         }
 
-        public static async Task<(int Placement, string Ordinal)> GetPlayerStandings(SdlPlayer player)
-        {
-            SdlPlayer[] players = await RetrieveAllSdlPlayers();
-
-            int rank = players.OrderByDescending(x => x.PowerLevel).ToList().FindLastIndex(x => x.PowerLevel == player.PowerLevel) + 1;
-
-            return (rank, GetOrdinal(rank));
-        }
-
-        private static string GetOrdinal(int num)
-        {
-            if (num <= 0) return num.ToString();
-
-            switch (num % 100)
-            {
-                case 11:
-                case 12:
-                case 13:
-                    return "th";
-            }
-
-            switch (num % 10)
-            {
-                case 1:
-                    return "st";
-                case 2:
-                    return "nd";
-                case 3:
-                    return "rd";
-                default:
-                    return "th";
-            }
-
-        }
-
         public static async Task RegisterTeam(string name, string logoUrl, ulong captainId, Color? color = null)
         {
             Color teamColor = color ?? Color.Gray;

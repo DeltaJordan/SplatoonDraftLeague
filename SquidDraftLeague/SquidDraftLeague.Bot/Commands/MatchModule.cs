@@ -825,7 +825,7 @@ namespace SquidDraftLeague.Bot.Commands
             
             if (forgiveLosing)
             {
-                DiscordMessage feedMessage = (DiscordMessage) await (await Program.Client.GetGuildAsync(570743985530863649))
+                DiscordMessage feedMessage = await (await Program.Client.GetGuildAsync(570743985530863649))
                     .GetChannel(666563839646760960).GetMessageAsync(OrderedFeedMessages[playerSet.SetNumber - 1]);
                 await feedMessage.ModifyAsync(embed: playerSet.GetFeedEmbedBuilder(null)
                     .WithDescription("The set ended unnaturally.").Build());
@@ -843,6 +843,8 @@ namespace SquidDraftLeague.Bot.Commands
             //}
             else
                 await MySqlClient.ReportScores(playerSet, points, points);
+
+            await Program.UpdateStandingsAsync();
 
             return points;
         }
