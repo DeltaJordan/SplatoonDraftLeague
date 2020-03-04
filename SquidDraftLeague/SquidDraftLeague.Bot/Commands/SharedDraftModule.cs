@@ -371,9 +371,11 @@ namespace SquidDraftLeague.Bot.Commands
                         joinedSet.DraftPlayers.First(e => e.DiscordId == user.Id));
                 }
 
+                List<DiscordMember> remainingUsers =
+                    ctx.Guild.Members.Where(x => joinedSet.AllPlayers.Any(y => y.DiscordId == x.Id)).ToList();
+
                 await ctx.RespondAsync(
                     $"{user.Mention} was kicked from the set. " +
-                    $"Temporarily, players will not be requeued due to a bug that David is too stoopid to fix, please %join in draft to requeue " +
                     $"Beginning removal of access to this channel in 30 seconds. " +
                     $"Rate limiting may cause the full process to take up to two minutes.",
                     embed: joinedSet.GetScoreEmbedBuilder(points, 0).Build());
@@ -403,14 +405,13 @@ namespace SquidDraftLeague.Bot.Commands
 
                 await user.RemoveRolesAsync(roleRemovalList.Where(x => user.Roles.Select(xr => xr.Id).Contains(x.Id)));
 
-                #region AlsoRemoved
-                /*foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
+                foreach (DiscordMember member in remainingUsers)
                 {
-                    SocketGuildUser movedGuildUser = ctx.Guild.GetUser(movedLobbyPlayer.DiscordId);
-                    await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
+                    await member.RemoveRolesAsync(roleRemovalList.Where(x => member.Roles.Any(f => f.Id == x.Id)));
                 }
-
-                await ((ITextChannel)ctx.Client.GetChannel(572536965833162753))
+                
+                #region AlsoRemoved
+                /*await ((ITextChannel)ctx.Client.GetChannel(572536965833162753))
                     .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.",
                         embed: movedLobby.GetEmbedBuilder().Build());*/
                 #endregion
@@ -536,6 +537,9 @@ namespace SquidDraftLeague.Bot.Commands
                                 joinedSet.DraftPlayers.First(e => e.DiscordId == user.Id));
                         }
 
+                        List<DiscordMember> remainingUsers =
+                            ctx.Guild.Members.Where(x => joinedSet.AllPlayers.Any(y => y.DiscordId == x.Id)).ToList();
+
                         File.WriteAllText(penaltyFile, JsonConvert.SerializeObject(record, Formatting.Indented));
 
                         await ctx.RespondAsync(
@@ -566,13 +570,12 @@ namespace SquidDraftLeague.Bot.Commands
 
                         await user.RemoveRolesAsync(roleRemovalList.Where(x => user.Roles.Select(xr => xr.Id).Contains(x.Id)));
 
-                        /*foreach (SdlPlayer movedLobbyPlayer in movedLobby.Players)
+                        foreach (DiscordMember member in remainingUsers)
                         {
-                            DiscordMember movedGuildUser = await ctx.Guild.GetMemberAsync(movedLobbyPlayer.DiscordId);
-                            await movedGuildUser.RemoveRolesAsync(roleRemovalList.Where(x => movedGuildUser.Roles.Any(f => f.Id == x.Id)));
+                            await member.RemoveRolesAsync(roleRemovalList.Where(x => member.Roles.Any(f => f.Id == x.Id)));
                         }
 
-                        await (await ctx.Client.GetChannelAsync(572536965833162753))
+                        /*await (await ctx.Client.GetChannelAsync(572536965833162753))
                             .SendMessageAsync($"{8 - movedLobby.Players.Count} players needed to begin.", 
                                 embed: movedLobby.GetEmbedBuilder().Build());*/
                     }
