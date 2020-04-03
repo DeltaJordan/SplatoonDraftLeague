@@ -605,10 +605,21 @@ namespace SquidDraftLeague.Bot.Commands
                                               $" Otherwise, use `%resolve deny` to continue reporting the current score.");
                         return;
                     }
+                        
+                    TimeSpan timeSpan = timeoutDateTime - DateTime.Now;
+
+                    if (timeSpan <= TimeSpan.Zero)
+                    {
+                        await ctx.RespondAsync("Time's up! Assuming the losing team has accepted their loss.");
+
+                        await this.EndMatchAsync(playerSet, ctx);
+
+                        return;
+                    }
 
                     replyMessage = await interactivity.WaitForMessageAsync(x => {
                         return ((DiscordMember)x.Author).Roles.Select(e => e.Id).Contains(loserRole.Id);
-                    }, timeoutDateTime - DateTime.Now);
+                    }, timeSpan);
                 }
             }
             else
